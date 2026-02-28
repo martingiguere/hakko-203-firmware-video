@@ -4,7 +4,18 @@
 
 Extract and reconstruct the firmware of a **Hakko FM-203** soldering station from a YouTube video recording of the Xeltek SuperPro 6100N programmer software displaying the hex dump of the MCU's flash memory. This follows the same general approach as the [hakko-202-firmware-video](../hakko-202-firmware-video/) project but adapted for different hardware, a different programmer tool UI, and a different video source.
 
-**Goal**: Recover 64 KB of firmware for the Renesas R5F21258SNFP microcontroller by applying OCR/classification to video frames showing the Xeltek SuperPro hex buffer scrolling through memory, then provide a human-assisted review tool for verification and correction.
+**Goal**: Recover the firmware for the Renesas R5F21258SNFP microcontroller by applying OCR/classification to video frames showing the Xeltek SuperPro hex buffer scrolling through memory, then provide a human-assisted review tool for verification and correction.
+
+### Buffer Size (Confirmed from Reference Screenshot)
+
+The Xeltek SuperPro "Edit Buffer" dialog shows:
+- **Buffer range**: `0000000000H – 0000013FFFH`
+- **Total buffer size**: `$14000` = **81,920 bytes (80 KB)**
+- **Checksum**: `00D2F2FFH` (32-bit)
+
+This 80 KB buffer covers the full `$00000`–`$13FFF` address range, which includes SFR, RAM, reserved areas, AND the program ROM. The 64 KB of program ROM resides at `$04000`–`$13FFF` within this buffer. The first 16 KB (`$00000`–`$03FFF`) contains SFR, RAM, and reserved space — not flash — and its contents represent the chip state at read time, not persistent firmware.
+
+**Implication**: The extraction pipeline must process all 80 KB (5,120 lines of 16 bytes) from the buffer, but the final firmware binary should focus on the 64 KB ROM region (`$04000`–`$13FFF` = 4,096 lines). The non-ROM region (`$00000`–`$03FFF`) may still be useful for understanding the chip's runtime state.
 
 ---
 
@@ -54,11 +65,7 @@ $0FFDC - $0FFFF   Fixed interrupt vector table           36 B
 $0FFFC - $0FFFF   Reset vector (20-bit entry point)
 ```
 
-**Note**: The 64 KB ROM is split across two non-contiguous address ranges. When the Xeltek programmer reads the device, it may present this as:
-- A flat 64 KB buffer (offsets `$00000`–`$0FFFF`) with the ROM linearized
-- Or with physical addresses preserved
-
-The actual buffer addressing used by the Xeltek software must be determined from the video frames during grid calibration (Phase 1). This mapping is critical for placing bytes at the correct offsets in the final firmware binary.
+**Confirmed from reference screenshot**: The Xeltek SuperPro reads the full `$00000`–`$13FFF` range (80 KB) with physical addresses preserved. The buffer addresses correspond directly to MCU physical addresses — no offset translation is needed. The 64 KB of program ROM occupies `$04000`–`$0FFFF` (lower 48 KB) and `$10000`–`$13FFF` (upper 16 KB) within the 80 KB buffer. The reference screenshot shows rows at addresses `$0FF70`–`$10060`, confirming that the address space is contiguous across the `$0FFFF`/`$10000` boundary in the buffer.
 
 ### Fixed Interrupt Vector Table (`$0FFDC`–`$0FFFF`)
 
@@ -119,21 +126,45 @@ Expected output: ~20,070 frames for the 11m9s segment at 30fps. Actual count wil
 
 ### Xeltek SuperPro Software UI
 
-The Xeltek SuperPro 6100N uses a Windows-based application that displays a hex editor buffer view. Key UI characteristics (to be confirmed from actual frames):
+The Xeltek SuperPro 6100N uses a Windows-based application with an "Edit Buffer" dialog that displays a hex editor buffer view.
 
-- **Hex buffer area**: Standard hex editor layout — offset/address column on the left, 16 hex bytes per row, ASCII representation on the right
-- **Row format** (expected):
-  ```
-  XXXXXXXX  XX XX XX XX XX XX XX XX  XX XX XX XX XX XX XX XX  | ................ |
-  ^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^    ^^^^^^^^^^^^^^^^
-  OFFSET    16 HEX BYTES (8+8 with center gap)                 ASCII COLUMN
-  ```
-- **Address format**: Likely 8-digit hex offset (the Xeltek software typically uses buffer offsets, not physical MCU addresses)
-- **Visible rows**: TBD from video analysis — typically 16-32 rows visible depending on window size and font
-- **Scrolling**: The buffer view scrolls as the video author navigates through the firmware contents
-- **Center gap**: Xeltek often groups bytes in two groups of 8 (separated by an extra space), unlike the Segger Flasher's uniform spacing
+#### Confirmed UI Layout (from reference screenshot)
 
-**Important**: The exact grid layout, character dimensions, and spacing must be calibrated from the actual video frames. The FM-202 project's `grid_calibration.json` approach should be replicated but with new parameters specific to the Xeltek UI.
+The reference screenshot (`1063 × 790 px`) reveals the exact layout:
+
+- **Window title**: "Edit Buffer"
+- **Column headers**: Green bars labeled `ADDRESS`, `HEX`, `ASCII`
+- **Address format**: **10 hex digits** (e.g., `000000FF70`), no separator
+- **Row format**:
+  ```
+  000000FF70   4E FC 00 00 4E FC 00 00-4E FC 00 00 4E FC 00 00   N...N...N...N...
+  ^^^^^^^^^^   ^^^^^^^^^^^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^^^^^^    ^^^^^^^^^^^^^^^^
+  ADDRESS(10)  8 HEX BYTES             DASH  8 HEX BYTES          ASCII COLUMN
+  ```
+- **Byte grouping**: 8 + dash + 8 (the two groups of 8 bytes are separated by a **dash character**, not just whitespace)
+- **Visible rows**: ~16 data rows visible in the Edit Buffer dialog
+- **Scrollbar**: Vertical scrollbar on the right side of the hex area
+- **Bottom status area**:
+  - `Address: 000000FF7FH` (cursor position)
+  - `Checksum: 00D2F2FFH` (32-bit buffer checksum)
+  - `Buffer range: 0000000000H - 0000013FFFH`
+  - Checkbox: "Buffer clear on data load" (checked)
+  - Checkbox: "Buffer save when exit" (unchecked)
+- **Bottom buttons**: Locate, Copy, Fill, Search, Search Next, Radix, Swap, Duplicate, OK
+
+**Important**: The exact pixel positions, character cell dimensions, and spacing must be calibrated from the actual video frames (which may have different resolution and scaling than the blog screenshot). The FM-202 project's `grid_calibration.json` approach should be replicated with new parameters specific to the Xeltek UI.
+
+#### Key Differences from Segger Flasher (FM-202)
+
+| Feature | Segger Flasher (FM-202) | Xeltek SuperPro (FM-203) |
+|---------|------------------------|--------------------------|
+| Address digits | 6 (`0040F0`) | 10 (`000000FF70`) |
+| Address separator | Colon (`:`) | None (space only) |
+| Byte grouping | Uniform spacing | 8-dash-8 (`XX XX XX XX-XX XX XX XX`) |
+| Visible rows | 16 | ~16 (TBC from video) |
+| Column headers | None | Green bars (ADDRESS, HEX, ASCII) |
+| Status info | Separate UI area | Below hex area in same dialog |
+| Checksum | CRC-16 displayed | 32-bit checksum (`00D2F2FFH`) |
 
 ---
 
@@ -165,13 +196,13 @@ firmware_reviewed.txt + hakko_fm203.bin (exports)
 | Aspect | FM-202 | FM-203 |
 |--------|--------|--------|
 | **MCU** | M38039FFFP (MELPS 740, 8-bit) | R5F21258SNFP (R8C/24, 16-bit) |
-| **ROM Size** | 60 KB (`$1000`–`$FFFF`) | 64 KB (`$04000`–`$13FFF`, split) |
+| **Buffer Size** | 60 KB (`$1000`–`$FFFF`) | 80 KB (`$00000`–`$13FFF`) containing 64 KB ROM |
 | **Programmer** | Segger Flasher | Xeltek SuperPro 6100N |
-| **Hex dump format** | Segger: uniform 16-byte rows | Xeltek: 8+8 grouped bytes (TBC) |
-| **Address format** | 6-digit hex (Segger) | 8-digit hex offset (Xeltek, TBC) |
+| **Hex dump format** | Segger: uniform 16-byte rows | Xeltek: 8-dash-8 grouped bytes |
+| **Address format** | 6-digit hex (Segger) | 10-digit hex (Xeltek) |
 | **Video duration** | ~7.5 min scrolling | ~11 min of hex display |
 | **Video source** | Camera pointed at monitor | Camera pointed at monitor (TBC) |
-| **Expected CRC** | `0x0657` | TBD (if visible in Xeltek UI) |
+| **Expected checksum** | CRC-16 `0x0657` | 32-bit `00D2F2FFH` (from Xeltek UI) |
 | **Instruction validation** | MELPS 740 opcode table | R8C/Tiny opcode table (from emulator) |
 | **Erased flash range** | `$1000`–`$4070`, `$8A50`–`$FFC0` | TBD from extraction |
 | **Reference data** | 69 verified lines from screenshot | Reference screenshot available (see below) |
@@ -220,23 +251,28 @@ Store calibration in `grid_calibration.json`:
   "first_row_center_y": 0.0,
   "visible_rows": 0,
   "address_x_start": 0,
-  "address_digits": 8,
+  "address_digits": 10,
   "address_char_spacing": 0.0,
   "byte_x_offset": 0,
   "byte_stride": 0.0,
   "byte_digit_spacing": 0.0,
   "byte_group_gap": 0.0,
+  "dash_x_position": 0.0,
   "bytes_per_line": 16,
   "cell_width": 0,
   "cell_height": 0,
   "cell_y_offset": 0,
   "cell_x_offset": 0,
   "calibration_frame": "frame_NNNNN",
-  "notes": "Calibrated from Xeltek SuperPro 6100N hex buffer view"
+  "notes": "Calibrated from Xeltek SuperPro 6100N Edit Buffer dialog"
 }
 ```
 
-**`byte_group_gap`**: Extra pixel spacing between byte 7 and byte 8 (the center gap in 8+8 grouping). Set to 0 if bytes are uniformly spaced.
+**`byte_group_gap`**: Extra pixel spacing around the dash between byte 7 and byte 8. The Xeltek UI uses an actual dash character as a separator (confirmed from screenshot), so the byte stride is not uniform across all 16 positions.
+
+**`dash_x_position`**: X pixel position of the dash separator between byte groups. Used to skip the dash during character extraction.
+
+**`address_digits`**: Set to 10 (confirmed from reference screenshot: addresses like `000000FF70`).
 
 ---
 
@@ -267,17 +303,15 @@ For each unique frame:
 5. **Byte reading**: Extract and classify all 32 hex digits (16 bytes × 2 digits) per row
 6. **Record observations**: Store `(offset, bytes, confidence, frame_id)` tuples
 
-### 6.3 Offset-to-Address Mapping
+### 6.3 Address Mapping (Confirmed)
 
-The Xeltek SuperPro software displays buffer offsets, not necessarily physical MCU addresses. The mapping must be determined:
+The reference screenshot confirms **Option B**: the Xeltek buffer addresses correspond directly to MCU physical addresses. The buffer range is `$00000`–`$13FFF` (80 KB), and addresses shown in the hex view (e.g., `000000FF70`) are the actual physical MCU addresses with leading zeros padded to 10 digits.
 
-- **Option A**: The Xeltek reads 64 KB starting at physical address `$04000`, displayed as buffer offsets `$00000`–`$0FFFF`. Physical address = buffer offset + `$04000`.
-- **Option B**: The Xeltek reads all addressable memory and the offsets correspond directly to physical addresses.
-- **Option C**: Some other mapping scheme specific to the device configuration.
+- **No offset translation needed**: Buffer address = physical MCU address
+- **ROM region within buffer**: `$04000`–`$0FFFF` (lower 48 KB) + `$10000`–`$13FFF` (upper 16 KB)
+- **Non-ROM region**: `$00000`–`$03FFF` (SFR, RAM, reserved — 16 KB)
 
-This will be determined from:
-1. The reference screenshot (compare visible data with known ID code byte locations)
-2. The video itself (check if offset `$BFDF` contains `2F`, which would confirm Option A mapping: `$BFDF` + `$04000` = `$FFDF`)
+The reference screenshot shows the address `000000FFE0` containing the interrupt vector data, and addresses crossing from `$0FFF0` to `$10000` seamlessly, confirming contiguous physical addressing.
 
 ### 6.4 Multi-Frame Voting
 
@@ -311,28 +345,43 @@ The R5F21258SNFP emulator project includes instruction encoding documentation (`
 | `extracted_firmware.txt` | Raw extraction output (before merge) |
 | `firmware_merged.txt` | Merged/corrected hex dump |
 | `firmware_merged_sources.json` | Per-address source map |
-| `hakko_fm203.bin` | 64 KB firmware binary |
+| `hakko_fm203.bin` | 80 KB full buffer binary (or 64 KB ROM-only binary) |
 | `fast_knn_classifier.npz` | Trained kNN classifier |
 | `grid_calibration.json` | Grid geometry parameters |
 
 ### 6.8 Binary Generation
 
+Two binary outputs are generated:
+
+**Full buffer binary (80 KB)** — byte-for-byte image of the entire Xeltek buffer:
+
 ```python
-# 64 KB firmware image, pre-filled with 0xFF (erased flash)
-firmware = bytearray([0xFF] * 65536)  # 64 KB
+# 80 KB buffer image ($00000-$13FFF), pre-filled with 0xFF
+buffer = bytearray([0xFF] * 0x14000)  # 81,920 bytes
 
-# Place extracted bytes at correct offsets
-# If Xeltek uses buffer offsets (Option A):
-#   binary_offset = buffer_offset
-#   Physical address = buffer_offset + 0x04000
+# Buffer addresses = physical MCU addresses (no translation)
 for address, bytes_data in extracted_lines.items():
-    offset = address_to_binary_offset(address)
     for i, b in enumerate(bytes_data):
-        firmware[offset + i] = b
+        buffer[address + i] = b
 
-# Write binary
+with open('hakko_fm203_full.bin', 'wb') as f:
+    f.write(buffer)
+```
+
+**ROM-only binary (64 KB)** — just the program ROM, suitable for programming onto a replacement chip:
+
+```python
+# 64 KB ROM image ($04000-$13FFF), pre-filled with 0xFF
+rom = bytearray([0xFF] * 0x10000)  # 65,536 bytes
+
+for address, bytes_data in extracted_lines.items():
+    if 0x04000 <= address <= 0x13FF0:
+        rom_offset = address - 0x04000
+        for i, b in enumerate(bytes_data):
+            rom[rom_offset + i] = b
+
 with open('hakko_fm203.bin', 'wb') as f:
-    f.write(firmware)
+    f.write(rom)
 ```
 
 ---
@@ -351,7 +400,7 @@ A Flask/HTML web application for human-assisted review and correction of the ext
 │  │ (pixel   │ │  ┌─────────────────────────────────┐     │  │
 │  │  strip)  │ │  │ Offset: 0x00A340  Status: MISS  │     │  │
 │  │          │ │  ├─────────────────────────────────┤     │  │
-│  │ 4,096 px │ │  │ [A3][3C][01][26][..][..][..]...│     │  │
+│  │ 5,120 px │ │  │ [A3][3C][01][26][..][..][..]...│     │  │
 │  │ tall     │ │  │  16 editable byte cells         │     │  │
 │  │          │ │  ├─────────────────────────────────┤     │  │
 │  │ click to │ │  │ Frame crops (vertical stack)    │     │  │
@@ -389,7 +438,7 @@ A Flask/HTML web application for human-assisted review and correction of the ext
 
 ### 7.2 Scope
 
-The tool covers all firmware lines (64 KB / 16 = 4,096 lines if using flat buffer offsets, or the appropriate count based on the actual address layout). Lines are presented in prioritized order:
+The tool covers all 5,120 lines in the 80 KB buffer (`$00000`–`$13FFF`, 80 KB / 16 bytes per line). The 4,096 ROM lines (`$04000`–`$13FFF`) are the primary review focus; the 1,024 non-ROM lines (`$00000`–`$03FFF`) are available but lower priority. Lines are presented in prioritized order:
 
 1. **Missing lines** — no extracted data
 2. **Low-confidence lines** — extracted but kNN vote margin was narrow
@@ -429,15 +478,15 @@ For missing offsets where the standard pipeline found no data:
 
 Follows the same design as the FM-202 review tool (see `hakko-202-firmware-video/claude/SPEC_firmware_review_tool.md` for the full specification). Key adaptations:
 
-- **Minimap height**: Scaled to the number of firmware lines (4,096 for 64 KB, or adjusted per actual layout)
-- **Address display**: Shows both buffer offset and physical MCU address (e.g., `Offset 0x00A340 → MCU $0E340`)
+- **Minimap height**: 5,120 pixels (one per buffer line, $00000–$13FFF), with the non-ROM region ($00000–$03FFF) visually distinguished (dimmed or separate color)
+- **Address display**: Shows the physical MCU address (e.g., `$0A340`) with a region indicator (`ROM` or `SFR/RAM`)
 - **Byte cell alignment**: Uses Xeltek-specific grid constants (byte stride, group gap)
 - **ID code validation indicator**: Highlight the 7 known ID code byte positions with a special badge when their values match or mismatch the expected values
 
 ### 7.5 Stats Bar
 
 - **Review progress**: `Reviewed: N/M missing | N/M suspect | N/M confident`
-- **Current CRC**: Live CRC computation (algorithm TBD — may need to match what Xeltek reports, or use standard CRC-16/CCITT)
+- **Current checksum**: Live 32-bit checksum computation to match the Xeltek-reported value `00D2F2FFH` (algorithm TBD — likely a simple byte sum or CRC-32; must be determined by testing against known data)
 - **ID code status**: `ID: 7/7 match` or `ID: 5/7 match` — quick indicator of known-byte accuracy
 - **Address jump**: Text input for jumping to a specific offset
 - **Save/Export buttons**
@@ -464,7 +513,8 @@ Same as FM-202 review tool:
 
 - **Save**: `review_state.json` — preserves all review state, resumable across sessions
 - **Export Hex**: `firmware_reviewed.txt` — hex dump in standard format
-- **Export Binary**: `hakko_fm203_reviewed.bin` — 64 KB firmware binary
+- **Export Binary (ROM)**: `hakko_fm203_reviewed.bin` — 64 KB ROM-only binary (`$04000`–`$13FFF`)
+- **Export Binary (Full)**: `hakko_fm203_full_reviewed.bin` — 80 KB full buffer binary (`$00000`–`$13FFF`)
 
 ### 7.8 Flask Backend API
 
@@ -484,7 +534,7 @@ Same endpoints as FM-202 review tool, with path/naming adapted:
 | `POST` | `/api/line/<offset>` | Update line data |
 | `POST` | `/api/save` | Write review_state.json |
 | `POST` | `/api/export/hex` | Generate firmware_reviewed.txt |
-| `POST` | `/api/export/binary` | Generate hakko_fm203_reviewed.bin |
+| `POST` | `/api/export/binary` | Generate hakko_fm203_reviewed.bin (ROM) + full buffer |
 | `GET` | `/api/settings` | UI settings |
 | `POST` | `/api/settings` | Update UI settings |
 
@@ -515,9 +565,16 @@ Use the instruction encoding data from `R5F21258SNFP_emulator/INSTRUCTION_ENCODI
 
 The blog post mentions both units tested ran Firmware V2.00. If firmware from a second unit becomes available, byte-for-byte comparison would identify extraction errors vs. genuine firmware differences.
 
-### 8.6 CRC Validation
+### 8.6 Checksum Validation
 
-If the Xeltek software displays a CRC or checksum for the buffer contents (check the video for any such display), record it as the target CRC for validation. The CRC algorithm must also be identified (CRC-16/CCITT, CRC-32, simple checksum, etc.).
+The Xeltek SuperPro displays a 32-bit checksum in the Edit Buffer dialog: **`00D2F2FFH`**. This serves as the target checksum for the full 80 KB buffer (`$00000`–`$13FFF`).
+
+**Checksum algorithm identification**: The exact algorithm must be determined. Common possibilities:
+- Simple 32-bit byte sum (most likely for Xeltek — sum all bytes, truncate to 32 bits)
+- CRC-32 (IEEE 802.3)
+- CRC-32/JAMCRC
+
+The algorithm can be identified by computing candidate checksums against the reference screenshot's visible data and cross-referencing with the displayed value. Once identified, the checksum provides a strong end-to-end validation of the full extracted buffer.
 
 ---
 
@@ -548,7 +605,8 @@ hakko-203-firmware-video/
 ├── extracted_firmware.txt           # Raw kNN extraction output
 ├── firmware_merged.txt              # Final merged hex dump
 ├── firmware_merged_sources.json     # Per-address source tracking
-├── hakko_fm203.bin                  # 64 KB firmware binary
+├── hakko_fm203.bin                  # 64 KB ROM-only firmware binary
+├── hakko_fm203_full.bin             # 80 KB full buffer binary
 ├── fast_knn_classifier.npz          # Trained kNN model
 │
 ├── firmware_review_tool/            # Flask review application
@@ -598,7 +656,7 @@ hakko-203-firmware-video/
 2. Adapt `precompute_gaps.py` for gap context generation
 3. Adapt `app.py` Flask backend (new paths, address mapping, CRC)
 4. Adapt `index.html` frontend (byte cell alignment, address display, minimap sizing)
-5. Implement dual-address display (buffer offset + physical MCU address)
+5. Add region indicator for ROM vs. non-ROM addresses
 6. Add ID code validation indicator
 
 ### Phase 4: Review & Export
@@ -675,7 +733,7 @@ ffmpeg / ffprobe      # Frame extraction
 | Xeltek font is harder to classify than Segger | Lower extraction accuracy | Expand training set; tune features for Xeltek font |
 | Video is lower quality / more camera shake | Blurrier frames, more missing data | Multi-frame voting compensates; review tool for manual correction |
 | Buffer offset ≠ physical address mapping is complex | Wrong byte placement in binary | Validate against known ID code bytes early in pipeline |
-| No CRC visible in Xeltek UI | Cannot validate final binary via CRC | Rely on ID code, vector table, and instruction validation |
+| Checksum algorithm unknown | Cannot validate until algorithm identified | Test common algorithms (byte sum, CRC-32) against reference data; the 32-bit value `00D2F2FFH` is visible in the UI |
 | Large erased flash regions obscure actual code coverage | False sense of completion | Track FF-fill vs. observed data separately in source map |
 | Video has UI dialogs/popups during scrolling | Frames with obscured hex data | Detect and skip frames with non-standard UI state |
 | 11+ minutes of video produces 20K+ frames | Slow processing | Frame deduplication; parallel processing where possible |
@@ -689,7 +747,8 @@ ffmpeg / ffprobe      # Frame extraction
 3. **Vector table validity**: All interrupt vectors point to valid ROM addresses
 4. **Instruction validity**: Disassembly from reset vector produces valid R8C/Tiny instructions with no illegal opcodes in traced code paths
 5. **Reference match**: 100% accuracy on manually transcribed reference screenshot bytes
-6. **Binary output**: Valid 64 KB `hakko_fm203.bin` that can be programmed onto a replacement R5F21258SNFP
+6. **Checksum match**: 32-bit checksum of the full 80 KB buffer matches Xeltek-reported `00D2F2FFH`
+7. **Binary output**: Valid 64 KB ROM binary (`hakko_fm203.bin`) that can be programmed onto a replacement R5F21258SNFP, plus full 80 KB buffer binary
 
 ---
 
