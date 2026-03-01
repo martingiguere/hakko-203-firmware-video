@@ -10,6 +10,7 @@ __pycache__/
 
 # Data and Artifacts
 frames/
+frames
 crops/
 *.npz
 *.pkl
