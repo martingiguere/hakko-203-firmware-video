@@ -1,0 +1,145 @@
+# Authoritative Reference Transcription
+# Source: reference/reference_screenshot.png (Xeltek SuperPro 6100N "Edit Buffer" dialog)
+# Transcribed by: Claude (visual inspection of reference screenshot)
+# Status: DRAFT — requires manual verification by human
+#
+# Device Info from screenshot:
+#   MCU:              R5F21258SNFP (Renesas R8C/24 Group)
+#   Programmer:       Xeltek SuperPro 6100N with DX3063 adapter
+#   Buffer range:     0000000000H – 0000013FFFH (80 KB)
+#   Checksum:         00D2F2FFH (32-bit)
+#   Address cursor:   000000FF7FH
+#   Source device:    Hakko FM-203 Soldering Station (board B3403)
+#   Firmware version: V2.00 (per blog post)
+#
+# Visible address range: $0FF70 – $10060 (16 rows, 256 bytes)
+# Format: ADDRESS: XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX XX
+#
+# Note: The Xeltek UI shows "8-dash-8" byte grouping (e.g., "4E FC 00 00-4E FC 00 00")
+#       but we record in standard 16-byte-per-line format here.
+#
+# Confidence markers:
+#   (no marker) = high confidence from clear image region
+#   [?]         = byte needs verification (image ambiguity or discrepancy with SPEC)
+#
+# ============================================================================
+
+# --- ROM code region ($0FF70–$0FFCF): repeating pattern ---
+# These bytes are regular ROM code, NOT vector table entries.
+# Pattern: 4E FC 00 00 repeated (likely unused-interrupt handler or jump table)
+
+0FF70: 4E FC 00 00 4E FC 00 00 4E FC 00 00 4E FC 00 00
+0FF80: 4E FC 00 00 4E FC 00 00 4E FC 00 00 4E FC 00 00
+0FF90: 4E FC 00 00 4E FC 00 00 4E FC 00 00 4E FC 00 00
+0FFA0: 4E FC 00 00 4E FC 00 00 4E FC 00 00 4E FC 00 00
+0FFB0: 4E FC 00 00 4E FC 00 00 4E FC 00 00 4E FC 00 00
+0FFC0: 4E FC 00 00 4E FC 00 00 4E FC 00 00 4E FC 00 00
+
+# --- Interrupt vector table begins at $0FFDC (within row at $0FFD0) ---
+# Bytes $0FFD0–$0FFDB are still ROM code (4E FC 00 00 pattern).
+# Bytes $0FFDC–$0FFDF are the undefined instruction vector.
+# The ISP ID code byte at $FFDF overlays the last byte of this vector.
+
+0FFD0: 4E FC 00 00 4E FC 00 00 4E FC 00 00 4E FC 00 48
+
+# --- Vector table + ISP ID code overlay ($0FFE0–$0FFEF) ---
+# $FFE0–$FFE3: Overflow vector (ID byte $FFE3 = 4B)
+# $FFE4–$FFE7: BRK vector (no ID byte — standard handler at $0FC4E)
+# $FFE8–$FFEB: Address match vector (ID byte $FFEB = 30)
+# $FFEC–$FFEF: Single step vector (ID byte $FFEF = 30)
+
+0FFE0: 4E FC 00 4B 4E FC 00 00 4E FC 00 30 4E FC 00 30
+
+# --- Vector table continued + reset vector ($0FFF0–$0FFFF) ---
+# $FFF0–$FFF3: Watchdog/osc/voltage vector (programmed, ID byte $FFF3 = 32)
+# $FFF4–$FFF7: Reserved vector (erased FF FF FF, ID byte $FFF7 = 35)
+# $FFF8–$FFFB: Reserved vector (erased FF FF FF, ID byte $FFFB = 36)
+# $FFFC–$FFFF: Reset vector (AE FB 00 5F → entry point $0FBAE)
+
+0FFF0: 4E FC 00 32 FF FF FF 35 FF FF FF 36 AE FB 00 5F
+
+# --- Upper ROM: 7-segment display lookup table ($10000–$1001F) ---
+# $10000–$10009: Common-anode 7-segment codes for digits 0–9
+#   C0=0, F9=1, A4=2, B0=3, 99=4, 92=5, 82=6, D8=7, 80=8, 90=9
+# $1000A–$1000F: Additional display patterns (FF=blank, others=custom chars)
+
+10000: C0 F9 A4 B0 99 92 82 D8 80 90 FF C6 8E 8C B9 BF
+
+# $10010–$1001F: Additional 7-segment / display lookup patterns
+
+10010: 92 86 89 87 88 C1 C0 A3 F7 94 C7 A1 FF F1 91 AB
+
+# --- Bit mask table ($10020–$10027) then calibration ramp start ---
+# $10020–$10027: Inverted single-bit masks
+#   FD=~(1<<0), FB=~(1<<1), F7=~(1<<2), EF=~(1<<3),
+#   DF=~(1<<4), BF=~(1<<5), 7F=~(1<<6), FF=~(1<<7)
+# $10028–$1002F: Start of ramp-up calibration table
+
+10020: FD FB F7 EF DF BF 7F FF 00 06 06 06 06 06 08 08
+
+# --- Ramp-up calibration lookup tables ($10030–$1006F) ---
+# Monotonically non-decreasing values used for temperature/power ramp control
+
+10030: 08 0A 0A 0A 0A 0E 0E 10 10 12 12 12 12 12 12 12
+10040: 12 12 12 14 14 14 14 14 14 14 14 14 14 14 14 14
+10050: 00 06 06 06 06 06 06 06 06 06 06 06 08 08 08 08
+10060: 08 08 08 08 08 0A 0A 0A 0A 0C 0C 0C 0E 0E 10 10
+
+# ============================================================================
+# ISP ID Code Validation (7 known bytes from SPEC.md Section 2):
+#
+#   Address  Expected  Screenshot  Match  ASCII
+#   $FFDF    2F        48          [?]    'H' (blog post may be from different unit/revision)
+#   $FFE3    4B        4B          YES    'K'
+#   $FFEB    30        30          YES    '0'
+#   $FFEF    30        30          YES    '0'
+#   $FFF3    32        32          YES    '2'
+#   $FFF7    35        35          YES    '5'
+#   $FFFB    36        36          YES    '6'
+#
+#   Result: 6/7 match, 1 discrepancy at $FFDF
+#
+# ============================================================================
+# ASCII Cross-Check Validation (spot checks):
+#
+#   Row $0FF70 byte 0: 4E → 'N'  (confirmed: ASCII column starts with 'N')
+#   Row $0FFD0 byte 15: 48 → 'H' (confirmed: ASCII column ends with 'H')
+#   Row $0FFE0 byte 3: 4B → 'K'  (confirmed: ASCII shows 'K' at position 3)
+#   Row $0FFE0 byte 11: 30 → '0' (confirmed: ASCII shows '0')
+#   Row $0FFF0 byte 15: 5F → '_' (confirmed: ASCII shows '_' at end)
+#
+# ============================================================================
+# Pattern Observations:
+#
+#   $0FF70–$0FFC0: Repeating 4E FC 00 00 (24 repetitions = 96 bytes)
+#     Likely an unused-interrupt handler or filled jump table entries
+#     pointing to a common handler at address $0FC4E
+#
+#   $0FFDC–$0FFF3: Programmed interrupt vectors (4E FC 00 xx) with ISP ID
+#     code bytes overlaying the 4th byte of each entry
+#
+#   $0FFF4–$0FFFB: Reserved vectors left erased (FF FF FF xx) with only
+#     the ISP ID code byte programmed at the 4th byte position
+#
+#   $0FFFC–$0FFFF: Reset vector = AE FB 00 5F → entry point at $0FBAE
+#     (byte 3 = 5F is not used for 20-bit addressing; may be option byte)
+#
+#   $10000–$10009: 7-segment display lookup table (common-anode, digits 0–9)
+#     Standard encoding: C0 F9 A4 B0 99 92 82 D8 80 90
+#
+#   $10020–$10027: Inverted bit mask table (FD FB F7 EF DF BF 7F FF)
+#     Used for clearing individual bits in port registers
+#
+#   $10028+: Ramp-up calibration tables with monotonically non-decreasing
+#     values (00, 06, 08, 0A, 0C, 0E, 10, 12, 14) — temperature control
+#
+# ============================================================================
+# Summary:
+#   Total lines:  16
+#   Total bytes:  256 (addresses $0FF70 through $1006F)
+#   Coverage:     256 of 81,920 bytes = 0.3% of full buffer
+#                 256 of 65,536 bytes = 0.4% of ROM region
+#
+# These 256 bytes span the boundary between lower ROM ($04000–$0FFFF)
+# and upper ROM ($10000–$13FFF), including the interrupt vector table
+# and the start of the upper ROM data tables.

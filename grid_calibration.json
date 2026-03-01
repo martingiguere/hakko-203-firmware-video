@@ -1,0 +1,105 @@
+{
+  "frame_width": 1920,
+  "frame_height": 1080,
+  "hex_region": {
+    "x_min": 0,
+    "x_max": 1355,
+    "y_min": 258,
+    "y_max": 809
+  },
+  "row_height": 28.0,
+  "first_row_center_y": 272.0,
+  "visible_rows": 13,
+  "address_x_start": 271,
+  "address_digits": 10,
+  "address_char_spacing": 13.92,
+  "byte_x_offset": 454,
+  "byte_stride": 41.75,
+  "byte_digit_spacing": 13.92,
+  "byte_group_gap": 0.0,
+  "dash_x_position": 781.04,
+  "bytes_per_line": 16,
+  "cell_width": 14,
+  "cell_height": 28,
+  "cell_y_offset": 0,
+  "cell_x_offset": 0,
+  "calibration_frame": "frame_05000.png",
+  "notes": "Calibrated from Xeltek SuperPro 6100N Edit Buffer dialog",
+  "layout": {
+    "address_cols": [
+      0,
+      10
+    ],
+    "hex_start_col": 12,
+    "hex_byte_stride": 3,
+    "hex_bytes_per_line": 16,
+    "byte_group_size": 8,
+    "dash_between_groups": true
+  },
+  "byte_positions": [
+    {
+      "byte": 0,
+      "x": 454.0
+    },
+    {
+      "byte": 1,
+      "x": 495.8
+    },
+    {
+      "byte": 2,
+      "x": 537.5
+    },
+    {
+      "byte": 3,
+      "x": 579.2
+    },
+    {
+      "byte": 4,
+      "x": 621.0
+    },
+    {
+      "byte": 5,
+      "x": 662.8
+    },
+    {
+      "byte": 6,
+      "x": 704.5
+    },
+    {
+      "byte": 7,
+      "x": 746.2
+    },
+    {
+      "byte": 8,
+      "x": 788.0
+    },
+    {
+      "byte": 9,
+      "x": 829.8
+    },
+    {
+      "byte": 10,
+      "x": 871.5
+    },
+    {
+      "byte": 11,
+      "x": 913.2
+    },
+    {
+      "byte": 12,
+      "x": 955.0
+    },
+    {
+      "byte": 13,
+      "x": 996.8
+    },
+    {
+      "byte": 14,
+      "x": 1038.5
+    },
+    {
+      "byte": 15,
+      "x": 1080.2
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+# Environments
+venv/
+.env
+
+# Python bytecode
+__pycache__/
+
+# Release artifacts
+*.tar.gz
+
+# Data and Artifacts
+frames/
+crops/
+*.npz
+*.pkl
+calibration_debug.png
+
+# Large Videos
+*.mp4
+*.mkv
+*.webm
+
+# Local Binaries
+ffmpeg
+ffprobe
+
+# Review state (per-session)
+review_state.json
+
+# IDE / Editor Settings
+.claude/
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+Thumbs.db
