@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Firmware Review Tool — Hakko FM-203</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: "SF Mono", "Menlo", "Consolas", monospace;
+            background: #f5f5f5;
+            color: #222;
+            display: grid;
+            grid-template-rows: 48px 1fr;
+            grid-template-columns: 60px 1fr;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Stats Bar --- */
+        #stats-bar {
+            grid-column: 1 / -1;
+            grid-row: 1;
+            background: #e8eaf0;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 16px;
+            z-index: 10;
+            font-size: 13px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        #stats-text { color: #444; }
+        #stats-text span { margin-right: 10px; }
+        #checksum-display { font-weight: bold; }
+        .checksum-match { color: #2e7d32; }
+        .checksum-mismatch { color: #c62828; }
+        #id-display { font-weight: bold; margin-left: 8px; }
+        #addr-jump {
+            width: 80px;
+            padding: 3px 6px;
+            font-family: inherit;
+            font-size: 13px;
+            border: 1px solid #aaa;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+        .bar-btn {
+            padding: 4px 10px;
+            font-family: inherit;
+            font-size: 12px;
+            border: 1px solid #999;
+            border-radius: 3px;
+            background: #fff;
+            cursor: pointer;
+        }
+        .bar-btn:hover { background: #e0e0e0; }
+        .bar-btn.dirty { font-weight: bold; }
+        .bar-spacer { flex: 1; }
+
+        /* --- Sidebar / Minimap --- */
+        #sidebar {
+            grid-column: 1;
+            grid-row: 2;
+            background: #e0e0e0;
+            border-right: 1px solid #ccc;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4px 0;
+        }
+        #minimap-canvas {
+            cursor: pointer;
+            image-rendering: pixelated;
+        }
+
+        /* --- Main Panel --- */
+        #main-panel {
+            grid-column: 2;
+            grid-row: 2;
+            overflow-y: auto;
+            padding: 16px 24px;
+        }
+
+        /* Line Header */
+        #line-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        #line-addr {
+            font-size: 20px;
+            font-weight: bold;
+            color: #111;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #fff;
+        }
+        .badge-unreviewed { background: #888; }
+        .badge-accepted { background: #43a047; }
+        .badge-edited { background: #1e88e5; }
+        .badge-flagged { background: #e53935; }
+        .badge-missing { background: #888; }
+        .region-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .region-rom { background: #c8e6c9; color: #2e7d32; }
+        .region-sfr { background: #e0e0e0; color: #666; }
+        .nav-btn {
+            padding: 4px 10px;
+            font-family: inherit;
+            font-size: 12px;
+            border: 1px solid #999;
+            border-radius: 3px;
+            background: #fff;
+            cursor: pointer;
+        }
+        .nav-btn:hover { background: #e0e0e0; }
+        #frame-count { color: #666; font-size: 12px; }
+
+        /* Byte Cells */
+        #byte-cells {
+            display: flex;
+            gap: 0;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+        .byte-cell {
+            text-align: center;
+            font-family: inherit;
+            font-weight: bold;
+            border: 1px solid #aaa;
+            border-radius: 3px;
+            padding: 0;
+            text-transform: uppercase;
+            box-sizing: border-box;
+        }
+        .byte-cell:focus {
+            outline: 2px solid #1e88e5;
+            outline-offset: -1px;
+        }
+        .conf-high { background: #c8f7c5; }
+        .conf-medium { background: #fff3cd; }
+        .conf-low { background: #f5c6cb; }
+        .conf-none { background: #e2e2e2; }
+        .conf-edited { background: #fff; }
+        .byte-index {
+            display: flex;
+            gap: 0;
+            margin-bottom: 2px;
+        }
+        .byte-idx-label {
+            text-align: center;
+            color: #999;
+        }
+
+        /* Crops */
+        #crops-section { margin-top: 8px; }
+        #zoom-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+        #zoom-slider { width: 100px; }
+        .crop-wrapper {
+            margin-bottom: 12px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 6px;
+        }
+        .crop-label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .crop-container {
+            position: relative;
+            overflow: auto;
+            line-height: 0;
+        }
+        .crop-img {
+            image-rendering: pixelated;
+            transform-origin: top left;
+            display: block;
+        }
+        .crop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            pointer-events: none;
+        }
+        #no-frames-msg {
+            color: #999;
+            font-style: italic;
+            margin-top: 16px;
+        }
+
+        /* Gap context mode */
+        #gap-banner {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            display: none;
+        }
+        #gap-banner .gap-title {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 4px;
+        }
+        #gap-banner .gap-info {
+            color: #666;
+            font-size: 12px;
+        }
+        #gap-nav-strip {
+            display: none;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+        .gap-nav-link {
+            padding: 2px 8px;
+            font-size: 12px;
+            font-family: inherit;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background: #fff;
+            cursor: pointer;
+            color: #444;
+            text-decoration: none;
+        }
+        .gap-nav-link:hover { background: #e8eaf0; }
+        .gap-nav-link.current {
+            font-weight: bold;
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+        .gap-crop-wrapper {
+            margin-bottom: 12px;
+            background: #fffde7;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 6px;
+        }
+        .gap-crop-label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 4px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .quality-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .quality-high { background: #43a047; }
+        .quality-medium { background: #f9a825; color: #333; }
+        .quality-low { background: #999; }
+
+        /* Keyboard help */
+        #keyboard-help {
+            margin-top: 24px;
+            padding: 12px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #888;
+        }
+        #keyboard-help summary { cursor: pointer; color: #666; }
+        #keyboard-help kbd {
+            background: #eee;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-size: 11px;
+        }
+        #keyboard-help td { padding: 2px 8px; }
+
+        /* Toast notification */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 13px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+            pointer-events: none;
+        }
+        #toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<!-- Stats Bar -->
+<div id="stats-bar">
+    <div id="stats-text">Loading...</div>
+    <span id="checksum-display"></span>
+    <span id="id-display"></span>
+    <div class="bar-spacer"></div>
+    <input type="text" id="addr-jump" placeholder="Addr" title="Jump to address (Ctrl+G)">
+    <button class="bar-btn" id="btn-save" onclick="doSave()" title="Ctrl+S">Save</button>
+    <button class="bar-btn" id="btn-export-hex" onclick="doExportHex()">Export Hex</button>
+    <button class="bar-btn" id="btn-export-bin" onclick="doExportBin()">Export Binary</button>
+</div>
+
+<!-- Sidebar / Minimap -->
+<div id="sidebar">
+    <canvas id="minimap-canvas" width="40" height="5120"></canvas>
+</div>
+
+<!-- Main Panel -->
+<div id="main-panel">
+    <div id="line-header">
+        <span id="line-addr">0x00000</span>
+        <span class="status-badge badge-unreviewed" id="status-badge">UNREVIEWED</span>
+        <span class="region-badge" id="region-badge"></span>
+        <button class="nav-btn" onclick="navigateSeq(-1)" title="Shift+Left: previous address">&laquo; Seq</button>
+        <button class="nav-btn" onclick="navigateSeq(+1)" title="Shift+Right: next address">Seq &raquo;</button>
+        <button class="nav-btn" onclick="navigate(-1)" title="[ or Left Arrow: previous by priority">&lsaquo; Pri</button>
+        <button class="nav-btn" onclick="navigate(+1)" title="] or Right Arrow: next by priority">Pri &rsaquo;</button>
+        <span id="frame-count"></span>
+    </div>
+
+    <div class="byte-index" id="byte-index-row"></div>
+    <div id="byte-cells"></div>
+
+    <div id="gap-banner">
+        <div class="gap-title" id="gap-title"></div>
+        <div class="gap-info">Context crops from neighboring frames. Yellow highlight marks the target row for manual transcription.</div>
+    </div>
+    <div id="gap-nav-strip"></div>
+
+    <div id="crops-section">
+        <div id="zoom-control">
+            Zoom: <input type="range" id="zoom-slider" min="1" max="5" step="0.5" value="2">
+            <span id="zoom-label">2x</span>
+        </div>
+        <div id="crops-container"></div>
+        <div id="no-frames-msg" style="display:none;">No frame data available for this address.</div>
+    </div>
+
+    <details id="keyboard-help">
+        <summary>Keyboard shortcuts</summary>
+        <table>
+            <tr><td><kbd>Space</kbd></td><td>Accept line &amp; next priority</td></tr>
+            <tr><td><kbd>Enter</kbd></td><td>Accept line &amp; next sequential (+0x10)</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Skip (advance without status change)</td></tr>
+            <tr><td><kbd>F</kbd></td><td>Flag line &amp; advance</td></tr>
+            <tr><td><kbd>&larr;</kbd> / <kbd>[</kbd></td><td>Previous line (priority)</td></tr>
+            <tr><td><kbd>&rarr;</kbd> / <kbd>]</kbd></td><td>Next line (priority)</td></tr>
+            <tr><td><kbd>Shift+&larr;</kbd></td><td>Previous address (sequential)</td></tr>
+            <tr><td><kbd>Shift+&rarr;</kbd></td><td>Next address (sequential)</td></tr>
+            <tr><td><kbd>R</kbd></td><td>Reset line status to unreviewed</td></tr>
+            <tr><td><kbd>+</kbd> / <kbd>-</kbd></td><td>Zoom in / out</td></tr>
+            <tr><td><kbd>1</kbd>&ndash;<kbd>9</kbd></td><td>Scroll to frame crop #N</td></tr>
+            <tr><td><kbd>Ctrl+S</kbd></td><td>Save</td></tr>
+            <tr><td><kbd>Ctrl+G</kbd></td><td>Jump to address</td></tr>
+            <tr><td><kbd>Tab</kbd></td><td>Next byte cell</td></tr>
+        </table>
+    </details>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// =========================================================================
+// State
+// =========================================================================
+const state = {
+    currentAddr: "00000",
+    lineData: null,       // response from /api/line
+    frameData: null,      // response from /api/frames
+    minimapData: [],      // 5120 entries
+    addressList: [],      // addresses in priority order
+    addrIndex: 0,
+    zoom: 2,
+    dirty: false,
+    gapData: null,          // response from /api/gap_frames
+    gapContextMode: false,  // whether current address is in gap context mode
+};
+
+// Tier priority for sorting (lower = review first)
+const TIER_PRIORITY = {
+    missing: 0,
+    low_confidence: 1,
+    flagged: 2,
+    high_confidence: 3,
+    edited: 4,
+    accepted: 5,
+};
+
+const TIER_COLORS = {
+    missing:         "#888888",
+    flagged:         "#e53935",
+    low_confidence:  "#f9a825",
+    edited:          "#1e88e5",
+    accepted:        "#43a047",
+    high_confidence: "#bdbdbd",
+};
+
+const BADGE_CLASSES = {
+    unreviewed: "badge-unreviewed",
+    accepted:   "badge-accepted",
+    edited:     "badge-edited",
+    flagged:    "badge-flagged",
+};
+
+// =========================================================================
+// API Helper
+// =========================================================================
+async function api(method, path, body) {
+    const opts = { method, headers: {} };
+    if (body !== undefined) {
+        opts.headers["Content-Type"] = "application/json";
+        opts.body = JSON.stringify(body);
+    }
+    const resp = await fetch(path, opts);
+    return resp.json();
+}
+
+// =========================================================================
+// Toast
+// =========================================================================
+let toastTimer = null;
+function showToast(msg, durationMs = 2500) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), durationMs);
+}
+
+// =========================================================================
+// Initialization
+// =========================================================================
+async function init() {
+    // Build byte index labels
+    const idxRow = document.getElementById("byte-index-row");
+    for (let i = 0; i < 16; i++) {
+        const span = document.createElement("span");
+        span.className = "byte-idx-label";
+        span.textContent = i.toString(16).toUpperCase();
+        idxRow.appendChild(span);
+    }
+
+    // Build byte cell inputs
+    const cellsDiv = document.getElementById("byte-cells");
+    for (let i = 0; i < 16; i++) {
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.maxLength = 2;
+        inp.className = "byte-cell";
+        inp.dataset.idx = i;
+        inp.addEventListener("input", onByteInput);
+        inp.addEventListener("change", onByteChange);
+        inp.addEventListener("keydown", onByteCellKeydown);
+        cellsDiv.appendChild(inp);
+    }
+
+    // Load settings
+    const settings = await api("GET", "/api/settings");
+    if (settings.zoom_level) {
+        state.zoom = settings.zoom_level;
+        document.getElementById("zoom-slider").value = state.zoom;
+        document.getElementById("zoom-label").textContent = state.zoom + "x";
+    }
+    if (settings.current_address) {
+        state.currentAddr = settings.current_address.toUpperCase().padStart(5, "0");
+    }
+
+    // Load minimap
+    state.minimapData = await api("GET", "/api/minimap");
+
+    // Build priority-sorted address list
+    buildAddressList();
+
+    // Set addrIndex to current address
+    const idx = state.addressList.indexOf(state.currentAddr);
+    state.addrIndex = idx >= 0 ? idx : 0;
+    state.currentAddr = state.addressList[state.addrIndex];
+
+    // Set initial byte cell layout for current zoom
+    updateByteCellLayout();
+
+    // Render minimap
+    renderMinimap();
+
+    // Load and render current line
+    await loadLine(state.currentAddr);
+
+    // Refresh stats
+    await refreshStats();
+
+    // Zoom slider
+    document.getElementById("zoom-slider").addEventListener("input", (e) => {
+        state.zoom = parseFloat(e.target.value);
+        document.getElementById("zoom-label").textContent = state.zoom + "x";
+        updateByteCellLayout();
+        renderCrops();
+    });
+
+    // Address jump
+    document.getElementById("addr-jump").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            e.stopPropagation();  // Don't let Enter bubble to onGlobalKeydown
+            jumpToAddr(e.target.value);
+            e.target.blur();
+        }
+    });
+
+    // Global keyboard shortcuts
+    document.addEventListener("keydown", onGlobalKeydown);
+
+    // Beforeunload
+    window.addEventListener("beforeunload", (e) => {
+        if (state.dirty) {
+            e.preventDefault();
+            e.returnValue = "Unsaved changes";
+        }
+    });
+}
+
+function updateByteCellLayout() {
+    const zoom = state.zoom;
+    const offset = 184;       // byte 0 in crop coords (454 - 270)
+    const stride = 41.75;     // byte spacing in crop
+    const digitWidth = 28;    // 2 digits x 14px
+    const containerWidth = 830 * zoom;  // crop width x zoom
+
+    // --- Byte index labels ---
+    const idxRow = document.getElementById("byte-index-row");
+    idxRow.style.position = "relative";
+    idxRow.style.width = containerWidth + "px";
+    idxRow.style.height = Math.round(12 * zoom) + "px";
+
+    const labels = idxRow.querySelectorAll(".byte-idx-label");
+    labels.forEach((label, i) => {
+        label.style.position = "absolute";
+        label.style.left = Math.round((offset + i * stride) * zoom) + "px";
+        label.style.width = Math.round(digitWidth * zoom) + "px";
+        label.style.fontSize = Math.max(8, Math.round(5 * zoom)) + "px";
+    });
+
+    // --- Byte input cells ---
+    const cellsDiv = document.getElementById("byte-cells");
+    cellsDiv.style.position = "relative";
+    cellsDiv.style.width = containerWidth + "px";
+    const cellHeight = Math.max(20, Math.round(12 * zoom));
+    cellsDiv.style.height = cellHeight + "px";
+
+    const cells = cellsDiv.querySelectorAll(".byte-cell");
+    const cellWidth = Math.round(digitWidth * zoom);
+    const fontSize = Math.max(10, Math.round(7 * zoom)) + "px";
+    cells.forEach((cell, i) => {
+        cell.style.position = "absolute";
+        cell.style.left = Math.round((offset + i * stride) * zoom) + "px";
+        cell.style.width = cellWidth + "px";
+        cell.style.height = cellHeight + "px";
+        cell.style.fontSize = fontSize;
+    });
+}
+
+function buildAddressList() {
+    // Build maps of addr -> tier and addr -> gap_start from minimap
+    const tierMap = {};
+    const gapStartMap = {};
+    for (const entry of state.minimapData) {
+        tierMap[entry.address] = entry.tier;
+        if (entry.gap_start) {
+            gapStartMap[entry.address] = entry.gap_start;
+        }
+    }
+    // Sort addresses by tier priority, then by gap_start (groups gap members),
+    // then by address (numeric order within tier/gap)
+    state.addressList = state.minimapData.map(e => e.address).sort((a, b) => {
+        const ta = TIER_PRIORITY[tierMap[a]] ?? 3;
+        const tb = TIER_PRIORITY[tierMap[b]] ?? 3;
+        if (ta !== tb) return ta - tb;
+        // For missing tier, group by gap_start
+        const ga = gapStartMap[a] || a;
+        const gb = gapStartMap[b] || b;
+        if (ga !== gb) return ga.localeCompare(gb);
+        return a.localeCompare(b);
+    });
+}
+
+// =========================================================================
+// Navigation
+// =========================================================================
+async function loadLine(addr) {
+    state.currentAddr = addr;
+    const idx = state.addressList.indexOf(addr);
+    if (idx >= 0) state.addrIndex = idx;
+
+    // Fetch line data and frame data in parallel
+    const [lineData, frameData] = await Promise.all([
+        api("GET", `/api/line/${addr}`),
+        api("GET", `/api/frames/${addr}`),
+    ]);
+    state.lineData = lineData;
+    state.frameData = frameData;
+
+    // Check if this is a missing address with no standard frames -- enter gap context mode
+    state.gapContextMode = false;
+    state.gapData = null;
+    if (lineData.source === "missing" && (!frameData.frames || frameData.frames.length === 0)) {
+        try {
+            const gapResp = await fetch(`/api/gap_frames/${addr}`);
+            if (gapResp.ok) {
+                state.gapData = await gapResp.json();
+                state.gapContextMode = true;
+            }
+        } catch (e) { /* no gap data available */ }
+    }
+
+    renderLineHeader();
+    renderByteCells();
+    renderGapBanner();
+    renderGapNavStrip();
+    renderCrops();
+    renderMinimapMarker();
+
+    // Save current address to settings (fire-and-forget)
+    api("POST", "/api/settings", { current_address: addr });
+}
+
+function navigate(delta) {
+    const newIdx = state.addrIndex + delta;
+    if (newIdx < 0 || newIdx >= state.addressList.length) {
+        showToast(delta > 0 ? "End of list" : "Start of list");
+        return;
+    }
+    state.addrIndex = newIdx;
+    loadLine(state.addressList[newIdx]);
+}
+
+function navigateSeq(delta) {
+    // Navigate to the next/previous sequential address (+/-0x10)
+    const currentInt = parseInt(state.currentAddr, 16);
+    const newInt = currentInt + delta * 0x10;
+    if (newInt < 0x00000 || newInt > 0x13FF0) {
+        showToast(delta > 0 ? "End of address range" : "Start of address range");
+        return;
+    }
+    const newAddr = newInt.toString(16).toUpperCase().padStart(5, "0");
+    loadLine(newAddr);
+}
+
+function jumpToAddr(raw) {
+    let addr = raw.trim().toUpperCase().replace(/^0X/, "").padStart(5, "0");
+    // Align to 16-byte boundary
+    const num = parseInt(addr, 16);
+    if (isNaN(num)) { showToast("Invalid address"); return; }
+    const aligned = (num & 0xFFFF0).toString(16).toUpperCase().padStart(5, "0");
+    const idx = state.addressList.indexOf(aligned);
+    if (idx < 0) {
+        // Address not in priority list, but might still be valid
+        if (state.minimapData.some(e => e.address === aligned)) {
+            loadLine(aligned);
+        } else {
+            showToast("Address out of range");
+        }
+        return;
+    }
+    state.addrIndex = idx;
+    loadLine(aligned);
+}
+
+// =========================================================================
+// Render: Line Header
+// =========================================================================
+function renderLineHeader() {
+    const d = state.lineData;
+    if (!d) return;
+
+    document.getElementById("line-addr").textContent = `0x${d.address}`;
+
+    const badge = document.getElementById("status-badge");
+    const status = d.source === "missing" && d.status === "unreviewed" ? "missing" : d.status;
+    badge.textContent = status.toUpperCase();
+    badge.className = "status-badge " + (BADGE_CLASSES[d.status] || "badge-unreviewed");
+    if (status === "missing") badge.className = "status-badge badge-missing";
+
+    // Address region badge
+    const regionBadge = document.getElementById("region-badge");
+    const addrInt = parseInt(d.address, 16);
+    if (addrInt >= 0x04000) {
+        regionBadge.textContent = "ROM";
+        regionBadge.className = "region-badge region-rom";
+    } else {
+        regionBadge.textContent = "SFR/RAM";
+        regionBadge.className = "region-badge region-sfr";
+    }
+
+    if (state.gapContextMode && state.gapData) {
+        const g = state.gapData;
+        const nCandidates = g.candidates ? g.candidates.length : 0;
+        document.getElementById("frame-count").textContent =
+            `Gap context: ${nCandidates} candidate frame${nCandidates !== 1 ? "s" : ""}`;
+    } else {
+        document.getElementById("frame-count").textContent =
+            d.frame_count > 0 ? `Visible in ${d.frame_count} frame${d.frame_count !== 1 ? "s" : ""}` : "No frames";
+    }
+}
+
+// =========================================================================
+// Render: Byte Cells
+// =========================================================================
+function renderByteCells() {
+    const d = state.lineData;
+    if (!d) return;
+    const cells = document.querySelectorAll(".byte-cell");
+    for (let i = 0; i < 16; i++) {
+        const cell = cells[i];
+        const val = d.bytes[i];
+        cell.value = val === "--" ? "" : val;
+        // Determine background
+        if (d.edited_positions && d.edited_positions.includes(i)) {
+            cell.className = "byte-cell conf-edited";
+        } else {
+            const conf = d.confidence ? d.confidence[i] : "none";
+            cell.className = "byte-cell conf-" + conf;
+        }
+    }
+}
+
+// =========================================================================
+// Byte Cell Events
+// =========================================================================
+function onByteInput(e) {
+    const inp = e.target;
+    // Strip non-hex characters
+    inp.value = inp.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase().slice(0, 2);
+}
+
+function onByteChange(e) {
+    const inp = e.target;
+    const idx = parseInt(inp.dataset.idx, 10);
+    const val = inp.value.toUpperCase();
+
+    // Validate: must be exactly 2 hex chars or empty
+    if (val.length === 0) {
+        inp.value = "";
+        commitBytes();
+        return;
+    }
+    if (val.length === 1) {
+        inp.value = "0" + val;
+    }
+    commitBytes();
+}
+
+async function commitBytes() {
+    const cells = document.querySelectorAll(".byte-cell");
+    const bytes = [];
+    for (let i = 0; i < 16; i++) {
+        const v = cells[i].value.trim().toUpperCase();
+        bytes.push(v.length === 2 ? v : "--");
+    }
+
+    // Check if anything actually changed
+    const orig = state.lineData.bytes;
+    let changed = false;
+    for (let i = 0; i < 16; i++) {
+        if (bytes[i] !== orig[i]) { changed = true; break; }
+    }
+    if (!changed) return;
+
+    const result = await api("POST", `/api/line/${state.currentAddr}`, { bytes });
+    state.dirty = true;
+    updateDirtyIndicator();
+
+    // Refresh line data to get updated status/edited_positions
+    state.lineData = await api("GET", `/api/line/${state.currentAddr}`);
+    renderLineHeader();
+    renderByteCells();
+    renderCropOverlays();
+
+    // Invalidate minimap
+    state.minimapData = await api("GET", "/api/minimap");
+    buildAddressList();
+    state.addrIndex = state.addressList.indexOf(state.currentAddr);
+    renderMinimap();
+}
+
+function onByteCellKeydown(e) {
+    if (e.key === "Tab") {
+        e.preventDefault();
+        const idx = parseInt(e.target.dataset.idx, 10);
+        const next = e.shiftKey ? idx - 1 : idx + 1;
+        if (next >= 0 && next < 16) {
+            const cells = document.querySelectorAll(".byte-cell");
+            cells[next].focus();
+            cells[next].select();
+        }
+    }
+}
+
+function isInByteCell() {
+    return document.activeElement && document.activeElement.classList.contains("byte-cell");
+}
+
+// =========================================================================
+// Render: Gap Banner & Navigation
+// =========================================================================
+function renderGapBanner() {
+    const banner = document.getElementById("gap-banner");
+    if (!state.gapContextMode || !state.gapData) {
+        banner.style.display = "none";
+        return;
+    }
+    const g = state.gapData;
+    document.getElementById("gap-title").textContent =
+        `Gap 0x${g.gap_start}\u20130x${g.gap_end} (${g.gap_size} missing line${g.gap_size !== 1 ? "s" : ""})`;
+    banner.style.display = "block";
+}
+
+function renderGapNavStrip() {
+    const strip = document.getElementById("gap-nav-strip");
+    strip.innerHTML = "";
+    if (!state.gapContextMode || !state.gapData || state.gapData.gap_size <= 1) {
+        strip.style.display = "none";
+        return;
+    }
+    strip.style.display = "flex";
+
+    // Build all addresses in this gap from gap_start to gap_end
+    const gapStartInt = parseInt(state.gapData.gap_start, 16);
+    const gapEndInt = parseInt(state.gapData.gap_end, 16);
+    for (let a = gapStartInt; a <= gapEndInt; a += 0x10) {
+        const addrStr = a.toString(16).toUpperCase().padStart(5, "0");
+        const link = document.createElement("a");
+        link.className = "gap-nav-link";
+        link.textContent = "0x" + addrStr;
+        link.href = "#";
+        if (addrStr === state.currentAddr) {
+            link.classList.add("current");
+        }
+        link.onclick = (e) => {
+            e.preventDefault();
+            jumpToAddr(addrStr);
+        };
+        strip.appendChild(link);
+    }
+}
+
+// =========================================================================
+// Render: Frame Crops & Overlays
+// =========================================================================
+function renderCrops() {
+    const container = document.getElementById("crops-container");
+    const noFramesMsg = document.getElementById("no-frames-msg");
+    container.innerHTML = "";
+
+    // Gap context mode: render gap context crops instead of standard crops
+    if (state.gapContextMode) {
+        if (state.gapData && state.gapData.candidates && state.gapData.candidates.length > 0) {
+            noFramesMsg.style.display = "none";
+            renderGapContextCrops(container);
+        } else {
+            noFramesMsg.textContent = "No candidate frames found for this gap address.";
+            noFramesMsg.style.display = "block";
+        }
+        return;
+    }
+
+    // Restore default message text
+    noFramesMsg.textContent = "No frame data available for this address.";
+
+    const fd = state.frameData;
+    const hasFrames = fd && fd.frames && fd.frames.length > 0;
+
+    if (!hasFrames) {
+        noFramesMsg.style.display = "block";
+        return;
+    }
+    noFramesMsg.style.display = "none";
+
+    const sortedFrames = [...fd.frames].sort((a, b) => a - b);
+
+    for (let fi = 0; fi < sortedFrames.length; fi++) {
+        const frame = sortedFrames[fi];
+        const wrapper = document.createElement("div");
+        wrapper.className = "crop-wrapper";
+        wrapper.id = `crop-${fi + 1}`;
+
+        const label = document.createElement("div");
+        label.className = "crop-label";
+        label.textContent = `Frame ${String(frame).padStart(5, "0")}`;
+
+        // Reading for this frame
+        const reading = fd.readings ? fd.readings[String(frame)] : null;
+        if (reading) {
+            const disagreements = [];
+            for (let i = 0; i < 16; i++) {
+                const current = state.lineData.bytes[i];
+                const frameVal = reading[i];
+                if (frameVal === "--") continue;  // blank cell -- not a disagreement
+                if (frameVal !== current) disagreements.push(i);
+            }
+            if (disagreements.length > 0) {
+                label.textContent += ` -- ${disagreements.length} byte${disagreements.length > 1 ? "s" : ""} differ`;
+                label.style.color = "#c62828";
+            }
+        }
+
+        const cropContainer = document.createElement("div");
+        cropContainer.className = "crop-container";
+
+        const img = document.createElement("img");
+        img.className = "crop-img";
+        img.src = `/api/crop/${state.currentAddr}/${frame}`;
+        img.dataset.frame = frame;
+        img.style.transform = `scale(${state.zoom})`;
+        // Set explicit dimensions so container knows the scaled size
+        img.onload = () => {
+            cropContainer.style.width = (img.naturalWidth * state.zoom) + "px";
+            cropContainer.style.height = (img.naturalHeight * state.zoom) + "px";
+            // Render overlay after image loads
+            renderSingleOverlay(canvas, frame, img.naturalWidth, img.naturalHeight);
+        };
+
+        const canvas = document.createElement("canvas");
+        canvas.className = "crop-overlay";
+        canvas.dataset.frame = frame;
+
+        cropContainer.appendChild(img);
+        cropContainer.appendChild(canvas);
+        wrapper.appendChild(label);
+        wrapper.appendChild(cropContainer);
+        container.appendChild(wrapper);
+    }
+}
+
+function renderSingleOverlay(canvas, frame, natW, natH) {
+    canvas.width = natW;
+    canvas.height = natH;
+    canvas.style.transform = `scale(${state.zoom})`;
+    canvas.style.width = natW + "px";
+    canvas.style.height = natH + "px";
+
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, natW, natH);
+
+    const fd = state.frameData;
+    if (!fd || !fd.readings) return;
+    const reading = fd.readings[String(frame)];
+    if (!reading) return;
+
+    const currentBytes = state.lineData.bytes;
+
+    for (let i = 0; i < 16; i++) {
+        const frameVal = reading[i];
+        const currentVal = currentBytes[i];
+
+        if (frameVal === "--") continue;  // blank cell -- no overlay
+        if (frameVal === currentVal) continue;
+
+        // Byte position in crop image coordinates
+        // Hex bytes start at x_offset 184px from crop left, stride 41.75px
+        const x = 184 + i * 41.75;
+        const w = 28;
+
+        if (currentVal === "--") {
+            // Missing byte -- yellow highlight
+            ctx.fillStyle = "rgba(255, 200, 0, 0.35)";
+        } else {
+            // Disagreement -- red highlight
+            ctx.fillStyle = "rgba(255, 0, 0, 0.3)";
+        }
+        ctx.fillRect(x, 0, w, natH);
+    }
+}
+
+function renderCropOverlays() {
+    // Re-render all overlays without reloading images
+    const canvases = document.querySelectorAll(".crop-overlay");
+    canvases.forEach(canvas => {
+        const frame = parseInt(canvas.dataset.frame, 10);
+        const img = canvas.parentElement.querySelector(".crop-img");
+        if (img && img.naturalWidth) {
+            renderSingleOverlay(canvas, frame, img.naturalWidth, img.naturalHeight);
+        }
+    });
+}
+
+// =========================================================================
+// Render: Gap Context Crops
+// =========================================================================
+function renderGapContextCrops(container) {
+    const candidates = state.gapData.candidates;
+
+    for (let ci = 0; ci < candidates.length; ci++) {
+        const cand = candidates[ci];
+        const wrapper = document.createElement("div");
+        wrapper.className = "gap-crop-wrapper";
+        wrapper.id = `crop-${ci + 1}`;
+
+        const label = document.createElement("div");
+        label.className = "gap-crop-label";
+
+        const frameSpan = document.createElement("span");
+        frameSpan.textContent = `Frame ${String(cand.frame).padStart(5, "0")}`;
+
+        const qualityBadge = document.createElement("span");
+        qualityBadge.className = "quality-badge";
+        const qScore = cand.quality * 100;
+        qualityBadge.textContent = `Q: ${Math.round(qScore)}`;
+        if (qScore >= 20) {
+            qualityBadge.classList.add("quality-high");
+        } else if (qScore >= 8) {
+            qualityBadge.classList.add("quality-medium");
+        } else {
+            qualityBadge.classList.add("quality-low");
+        }
+
+        const anchorSpan = document.createElement("span");
+        anchorSpan.style.color = "#888";
+        anchorSpan.style.fontSize = "10px";
+        anchorSpan.textContent = `anchor: 0x${cand.anchor_addr} (${cand.anchor_offset_rows > 0 ? "+" : ""}${cand.anchor_offset_rows} rows)`;
+
+        label.appendChild(frameSpan);
+        label.appendChild(qualityBadge);
+        label.appendChild(anchorSpan);
+
+        const cropContainer = document.createElement("div");
+        cropContainer.className = "crop-container";
+
+        const img = document.createElement("img");
+        img.className = "crop-img";
+        img.src = `/api/gap_context/${state.currentAddr}/${cand.frame}`;
+        img.dataset.frame = cand.frame;
+        img.style.transform = `scale(${state.zoom})`;
+
+        const canvas = document.createElement("canvas");
+        canvas.className = "crop-overlay";
+        canvas.dataset.frame = cand.frame;
+
+        img.onload = () => {
+            cropContainer.style.width = (img.naturalWidth * state.zoom) + "px";
+            cropContainer.style.height = (img.naturalHeight * state.zoom) + "px";
+            renderGapContextOverlay(canvas, img.naturalWidth, img.naturalHeight);
+        };
+
+        cropContainer.appendChild(img);
+        cropContainer.appendChild(canvas);
+        wrapper.appendChild(label);
+        wrapper.appendChild(cropContainer);
+        container.appendChild(wrapper);
+    }
+}
+
+function renderGapContextOverlay(canvas, natW, natH) {
+    canvas.width = natW;
+    canvas.height = natH;
+    canvas.style.transform = `scale(${state.zoom})`;
+    canvas.style.width = natW + "px";
+    canvas.style.height = natH + "px";
+
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, natW, natH);
+
+    // Target row is center of 9-row crop (row index 4 of 0-8)
+    // Row height 28px, crop height = 9 * 28 = 252px
+    const rowHeight = natH / 9;
+    const targetY = 4 * rowHeight;
+
+    // Yellow highlight band across full width at target row
+    ctx.fillStyle = "rgba(255, 220, 0, 0.25)";
+    ctx.fillRect(0, targetY, natW, rowHeight);
+
+    // Dashed amber border for precise row delineation
+    ctx.strokeStyle = "rgba(255, 160, 0, 0.6)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(0.5, targetY + 0.5, natW - 1, rowHeight - 1);
+    ctx.setLineDash([]);
+
+    // Subtle blue tint on 16 hex byte column positions within target row
+    // Byte 0 at 184px from crop left, stride 41.75px, cell width 28px
+    ctx.fillStyle = "rgba(30, 136, 229, 0.12)";
+    for (let i = 0; i < 16; i++) {
+        const x = 184 + i * 41.75;
+        ctx.fillRect(x, targetY, 28, rowHeight);
+    }
+}
+
+// =========================================================================
+// Render: Minimap
+// =========================================================================
+function renderMinimap() {
+    const canvas = document.getElementById("minimap-canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Background
+    ctx.fillStyle = "#ddd";
+    ctx.fillRect(0, 0, 40, 5120);
+
+    for (let i = 0; i < state.minimapData.length; i++) {
+        const entry = state.minimapData[i];
+        ctx.fillStyle = TIER_COLORS[entry.tier] || "#ddd";
+        ctx.fillRect(0, i, 40, 1);
+    }
+
+    renderMinimapMarker();
+
+    // Click handler
+    canvas.onclick = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleY = 5120 / rect.height;
+        const y = Math.floor((e.clientY - rect.top) * scaleY);
+        const idx = Math.max(0, Math.min(5119, y));
+        const addr = state.minimapData[idx].address;
+        jumpToAddr(addr);
+    };
+}
+
+function renderMinimapMarker() {
+    const canvas = document.getElementById("minimap-canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Re-render minimap pixels (to clear old marker)
+    ctx.fillStyle = "#ddd";
+    ctx.fillRect(0, 0, 40, 5120);
+    for (let i = 0; i < state.minimapData.length; i++) {
+        ctx.fillStyle = TIER_COLORS[state.minimapData[i].tier] || "#ddd";
+        ctx.fillRect(0, i, 40, 1);
+    }
+
+    // Find current address position in sequential order
+    const seqIdx = state.minimapData.findIndex(e => e.address === state.currentAddr);
+    if (seqIdx >= 0) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, seqIdx, 40, 3);
+        // Border for visibility
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, seqIdx, 40, 3);
+
+        // Scroll minimap to keep marker visible
+        const sidebar = document.getElementById("sidebar");
+        const canvasRect = canvas.getBoundingClientRect();
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const markerScreenY = canvasRect.top + (seqIdx / 5120) * canvasRect.height;
+        if (markerScreenY < sidebarRect.top || markerScreenY > sidebarRect.bottom - 20) {
+            const targetScroll = (seqIdx / 5120) * canvas.offsetHeight - sidebarRect.height / 2;
+            sidebar.scrollTop = Math.max(0, targetScroll);
+        }
+    }
+}
+
+// =========================================================================
+// Stats Bar
+// =========================================================================
+async function refreshStats() {
+    const s = await api("GET", "/api/stats");
+
+    const statsText = document.getElementById("stats-text");
+    statsText.innerHTML = [
+        `<span>Total: ${s.total_lines}</span>`,
+        `<span>Data: ${s.has_data}</span>`,
+        `<span style="color:#888">Missing: ${s.missing}</span>`,
+        `<span style="color:#43a047">Accepted: ${s.accepted}</span>`,
+        `<span style="color:#1e88e5">Edited: ${s.edited}</span>`,
+        `<span style="color:#e53935">Flagged: ${s.flagged}</span>`,
+        `<span>Unreviewed: ${s.unreviewed}</span>`,
+    ].join("");
+
+    const checksumEl = document.getElementById("checksum-display");
+    if (s.checksum_match) {
+        checksumEl.className = "checksum-match";
+        checksumEl.textContent = `Sum: 0x${s.checksum} = 0x${s.checksum_target}`;
+    } else {
+        checksumEl.className = "checksum-mismatch";
+        checksumEl.textContent = `Sum: 0x${s.checksum} (target: 0x${s.checksum_target})`;
+    }
+
+    // ID code indicator
+    const idEl = document.getElementById("id-display");
+    if (s.id_match === s.id_total) {
+        idEl.style.color = "#2e7d32";
+        idEl.textContent = `ID: ${s.id_match}/${s.id_total}`;
+    } else {
+        idEl.style.color = "#c62828";
+        idEl.textContent = `ID: ${s.id_match}/${s.id_total}`;
+    }
+
+    state.dirty = s.dirty;
+    updateDirtyIndicator();
+}
+
+function updateDirtyIndicator() {
+    const btn = document.getElementById("btn-save");
+    if (state.dirty) {
+        btn.textContent = "Save *";
+        btn.classList.add("dirty");
+    } else {
+        btn.textContent = "Save";
+        btn.classList.remove("dirty");
+    }
+}
+
+// =========================================================================
+// Actions
+// =========================================================================
+async function doSave() {
+    const result = await api("POST", "/api/save");
+    if (result.ok) {
+        state.dirty = false;
+        updateDirtyIndicator();
+        showToast(`Saved (${result.size_kb} KB)`);
+        await refreshStats();
+    } else {
+        showToast("Save failed!");
+    }
+}
+
+async function doExportHex() {
+    const result = await api("POST", "/api/export/hex");
+    if (result.ok) {
+        showToast(`Exported ${result.lines} lines to firmware_reviewed.txt`);
+    }
+}
+
+async function doExportBin() {
+    const result = await api("POST", "/api/export/binary");
+    if (result.ok) {
+        const matchStr = result.checksum_match ? " -- CHECKSUM MATCH!" : "";
+        showToast(`Exported binaries (Sum: 0x${result.checksum})${matchStr}`);
+        await refreshStats();
+    }
+}
+
+async function acceptLine() {
+    await api("POST", `/api/line/${state.currentAddr}`, { status: "accepted" });
+    state.dirty = true;
+    updateDirtyIndicator();
+    // Refresh minimap and stats
+    state.minimapData = await api("GET", "/api/minimap");
+    buildAddressList();
+    state.addrIndex = state.addressList.indexOf(state.currentAddr);
+    renderMinimap();
+    refreshStats();
+    navigate(+1);
+}
+
+async function acceptLineSeq() {
+    await api("POST", `/api/line/${state.currentAddr}`, { status: "accepted" });
+    state.dirty = true;
+    updateDirtyIndicator();
+    state.minimapData = await api("GET", "/api/minimap");
+    buildAddressList();
+    state.addrIndex = state.addressList.indexOf(state.currentAddr);
+    renderMinimap();
+    refreshStats();
+    navigateSeq(+1);
+}
+
+async function flagLine() {
+    await api("POST", `/api/line/${state.currentAddr}`, { status: "flagged" });
+    state.dirty = true;
+    updateDirtyIndicator();
+    state.minimapData = await api("GET", "/api/minimap");
+    buildAddressList();
+    state.addrIndex = state.addressList.indexOf(state.currentAddr);
+    renderMinimap();
+    refreshStats();
+    navigate(+1);
+}
+
+async function resetLine() {
+    await api("POST", `/api/line/${state.currentAddr}`, { status: "unreviewed" });
+    state.dirty = true;
+    updateDirtyIndicator();
+    state.lineData = await api("GET", `/api/line/${state.currentAddr}`);
+    renderLineHeader();
+    renderByteCells();
+    renderCropOverlays();
+    state.minimapData = await api("GET", "/api/minimap");
+    buildAddressList();
+    state.addrIndex = state.addressList.indexOf(state.currentAddr);
+    renderMinimap();
+    showToast("Line reset to unreviewed");
+}
+
+// =========================================================================
+// Keyboard Shortcuts
+// =========================================================================
+function onGlobalKeydown(e) {
+    // Ctrl+S -- save (always)
+    if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        doSave();
+        return;
+    }
+    // Ctrl+G -- focus address jump (always)
+    if ((e.ctrlKey || e.metaKey) && e.key === "g") {
+        e.preventDefault();
+        const input = document.getElementById("addr-jump");
+        input.focus();
+        input.select();
+        return;
+    }
+
+    // If we're in the address jump input, don't process other shortcuts
+    if (document.activeElement === document.getElementById("addr-jump")) return;
+
+    // If we're in a byte cell, don't process non-cell shortcuts
+    if (isInByteCell()) return;
+
+    // Shift+Arrow -- sequential navigation (+/-0x10)
+    if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        navigateSeq(e.key === "ArrowLeft" ? -1 : +1);
+        return;
+    }
+
+    switch (e.key) {
+        case " ":
+            e.preventDefault();
+            acceptLine();
+            break;
+        case "Enter":
+            e.preventDefault();
+            acceptLineSeq();
+            break;
+        case "Escape":
+            e.preventDefault();
+            navigate(+1);
+            break;
+        case "f":
+        case "F":
+            e.preventDefault();
+            flagLine();
+            break;
+        case "ArrowLeft":
+        case "[":
+            e.preventDefault();
+            navigate(-1);
+            break;
+        case "ArrowRight":
+        case "]":
+            e.preventDefault();
+            navigate(+1);
+            break;
+        case "r":
+        case "R":
+            e.preventDefault();
+            resetLine();
+            break;
+        case "+":
+        case "=":
+            e.preventDefault();
+            adjustZoom(0.5);
+            break;
+        case "-":
+        case "_":
+            e.preventDefault();
+            adjustZoom(-0.5);
+            break;
+        case "1": case "2": case "3": case "4": case "5":
+        case "6": case "7": case "8": case "9":
+            e.preventDefault();
+            scrollToCrop(parseInt(e.key, 10));
+            break;
+    }
+}
+
+function adjustZoom(delta) {
+    state.zoom = Math.max(1, Math.min(5, state.zoom + delta));
+    document.getElementById("zoom-slider").value = state.zoom;
+    document.getElementById("zoom-label").textContent = state.zoom + "x";
+    updateByteCellLayout();
+    renderCrops();
+}
+
+function scrollToCrop(n) {
+    const el = document.getElementById(`crop-${n}`);
+    if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+}
+
+// =========================================================================
+// Start
+// =========================================================================
+init();
+</script>
+
+</body>
+</html>
