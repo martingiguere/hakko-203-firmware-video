@@ -59,12 +59,17 @@ def detect_boundaries(crop_index):
     gap) for the end. This avoids 0x0D000-0x0D030 which have mixed early/late
     frames, and avoids scanning 0x0E/0x0F ranges.
     """
-    # Max frame in 0x0D040 specifically — the last pre-gap D address
-    key_start = '0D040'
-    if key_start not in crop_index:
-        print(f"ERROR: {key_start} not found in crop_index")
+    # Find the last pre-gap D address (search backwards from 0D040)
+    contam_start = None
+    for addr_int in range(0x0D040, 0x0CFFF, -0x10):
+        key = f"{addr_int:05X}"
+        if key in crop_index:
+            contam_start = max(crop_index[key]['frames'])
+            print(f"  Using {key} (max frame {contam_start}) as start boundary")
+            break
+    if contam_start is None:
+        print("ERROR: Could not find lower contamination boundary")
         sys.exit(1)
-    contam_start = max(crop_index[key_start]['frames'])
 
     # Min frame in 0x0DF80–0x0DFF0 (first post-gap D addresses)
     contam_end = float('inf')

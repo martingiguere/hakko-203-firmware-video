@@ -38,8 +38,8 @@ CROPS_DIR = os.path.join(PROJECT_ROOT, 'crops')
 CROP_INDEX_PATH = os.path.join(CROPS_DIR, 'crop_index.json')
 KNN_MODEL_PATH = os.path.join(PROJECT_ROOT, 'fast_knn_classifier.npz')
 
-MAX_FRAMES_PER_ADDRESS = 20
-TOTAL_FRAMES = 20070
+TOTAL_FRAMES = len([f for f in os.listdir(os.path.join(PROJECT_ROOT, 'frames'))
+                     if f.endswith('.png')]) if os.path.isdir(os.path.join(PROJECT_ROOT, 'frames')) else 0
 
 # Row crop geometry
 ROW_HALF_HEIGHT = 14  # 28px tall crop centered on row center
@@ -82,9 +82,6 @@ def precompute():
 
     # Index: addr_upper -> {frames: [int], readings: {frame_str: [bytes]}, confidences: {frame_str: [floats]}}
     crop_index = {}
-    # Track frame count per address to enforce cap
-    addr_frame_count = {}
-
     prev_img = None
     skipped = 0
     processed = 0
@@ -137,11 +134,6 @@ def precompute():
             addr_upper = f"{addr_int:05X}"
             addr_lower = addr_upper.lower()
 
-            # Enforce frame cap
-            count = addr_frame_count.get(addr_upper, 0)
-            if count >= MAX_FRAMES_PER_ADDRESS:
-                continue
-
             # Crop the full row
             y_center = int(round(row_y))
             y1 = max(0, y_center - ROW_HALF_HEIGHT)
@@ -172,7 +164,6 @@ def precompute():
                 round(float(c), 3) for c in confidences
             ]
 
-            addr_frame_count[addr_upper] = count + 1
             total_crops += 1
 
         # Progress bar

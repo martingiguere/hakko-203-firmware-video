@@ -95,34 +95,20 @@ Each entry is 4 bytes, little-endian, 20-bit address zero-extended.
 | **Reference Screenshot** | `https://www.stevenrhine.com/wp-content/uploads/2021/08/Hakko-FM-203-Firmware-Backup-TQFP52-Renasas-R5F21258SNFP-Successful-Data.png` |
 | **Blog Post** | `https://www.stevenrhine.com/?p=61168` |
 
-### Video Download
+### Video Download & Frame Extraction
+
+The full video is downloaded at max quality (format 137 = 1920×1080 H.264, format 140 = AAC audio) to preserve the original bitstream. Frames are then extracted directly from the original H.264 stream for the relevant segment — no intermediate re-encoded file. This avoids re-encoding quality loss (the old `--download-sections` + `--force-keyframes-at-cuts` approach dropped bitrate from 2,463 kbps to 1,885 kbps).
 
 ```bash
-# Download the relevant segment from YouTube using yt-dlp
-# Timestamps: 13:41 (821s) to 24:50 (1490s)
-yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
-    --download-sections "*821-1490" \
-    -o "xeltek_dump.mp4" \
-    "https://www.youtube.com/watch?v=F3vQnaCocdQ"
+# Download full video at max quality (preserves original H.264 bitstream)
+yt-dlp -f 137+140 -o full_video.mp4 "https://www.youtube.com/watch?v=F3vQnaCocdQ"
+
+# Extract frames from the relevant segment (decode-accurate seeking, no re-encode)
+# -ss after -i = decode from original bitstream with accurate seeking
+ffmpeg -i full_video.mp4 -ss 821 -to 1490 -vf fps=30 frames/frame_%05d.png
 ```
 
-Alternatively, download the full video and extract the segment with ffmpeg:
-
-```bash
-yt-dlp -f "bestvideo+bestaudio/best" -o "full_video.%(ext)s" \
-    "https://www.youtube.com/watch?v=F3vQnaCocdQ"
-ffmpeg -i full_video.* -ss 00:13:41 -to 00:24:50 -c copy xeltek_dump.mkv
-```
-
-### Frame Extraction
-
-```bash
-# Extract frames at native fps (likely 30fps)
-mkdir -p frames/
-ffmpeg -i xeltek_dump.mkv -vf "fps=30" frames/frame_%05d.png
-```
-
-Expected output: ~20,070 frames for the 11m9s segment at 30fps. Actual count will vary based on video encoding.
+Expected output: ~20,070 frames for the 11m9s segment at 30fps.
 
 ### Xeltek SuperPro Software UI
 
@@ -324,7 +310,7 @@ Same approach as FM-202:
 
 1. **Filter invalid lines**: Non-aligned addresses, ASCII artifacts, implausible byte patterns
 2. **Systematic error corrections**: Identify and fix classifier-specific confusion patterns (analogous to FM-202's CF→FF correction)
-3. **D→C address misclassification fix**: The kNN classifier systematically misreads hex digit `D` as `C` at address digit position 1 during frames ~13368–14493, causing ~559 frame observations from the `$0D000`–`$0DFFF` range to be filed under `$0C000`–`$0CFFF` addresses. The `fix_d_c_misread.py` script detects the contamination window, relocates frames to corrected `$0D` addresses (+0x1000), moves crop PNGs, recomputes byte consensus, and rebuilds all downstream files. This recovered 68 addresses in the `$0D050`–`$0DF70` gap.
+3. **D→C address misclassification fix**: The kNN classifier misreads hex digit `D` as `C` at address digit position 1 in a narrow frame window within the `$0D000`–`$0DFFF` range, causing some frame observations to be filed under `$0C000`–`$0CFFF` addresses. The `fix_d_c_misread.py` script dynamically detects the contamination window boundaries (searching for the last correctly-classified 0D entry before the gap and the first post-gap 0D entry), relocates frames to corrected `$0D` addresses (+0x1000), moves crop PNGs, recomputes byte consensus, and rebuilds all downstream files. Most of the `$0D050`–`$0DF70` gap is structural — the video scrolls through the 0D range in only ~20 frames, so most addresses aren't visible long enough to be captured.
 4. **Overlay reference data**: Verified data always wins
 5. **FF-fill erased flash gaps**: Identify regions where both boundary lines are all-FF and fill the gap
 6. **ID code validation**: Verify known bytes at ISP ID code addresses
