@@ -1609,10 +1609,10 @@ function onGlobalKeydown(e) {
         return;
     }
 
-    // If we're in the address jump input, don't process other shortcuts
+    // If we're in any text input, don't process other shortcuts
     if (document.activeElement === document.getElementById("addr-jump")) return;
-
-    // If we're in a byte cell, don't process non-cell shortcuts
+    if (document.activeElement && document.activeElement.closest(".frame-move-input")) return;
+    if (document.activeElement === document.getElementById("batch-addr-input")) return;
     if (isInByteCell()) return;
 
     // Shift+Arrow -- sequential navigation (+/-0x10)
