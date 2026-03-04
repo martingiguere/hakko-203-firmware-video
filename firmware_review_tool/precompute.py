@@ -16,6 +16,7 @@ import sys
 import os
 import json
 import time
+import shutil
 
 # Must set up paths before importing extract_pipeline (it reads grid_calibration.json at import)
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -37,6 +38,7 @@ FRAMES_DIR = os.path.join(PROJECT_ROOT, 'frames')
 CROPS_DIR = os.path.join(PROJECT_ROOT, 'crops')
 CROP_INDEX_PATH = os.path.join(CROPS_DIR, 'crop_index.json')
 KNN_MODEL_PATH = os.path.join(PROJECT_ROOT, 'fast_knn_classifier.npz')
+FRAME_MOVES_PATH = os.path.join(PROJECT_ROOT, 'frame_moves.json')
 
 TOTAL_FRAMES = len([f for f in os.listdir(os.path.join(PROJECT_ROOT, 'frames'))
                      if f.endswith('.png')]) if os.path.isdir(os.path.join(PROJECT_ROOT, 'frames')) else 0
@@ -191,6 +193,11 @@ def precompute():
     for addr in crop_index:
         crop_index[addr]["frames"].sort()
 
+    # Apply frame moves ledger (survives re-runs)
+    applied = apply_frame_moves(crop_index)
+    if applied:
+        print(f"  Applied {applied} frame moves from frame_moves.json")
+
     ref_addresses = precompute_ref_crops()
     if ref_addresses:
         crop_index["ref_addresses"] = ref_addresses
@@ -200,6 +207,51 @@ def precompute():
         json.dump(crop_index, f)
     print(f"  Crop index written to {CROP_INDEX_PATH}")
     print(f"  Index size: {os.path.getsize(CROP_INDEX_PATH) / 1024:.0f} KB")
+
+
+def apply_frame_moves(crop_index):
+    """Replay frame_moves.json onto the freshly-generated crop_index."""
+    if not os.path.exists(FRAME_MOVES_PATH):
+        return 0
+    with open(FRAME_MOVES_PATH) as f:
+        data = json.load(f)
+    moves = data.get("moves", [])
+    applied = 0
+    for move in moves:
+        frame = move["frame"]
+        from_addr = move["from_addr"]
+        to_addr = move["to_addr"]
+        frame_str = str(frame)
+        if from_addr not in crop_index:
+            continue
+        src = crop_index[from_addr]
+        if frame not in src.get("frames", []):
+            continue
+        # Move readings + confidences
+        dst = crop_index.setdefault(to_addr, {"frames": [], "readings": {}, "confidences": {}})
+        if frame_str in src.get("readings", {}):
+            dst["readings"][frame_str] = src["readings"].pop(frame_str)
+        if frame_str in src.get("confidences", {}):
+            dst["confidences"][frame_str] = src["confidences"].pop(frame_str)
+        src["frames"].remove(frame)
+        if frame not in dst["frames"]:
+            dst["frames"].append(frame)
+            dst["frames"].sort()
+        # Move crop PNG
+        src_png = os.path.join(CROPS_DIR, from_addr.lower(), f"frame_{frame:05d}.png")
+        dst_dir = os.path.join(CROPS_DIR, to_addr.lower())
+        dst_png = os.path.join(dst_dir, f"frame_{frame:05d}.png")
+        if os.path.exists(src_png):
+            os.makedirs(dst_dir, exist_ok=True)
+            shutil.move(src_png, dst_png)
+        # Clean up empty source
+        if not src["frames"] and not src.get("readings"):
+            del crop_index[from_addr]
+            src_dir_path = os.path.join(CROPS_DIR, from_addr.lower())
+            if os.path.isdir(src_dir_path) and not os.listdir(src_dir_path):
+                os.rmdir(src_dir_path)
+        applied += 1
+    return applied
 
 
 def precompute_ref_crops():

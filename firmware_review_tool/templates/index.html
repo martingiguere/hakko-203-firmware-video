@@ -293,6 +293,94 @@
         .quality-medium { background: #f9a825; color: #333; }
         .quality-low { background: #999; }
 
+        /* Frame move UI */
+        .crop-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .frame-select-cb {
+            margin: 0;
+            cursor: pointer;
+        }
+        .frame-move-btn {
+            margin-left: auto;
+            padding: 1px 6px;
+            font-family: inherit;
+            font-size: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background: #f5f5f5;
+            cursor: pointer;
+            color: #666;
+        }
+        .frame-move-btn:hover { background: #e0e0e0; color: #333; }
+        .frame-move-input {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 6px;
+            background: #f0f4ff;
+            border: 1px solid #90caf9;
+            border-radius: 3px;
+            margin-bottom: 4px;
+            font-size: 11px;
+        }
+        .frame-move-input input {
+            width: 70px;
+            padding: 2px 4px;
+            font-family: inherit;
+            font-size: 11px;
+            border: 1px solid #aaa;
+            border-radius: 2px;
+            text-transform: uppercase;
+        }
+        .frame-move-input button {
+            padding: 2px 8px;
+            font-family: inherit;
+            font-size: 10px;
+            border: 1px solid #999;
+            border-radius: 2px;
+            cursor: pointer;
+            background: #fff;
+        }
+        .frame-move-input .move-go-btn { background: #c8e6c9; }
+        .frame-move-input .move-go-btn:hover { background: #a5d6a7; }
+        #batch-action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 60px;
+            right: 0;
+            background: #e3f2fd;
+            border-top: 2px solid #1e88e5;
+            padding: 8px 16px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            z-index: 50;
+        }
+        #batch-action-bar input {
+            width: 70px;
+            padding: 2px 4px;
+            font-family: inherit;
+            font-size: 12px;
+            border: 1px solid #aaa;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+        #batch-action-bar button {
+            padding: 3px 10px;
+            font-family: inherit;
+            font-size: 11px;
+            border: 1px solid #999;
+            border-radius: 3px;
+            cursor: pointer;
+            background: #fff;
+        }
+        #batch-action-bar .batch-go-btn { background: #c8e6c9; }
+        #batch-action-bar .batch-go-btn:hover { background: #a5d6a7; }
+
         /* Keyboard help */
         #keyboard-help {
             margin-top: 24px;
@@ -402,6 +490,15 @@
     </details>
 </div>
 
+<!-- Batch Action Bar -->
+<div id="batch-action-bar">
+    <span id="batch-count">0 selected</span>
+    <span>Move to:</span>
+    <input type="text" id="batch-addr-input" placeholder="Addr">
+    <button class="batch-go-btn" onclick="doBatchMove()">Go</button>
+    <button onclick="deselectAllFrames()">Deselect All</button>
+</div>
+
 <!-- Toast -->
 <div id="toast"></div>
 
@@ -420,6 +517,7 @@ const state = {
     dirty: false,
     gapData: null,          // response from /api/gap_frames
     gapContextMode: false,  // whether current address is in gap context mode
+    selectedFrames: new Set(),  // frames selected for batch move
 };
 
 // Tier priority for sorting (lower = review first)
@@ -944,6 +1042,9 @@ function renderCrops() {
         container.appendChild(wrapper);
     }
 
+    state.selectedFrames.clear();
+    updateBatchBar();
+
     const sortedFrames = [...fd.frames].sort((a, b) => a - b);
 
     for (let fi = 0; fi < sortedFrames.length; fi++) {
@@ -954,10 +1055,25 @@ function renderCrops() {
 
         const label = document.createElement("div");
         label.className = "crop-label";
-        label.textContent = `Frame ${String(frame).padStart(5, "0")}`;
+
+        // Select checkbox
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.className = "frame-select-cb";
+        cb.dataset.frame = frame;
+        cb.onchange = () => {
+            if (cb.checked) state.selectedFrames.add(frame);
+            else state.selectedFrames.delete(frame);
+            updateBatchBar();
+        };
+        label.appendChild(cb);
+
+        const labelText = document.createElement("span");
+        labelText.textContent = `Frame ${String(frame).padStart(5, "0")}`;
 
         // Reading for this frame
         const reading = fd.readings ? fd.readings[String(frame)] : null;
+        let hasDiffs = false;
         if (reading) {
             const disagreements = [];
             for (let i = 0; i < 16; i++) {
@@ -967,10 +1083,23 @@ function renderCrops() {
                 if (frameVal !== current) disagreements.push(i);
             }
             if (disagreements.length > 0) {
-                label.textContent += ` -- ${disagreements.length} byte${disagreements.length > 1 ? "s" : ""} differ`;
-                label.style.color = "#c62828";
+                labelText.textContent += ` -- ${disagreements.length} byte${disagreements.length > 1 ? "s" : ""} differ`;
+                labelText.style.color = "#c62828";
+                hasDiffs = true;
             }
         }
+        label.appendChild(labelText);
+
+        // Move button (always shown — useful even without visible diffs)
+        const moveBtn = document.createElement("button");
+        moveBtn.className = "frame-move-btn";
+        moveBtn.textContent = "Move";
+        moveBtn.title = "Move this frame to a different address";
+        moveBtn.onclick = (e) => {
+            e.stopPropagation();
+            showMoveInput(wrapper, frame);
+        };
+        label.appendChild(moveBtn);
 
         const cropContainer = document.createElement("div");
         cropContainer.className = "crop-container";
@@ -998,6 +1127,116 @@ function renderCrops() {
         wrapper.appendChild(cropContainer);
         container.appendChild(wrapper);
     }
+}
+
+// =========================================================================
+// Frame Move Functions
+// =========================================================================
+async function showMoveInput(wrapper, frame) {
+    // Remove any existing move input in this wrapper
+    const existing = wrapper.querySelector(".frame-move-input");
+    if (existing) { existing.remove(); return; }
+
+    const row = document.createElement("div");
+    row.className = "frame-move-input";
+
+    const addrInput = document.createElement("input");
+    addrInput.type = "text";
+    addrInput.placeholder = "Dest addr";
+
+    // Try to get a suggested address
+    try {
+        const suggest = await api("GET", `/api/suggest_address/${frame}`);
+        if (suggest.suggested_addr && suggest.suggested_addr !== state.currentAddr) {
+            addrInput.value = suggest.suggested_addr;
+        }
+    } catch (e) { /* ignore */ }
+
+    const goBtn = document.createElement("button");
+    goBtn.className = "move-go-btn";
+    goBtn.textContent = "Go";
+    goBtn.onclick = () => doSingleMove(frame, addrInput.value);
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.onclick = () => row.remove();
+
+    addrInput.onkeydown = (e) => {
+        if (e.key === "Enter") { e.preventDefault(); doSingleMove(frame, addrInput.value); }
+        if (e.key === "Escape") { e.preventDefault(); row.remove(); }
+    };
+
+    row.appendChild(document.createTextNode("Move to: "));
+    row.appendChild(addrInput);
+    row.appendChild(goBtn);
+    row.appendChild(cancelBtn);
+
+    // Insert after the label, before the crop container
+    const label = wrapper.querySelector(".crop-label");
+    label.after(row);
+    addrInput.focus();
+}
+
+async function doSingleMove(frame, rawAddr) {
+    const toAddr = rawAddr.trim().toUpperCase().replace(/^0X/, "").padStart(5, "0");
+    if (!toAddr || toAddr === state.currentAddr) {
+        showToast("Enter a different destination address");
+        return;
+    }
+    const result = await api("POST", "/api/move_frame", {
+        frame: frame,
+        from_addr: state.currentAddr,
+        to_addr: toAddr,
+    });
+    if (result.error) {
+        showToast("Error: " + result.error, 4000);
+        return;
+    }
+    showToast(`Frame ${frame} moved to 0x${toAddr}`);
+    loadLine(state.currentAddr);
+    refreshStats();
+}
+
+function updateBatchBar() {
+    const bar = document.getElementById("batch-action-bar");
+    const count = state.selectedFrames.size;
+    if (count > 0) {
+        bar.style.display = "flex";
+        document.getElementById("batch-count").textContent = `${count} selected`;
+    } else {
+        bar.style.display = "none";
+    }
+}
+
+function deselectAllFrames() {
+    state.selectedFrames.clear();
+    document.querySelectorAll(".frame-select-cb").forEach(cb => cb.checked = false);
+    updateBatchBar();
+}
+
+async function doBatchMove() {
+    const toAddr = document.getElementById("batch-addr-input").value
+        .trim().toUpperCase().replace(/^0X/, "").padStart(5, "0");
+    if (!toAddr || state.selectedFrames.size === 0) {
+        showToast("Enter a destination address and select frames");
+        return;
+    }
+    const moves = [...state.selectedFrames].map(frame => ({
+        frame: frame,
+        from_addr: state.currentAddr,
+        to_addr: toAddr,
+    }));
+    const result = await api("POST", "/api/move_frames", { moves });
+    if (result.error) {
+        showToast("Error: " + result.error, 4000);
+        return;
+    }
+    showToast(`Moved ${result.applied} frame(s) to 0x${toAddr}`);
+    state.selectedFrames.clear();
+    document.getElementById("batch-addr-input").value = "";
+    updateBatchBar();
+    loadLine(state.currentAddr);
+    refreshStats();
 }
 
 function renderSingleOverlay(canvas, frame, natW, natH) {

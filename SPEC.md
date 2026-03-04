@@ -503,7 +503,42 @@ Same as FM-202 review tool:
 - **Export Binary (ROM)**: `hakko_fm203_reviewed.bin` — 64 KB ROM-only binary (`$04000`–`$13FFF`)
 - **Export Binary (Full)**: `hakko_fm203_full_reviewed.bin` — 80 KB full buffer binary (`$00000`–`$13FFF`)
 
-### 7.8 Flask Backend API
+### 7.8 Frame Reassignment
+
+The kNN address OCR can misassign frames during fast-scrolling segments. A single video frame contains 16 visible rows at different addresses; during scrolling, the OCR may read the wrong row's address for a crop, placing it under an incorrect address in `crop_index.json`. The frame reassignment feature lets users move misassigned frames to their correct address.
+
+#### `frame_moves.json` Ledger
+
+All moves are recorded in a persistent `frame_moves.json` ledger at the project root:
+
+```json
+{
+  "moves": [
+    {
+      "frame": 5605,
+      "from_addr": "04C60",
+      "to_addr": "04B80",
+      "timestamp": "2026-03-04T12:00:00Z"
+    }
+  ]
+}
+```
+
+The ledger survives `precompute.py` re-runs — after regenerating the base `crop_index.json`, all recorded moves are replayed automatically. This ensures manual corrections persist across pipeline rebuilds.
+
+#### Per-Frame Move
+
+Each frame crop in the review UI has a "Move" button. Clicking it shows an inline address input pre-filled with a suggested destination (computed by comparing the frame's reading against consensus at candidate addresses). On confirmation, the backend moves the frame's readings, confidences, and crop PNG to the destination address, recomputes weighted majority vote consensus for both source and destination, and updates the review state.
+
+#### Batch Move
+
+Checkboxes on each frame crop allow selecting multiple frames. A floating action bar at the bottom of the panel provides batch move to a single destination address.
+
+#### Consensus Recomputation
+
+After any move, the `weighted_majority_vote()` function recomputes consensus bytes for both the source and destination addresses. This uses per-byte kNN confidence as weights, matching the same logic used in `fix_d_c_misread.py`. The review state bytes are updated unless the user has manually edited them.
+
+### 7.9 Flask Backend API
 
 Same endpoints as FM-202 review tool, with path/naming adapted:
 
@@ -524,6 +559,9 @@ Same endpoints as FM-202 review tool, with path/naming adapted:
 | `POST` | `/api/export/binary` | Generate hakko_fm203_reviewed.bin (ROM) + full buffer |
 | `GET` | `/api/settings` | UI settings |
 | `POST` | `/api/settings` | Update UI settings |
+| `POST` | `/api/move_frame` | Move a single frame between addresses |
+| `POST` | `/api/move_frames` | Batch move multiple frames |
+| `GET` | `/api/suggest_address/<frame>` | Suggest correct address for a frame |
 
 ---
 
@@ -615,6 +653,7 @@ hakko-203-firmware-video/
 │       └── <offset>/
 │           └── frame_NNNNN.png
 │
+├── frame_moves.json                 # Frame reassignment ledger (persistent across re-runs)
 ├── review_state.json                # Review progress (gitignored)
 ├── firmware_reviewed.txt            # Exported reviewed hex dump
 └── hakko_fm203_reviewed.bin         # Exported reviewed binary
