@@ -30,7 +30,6 @@ from extract_pipeline import (
     read_hex_bytes_from_row,
     validate_address_sequence,
     is_frame_different,
-    process_frame,
 )
 from template_matcher import CAL, ADDR_X_START, BYTE_POSITIONS, BYTE_DIGIT_SPACING
 
@@ -49,6 +48,7 @@ CROP_X_END = 1100  # 830px wide crop
 
 BASE_ADDR = 0x00000
 END_ADDR = 0x13FF0
+MAX_ADDR_DIFF = 0x10000  # Max allowable difference between raw OCR read and validated address
 EXTRA_ROWS_ABOVE = 2
 
 
@@ -99,42 +99,26 @@ def precompute():
         prev_img = img
         processed += 1
 
-        # Use process_frame to get validated addresses and byte readings
-        results = process_frame(classifier, img)
-
-        # We need row_y positions for cropping. Reconstruct from addresses:
-        # process_frame reads rows at y_first + row_idx * row_h for row_idx in range(-2, num_rows).
-        # If we know one address's row position, we can compute all others.
-        # Build a lookup from addr_int to row_y using the calibration grid.
-        if not results:
-            continue
-
-        # Use the first result as anchor: find its row_y by scanning grid positions
-        # and matching the address to the closest expected position
-        anchor_addr = results[0][0]
-        # The address at row_idx=0 is: y_first corresponds to the first visible row
-        # Determine which row_idx the anchor is at by checking all possible positions
-        best_row_y = None
-        for row_idx in range(-EXTRA_ROWS_ABOVE, num_rows + 2):
+        # Read addresses from all visible rows (+ extra above)
+        addr_results = []
+        for row_idx in range(-EXTRA_ROWS_ABOVE, num_rows):
             row_y = y_first + row_idx * row_h
             if row_y < 0 or row_y >= img.shape[0]:
                 continue
-            addr_str, _ = read_address_from_row(classifier, img, row_y, addr_x)
+            addr_str, addr_conf = read_address_from_row(classifier, img, row_y, addr_x)
             try:
                 addr_int = int(addr_str, 16)
-                if addr_int == anchor_addr or abs(addr_int - anchor_addr) <= 0x08:
-                    best_row_y = row_y
-                    break
+                addr_results.append((addr_int, row_y, addr_conf))
             except ValueError:
                 continue
 
-        if best_row_y is None:
-            # Fallback: estimate from grid center
-            best_row_y = y_first
+        # Validate and correct address sequence
+        validated = validate_address_sequence(addr_results)
 
-        anchor_row_y = best_row_y
-
-        for addr_int, hex_bytes, byte_confs, addr_conf in results:
+        for (raw_addr, _, _), (addr_int, row_y, conf) in zip(addr_results, validated):
+            # Skip rows where raw OCR read is wildly different from validated address
+            if abs(raw_addr - addr_int) > MAX_ADDR_DIFF:
+                continue
             if addr_int < BASE_ADDR or addr_int > END_ADDR:
                 continue
             if addr_int % 0x10 != 0:
@@ -148,10 +132,6 @@ def precompute():
             if count >= MAX_FRAMES_PER_ADDRESS:
                 continue
 
-            # Compute row_y from anchor
-            row_offset = (addr_int - anchor_addr) / 0x10
-            row_y = anchor_row_y + row_offset * row_h
-
             # Crop the full row
             y_center = int(round(row_y))
             y1 = max(0, y_center - ROW_HALF_HEIGHT)
@@ -159,6 +139,11 @@ def precompute():
             x1 = CROP_X_START
             x2 = min(img.shape[1], CROP_X_END)
             crop = img[y1:y2, x1:x2]
+
+            # Read kNN bytes for this row
+            hex_bytes, confidences, _avg_conf = read_hex_bytes_from_row(
+                classifier, img, row_y
+            )
 
             # Save crop PNG
             crop_dir = os.path.join(CROPS_DIR, addr_lower)
@@ -174,7 +159,7 @@ def precompute():
                 b.upper() if b != "--" else "--" for b in hex_bytes
             ]
             crop_index[addr_upper]["confidences"][str(frame_num)] = [
-                round(float(c), 3) for c in byte_confs
+                round(float(c), 3) for c in confidences
             ]
 
             addr_frame_count[addr_upper] = count + 1
