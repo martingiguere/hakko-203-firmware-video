@@ -324,10 +324,11 @@ Same approach as FM-202:
 
 1. **Filter invalid lines**: Non-aligned addresses, ASCII artifacts, implausible byte patterns
 2. **Systematic error corrections**: Identify and fix classifier-specific confusion patterns (analogous to FM-202's CF→FF correction)
-3. **Overlay reference data**: Verified data always wins
-4. **FF-fill erased flash gaps**: Identify regions where both boundary lines are all-FF and fill the gap
-5. **ID code validation**: Verify known bytes at ISP ID code addresses
-6. **Interrupt vector validation**: Check that the vector table at `$0FFDC`–`$0FFFF` contains plausible 20-bit code addresses
+3. **D→C address misclassification fix**: The kNN classifier systematically misreads hex digit `D` as `C` at address digit position 1 during frames ~13368–14493, causing ~559 frame observations from the `$0D000`–`$0DFFF` range to be filed under `$0C000`–`$0CFFF` addresses. The `fix_d_c_misread.py` script detects the contamination window, relocates frames to corrected `$0D` addresses (+0x1000), moves crop PNGs, recomputes byte consensus, and rebuilds all downstream files. This recovered 68 addresses in the `$0D050`–`$0DF70` gap.
+4. **Overlay reference data**: Verified data always wins
+5. **FF-fill erased flash gaps**: Identify regions where both boundary lines are all-FF and fill the gap
+6. **ID code validation**: Verify known bytes at ISP ID code addresses
+7. **Interrupt vector validation**: Check that the vector table at `$0FFDC`–`$0FFFF` contains plausible 20-bit code addresses
 
 ### 6.6 Instruction Validation (R8C/Tiny)
 
@@ -599,6 +600,7 @@ hakko-203-firmware-video/
 ├── extract_pipeline.py              # Main extraction pipeline
 ├── template_matcher.py              # kNN classifier (adapted from FM-202)
 ├── postprocess_firmware.py          # Filtering, correction, merge, binary gen
+├── fix_d_c_misread.py               # D→C address misclassification correction
 ├── r8c_opcode_table.py              # R8C/Tiny opcode table for validation
 ├── r8c_disassembler.py              # R8C/Tiny disassembler for validation
 │
