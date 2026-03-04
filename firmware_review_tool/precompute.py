@@ -51,6 +51,16 @@ END_ADDR = 0x13FF0
 MAX_ADDR_DIFF = 0x10000  # Max allowable difference between raw OCR read and validated address
 EXTRA_ROWS_ABOVE = 2
 
+REF_IMAGE_PATH = os.path.join(PROJECT_ROOT, 'reference', 'reference_screenshot.png')
+REF_CROPS_DIR = os.path.join(CROPS_DIR, 'ref')
+REF_FIRST_ROW_Y = 127.0
+REF_ROW_SPACING = 24.0
+REF_NUM_ROWS = 16
+REF_FIRST_ADDR = 0x0FF70
+REF_CROP_X1 = 45
+REF_CROP_X2 = 760
+REF_CROP_HALF_H = 12
+
 
 def precompute():
     print("=== Firmware Review Tool: Precompute ===")
@@ -190,6 +200,10 @@ def precompute():
     for addr in crop_index:
         crop_index[addr]["frames"].sort()
 
+    ref_addresses = precompute_ref_crops()
+    if ref_addresses:
+        crop_index["ref_addresses"] = ref_addresses
+
     # Write crop index
     with open(CROP_INDEX_PATH, 'w', encoding='utf-8') as f:
         json.dump(crop_index, f)
@@ -197,5 +211,54 @@ def precompute():
     print(f"  Index size: {os.path.getsize(CROP_INDEX_PATH) / 1024:.0f} KB")
 
 
+def precompute_ref_crops():
+    """Crop and resize reference screenshot rows to match video crop dimensions."""
+    if not os.path.exists(REF_IMAGE_PATH):
+        print(f"WARNING: Reference screenshot not found at {REF_IMAGE_PATH}")
+        return []
+
+    ref_img = cv2.imread(REF_IMAGE_PATH, cv2.IMREAD_GRAYSCALE)
+    if ref_img is None:
+        print(f"WARNING: Could not load reference screenshot")
+        return []
+
+    os.makedirs(REF_CROPS_DIR, exist_ok=True)
+
+    target_w = CROP_X_END - CROP_X_START  # 830
+    target_h = ROW_HALF_HEIGHT * 2         # 28
+
+    ref_addresses = []
+    for row_idx in range(REF_NUM_ROWS):
+        addr_int = REF_FIRST_ADDR + row_idx * 0x10
+        addr_upper = f"{addr_int:05X}"
+        addr_lower = addr_upper.lower()
+
+        row_y = REF_FIRST_ROW_Y + row_idx * REF_ROW_SPACING
+        y1 = int(round(row_y - REF_CROP_HALF_H))
+        y2 = int(round(row_y + REF_CROP_HALF_H))
+        y1 = max(0, y1)
+        y2 = min(ref_img.shape[0], y2)
+
+        crop = ref_img[y1:y2, REF_CROP_X1:REF_CROP_X2]
+        resized = cv2.resize(crop, (target_w, target_h), interpolation=cv2.INTER_AREA)
+
+        crop_path = os.path.join(REF_CROPS_DIR, f'{addr_lower}.png')
+        cv2.imwrite(crop_path, resized)
+        ref_addresses.append(addr_upper)
+
+    print(f"  Reference crops: {len(ref_addresses)} rows saved to {REF_CROPS_DIR}")
+    return ref_addresses
+
+
 if __name__ == '__main__':
-    precompute()
+    if '--ref-only' in sys.argv:
+        ref_addresses = precompute_ref_crops()
+        if ref_addresses and os.path.exists(CROP_INDEX_PATH):
+            with open(CROP_INDEX_PATH, encoding='utf-8') as f:
+                idx = json.load(f)
+            idx["ref_addresses"] = ref_addresses
+            with open(CROP_INDEX_PATH, 'w', encoding='utf-8') as f:
+                json.dump(idx, f)
+            print(f"Updated {CROP_INDEX_PATH} with ref_addresses")
+    else:
+        precompute()

@@ -22,6 +22,7 @@ CROPS_DIR = os.path.join(PROJECT_ROOT, 'crops')
 CROP_INDEX_PATH = os.path.join(CROPS_DIR, 'crop_index.json')
 GAP_INDEX_PATH = os.path.join(CROPS_DIR, 'gap_context_index.json')
 GAP_CROPS_DIR = os.path.join(CROPS_DIR, 'gap')
+REF_CROPS_DIR = os.path.join(CROPS_DIR, 'ref')
 MERGED_PATH = os.path.join(PROJECT_ROOT, 'firmware_merged.txt')
 FRAMES_DIR = os.path.join(PROJECT_ROOT, 'frames')
 REVIEW_STATE_PATH = os.path.join(PROJECT_ROOT, 'review_state.json')
@@ -58,6 +59,7 @@ gap_context_index = {}  # addr_upper -> {gap_id, gap_start, gap_end, gap_size, c
 review_state = {}     # Full review state dict (lines, settings, stats, etc.)
 minimap_cache = None  # Cached minimap data, invalidated on status change
 dirty = False         # Unsaved changes flag
+ref_addresses = set()
 
 
 # ---------------------------------------------------------------------------
@@ -65,11 +67,17 @@ dirty = False         # Unsaved changes flag
 # ---------------------------------------------------------------------------
 
 def load_crop_index():
-    global crop_index
+    global crop_index, ref_addresses
     if os.path.exists(CROP_INDEX_PATH):
         with open(CROP_INDEX_PATH, encoding='utf-8') as f:
             crop_index = json.load(f)
-        print(f"Loaded crop index: {len(crop_index)} addresses")
+        ref_list = crop_index.pop("ref_addresses", [])
+        ref_addresses = set(a.upper() for a in ref_list)
+        if not ref_addresses and os.path.isdir(REF_CROPS_DIR):
+            for fname in os.listdir(REF_CROPS_DIR):
+                if fname.endswith('.png'):
+                    ref_addresses.add(fname[:-4].upper())
+        print(f"Loaded crop index: {len(crop_index)} addresses, {len(ref_addresses)} ref addresses")
     else:
         print("WARNING: crop_index.json not found. Run precompute.py first.")
         crop_index = {}
@@ -392,6 +400,7 @@ def get_frames(addr):
         "frames": frames,
         "readings": readings,
         "knn_confidences": knn_confidences,
+        "has_ref": addr in ref_addresses,
     })
 
 
@@ -401,6 +410,17 @@ def get_crop(addr, frame):
     crop_path = os.path.join(CROPS_DIR, addr_lower, f'frame_{frame:05d}.png')
     if not os.path.exists(crop_path):
         return jsonify({"error": "Crop not found"}), 404
+    return send_file(crop_path, mimetype='image/png')
+
+
+@app.route('/api/ref_crop/<addr>')
+def get_ref_crop(addr):
+    addr = normalize_addr(addr)
+    if addr not in ref_addresses:
+        return jsonify({"error": "No reference crop"}), 404
+    crop_path = os.path.join(REF_CROPS_DIR, f'{addr.lower()}.png')
+    if not os.path.exists(crop_path):
+        return jsonify({"error": "Reference crop file not found"}), 404
     return send_file(crop_path, mimetype='image/png')
 
 

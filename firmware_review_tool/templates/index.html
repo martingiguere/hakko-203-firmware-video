@@ -210,6 +210,14 @@
             transform-origin: top left;
             pointer-events: none;
         }
+        .ref-crop-wrapper {
+            border: 2px solid #4caf50;
+            background: #e8f5e9;
+        }
+        .ref-crop-wrapper .crop-label {
+            color: #2e7d32;
+            font-weight: bold;
+        }
         #no-frames-msg {
             color: #999;
             font-style: italic;
@@ -905,12 +913,36 @@ function renderCrops() {
 
     const fd = state.frameData;
     const hasFrames = fd && fd.frames && fd.frames.length > 0;
+    const hasRef = fd && fd.has_ref;
 
-    if (!hasFrames) {
+    if (!hasFrames && !hasRef) {
         noFramesMsg.style.display = "block";
         return;
     }
     noFramesMsg.style.display = "none";
+
+    // Reference crop (ground truth from screenshot)
+    if (hasRef) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "crop-wrapper ref-crop-wrapper";
+        const label = document.createElement("div");
+        label.className = "crop-label";
+        label.textContent = "REFERENCE";
+        const cropContainer = document.createElement("div");
+        cropContainer.className = "crop-container";
+        const img = document.createElement("img");
+        img.className = "crop-img";
+        img.src = `/api/ref_crop/${state.currentAddr}`;
+        img.style.transform = `scale(${state.zoom})`;
+        img.onload = () => {
+            cropContainer.style.width = (img.naturalWidth * state.zoom) + "px";
+            cropContainer.style.height = (img.naturalHeight * state.zoom) + "px";
+        };
+        cropContainer.appendChild(img);
+        wrapper.appendChild(label);
+        wrapper.appendChild(cropContainer);
+        container.appendChild(wrapper);
+    }
 
     const sortedFrames = [...fd.frames].sort((a, b) => a - b);
 
