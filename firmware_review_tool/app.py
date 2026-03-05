@@ -113,6 +113,15 @@ def save_frame_moves():
         json.dump({"moves": frame_moves}, f, indent=2)
 
 
+def save_crop_index():
+    data = dict(crop_index)
+    data["ref_addresses"] = sorted(ref_addresses)
+    tmp_path = CROP_INDEX_PATH + ".tmp"
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f)
+    os.replace(tmp_path, CROP_INDEX_PATH)
+
+
 def weighted_majority_vote(readings, confidences):
     """Weighted majority vote across frames for 16 byte positions."""
     if not readings:
@@ -784,6 +793,7 @@ def move_frame():
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     })
     save_frame_moves()
+    save_crop_index()
 
     recompute_consensus_for_addr(from_addr)
     recompute_consensus_for_addr(to_addr)
@@ -837,6 +847,7 @@ def move_frames_batch():
 
     if applied:
         save_frame_moves()
+        save_crop_index()
         for addr in affected_addrs:
             recompute_consensus_for_addr(addr)
         dirty = True
