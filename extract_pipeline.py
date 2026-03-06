@@ -379,6 +379,27 @@ def read_hex_bytes_from_row(classifier, img, row_y):
     return hex_bytes, confidences, avg_conf
 
 
+def try_fix_49_swap(addr, expected_addr):
+    """Check if swapping '4'<->'9' digits in addr produces expected_addr.
+
+    Returns corrected address int if a valid swap exists, else None.
+    """
+    addr_hex = f'{addr:05X}'
+    expected_hex = f'{expected_addr:05X}'
+    if len(addr_hex) != len(expected_hex):
+        return None
+    corrected = list(addr_hex)
+    for i in range(len(addr_hex)):
+        if addr_hex[i] == expected_hex[i]:
+            continue
+        if set([addr_hex[i], expected_hex[i]]) == set(['4', '9']):
+            corrected[i] = expected_hex[i]
+        else:
+            return None
+    result = int(''.join(corrected), 16)
+    return result if result == expected_addr else None
+
+
 def validate_address_sequence(addresses_with_rows):
     """Validate and correct addresses in a frame.
 
@@ -420,8 +441,15 @@ def validate_address_sequence(addresses_with_rows):
                 score += conf
                 consistent_count += 1
             else:
-                sequence.append((expected_addr, row_y, conf * 0.3))
-                score += conf * 0.1
+                # Check if 4<->9 digit swap explains the difference
+                fixed = try_fix_49_swap(addr, expected_addr)
+                if fixed is not None:
+                    sequence.append((expected_addr, row_y, conf * 0.7))
+                    score += conf * 0.8
+                    consistent_count += 1
+                else:
+                    sequence.append((expected_addr, row_y, conf * 0.3))
+                    score += conf * 0.1
 
         score *= (1 + consistent_count / len(addresses_with_rows))
 
