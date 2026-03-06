@@ -4111,269 +4111,61 @@
     "source": "extraction",
     "confidence": 0.2
   },
-  "04070": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04080": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04090": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "040A0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "040B0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "040C0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "040D0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "040E0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
   "040F0": {
     "source": "extraction",
     "confidence": 0.4
   },
-  "04100": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04110": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04120": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04130": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04140": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04150": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04170": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "04180": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04190": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "041A0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "041B0": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "041C0": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "041D0": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "041E0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "041F0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04200": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04210": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04220": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04230": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04240": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04250": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04260": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04270": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04280": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "04290": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "042A0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "042B0": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "042C0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "042D0": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "04460": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04470": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04480": {
-    "source": "extraction",
-    "confidence": 0.6
-  },
-  "04490": {
-    "source": "extraction",
-    "confidence": 0.6
-  },
   "044A0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
   "044B0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
   "044C0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
   "044D0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
   "044E0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
   "044F0": {
     "source": "extraction",
-    "confidence": 0.6
-  },
-  "04500": {
-    "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
   "04510": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
   "04520": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
   "04530": {
     "source": "extraction",
-    "confidence": 0.6
-  },
-  "04540": {
-    "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
   "04550": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
   "04560": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
   "04570": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
   "04580": {
     "source": "extraction",
-    "confidence": 0.6
-  },
-  "045D0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "045E0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "045F0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04600": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04610": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04620": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04640": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04650": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04660": {
-    "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.2
   },
   "04670": {
     "source": "extraction",
@@ -4399,10 +4191,6 @@
     "source": "extraction",
     "confidence": 0.6
   },
-  "046D0": {
-    "source": "extraction",
-    "confidence": 0.6
-  },
   "046E0": {
     "source": "extraction",
     "confidence": 0.6
@@ -4412,10 +4200,6 @@
     "confidence": 0.6
   },
   "04700": {
-    "source": "extraction",
-    "confidence": 0.6
-  },
-  "04710": {
     "source": "extraction",
     "confidence": 0.6
   },
@@ -4435,57 +4219,17 @@
     "source": "extraction",
     "confidence": 0.6
   },
-  "04760": {
+  "04830": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
-  "04770": {
+  "04840": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.2
   },
-  "04780": {
+  "04850": {
     "source": "extraction",
-    "confidence": 0.6
-  },
-  "04790": {
-    "source": "extraction",
-    "confidence": 0.6
-  },
-  "047A0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "047B0": {
-    "source": "extraction",
-    "confidence": 0.6
-  },
-  "047C0": {
-    "source": "extraction",
-    "confidence": 0.6
-  },
-  "047D0": {
-    "source": "extraction",
-    "confidence": 0.6
-  },
-  "047E0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "047F0": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04800": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04810": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04820": {
-    "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.2
   },
   "049A0": {
     "source": "extraction",
@@ -4725,17 +4469,13 @@
   },
   "04D50": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "04D60": {
     "source": "extraction",
     "confidence": 0.4
   },
   "04D70": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "04D80": {
     "source": "extraction",
     "confidence": 0.2
   },
@@ -6091,57 +5831,49 @@
     "source": "extraction",
     "confidence": 0.2
   },
-  "06360": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "06370": {
+  "06380": {
     "source": "extraction",
     "confidence": 0.4
   },
-  "06380": {
-    "source": "extraction",
-    "confidence": 0.6
-  },
   "06390": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "063A0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "063B0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "063C0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "063D0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "063E0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "063F0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "06400": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "06410": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "06420": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "06430": {
     "source": "extraction",
@@ -6213,19 +5945,19 @@
   },
   "06540": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "06550": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "06560": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "06570": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "06580": {
     "source": "extraction",
@@ -6729,7 +6461,7 @@
   },
   "06D50": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "06D60": {
     "source": "extraction",
@@ -7061,11 +6793,7 @@
   },
   "07370": {
     "source": "extraction",
-    "confidence": 0.4
-  },
-  "07380": {
-    "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.2
   },
   "07390": {
     "source": "extraction",
@@ -7077,11 +6805,11 @@
   },
   "073B0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "073C0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "073D0": {
     "source": "extraction",
@@ -8067,21 +7795,13 @@
     "source": "extraction",
     "confidence": 0.4
   },
-  "08360": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "08370": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
   "08380": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.2
   },
   "08390": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "083A0": {
     "source": "extraction",
@@ -8857,7 +8577,7 @@
   },
   "08FB0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "08FC0": {
     "source": "extraction",
@@ -9161,31 +8881,31 @@
   },
   "094A0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "094B0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "094C0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "094D0": {
     "source": "extraction",
-    "confidence": 0.2
+    "confidence": 0.6
   },
   "094E0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "094F0": {
     "source": "extraction",
-    "confidence": 0.2
+    "confidence": 0.6
   },
   "09500": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "09510": {
     "source": "extraction",
@@ -9713,21 +9433,25 @@
   },
   "09D40": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "09D50": {
     "source": "extraction",
+    "confidence": 0.6
+  },
+  "09D60": {
+    "source": "extraction",
     "confidence": 0.4
   },
-  "09DF0": {
+  "09D70": {
+    "source": "extraction",
+    "confidence": 0.4
+  },
+  "09D80": {
     "source": "extraction",
     "confidence": 0.2
   },
-  "09E00": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "09E10": {
+  "09D90": {
     "source": "extraction",
     "confidence": 0.2
   },
@@ -9737,19 +9461,19 @@
   },
   "09E30": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "09E40": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "09E50": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "09E60": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "09E70": {
     "source": "extraction",
@@ -10053,7 +9777,7 @@
   },
   "0A320": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.2
   },
   "0A330": {
     "source": "extraction",
@@ -10071,25 +9795,13 @@
     "source": "extraction",
     "confidence": 0.4
   },
-  "0A370": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "0A380": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "0A390": {
-    "source": "extraction",
-    "confidence": 0.6
-  },
   "0A3A0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "0A3B0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "0A3C0": {
     "source": "extraction",
@@ -10713,7 +10425,7 @@
   },
   "0AD70": {
     "source": "extraction",
-    "confidence": 0.2
+    "confidence": 0.4
   },
   "0ADA0": {
     "source": "extraction",
@@ -11097,11 +10809,11 @@
   },
   "0B390": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "0B3A0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "0B3B0": {
     "source": "extraction",
@@ -12101,7 +11813,7 @@
   },
   "0C340": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0C350": {
     "source": "extraction",
@@ -12111,17 +11823,9 @@
     "source": "extraction",
     "confidence": 0.4
   },
-  "0C370": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
-  "0C380": {
-    "source": "extraction",
-    "confidence": 0.6
-  },
   "0C390": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "0C3A0": {
     "source": "extraction",
@@ -12757,7 +12461,7 @@
   },
   "0CD80": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.2
   },
   "0CD90": {
     "source": "extraction",
@@ -12781,7 +12485,7 @@
   },
   "0CDE0": {
     "source": "extraction",
-    "confidence": 0.6
+    "confidence": 0.4
   },
   "0CDF0": {
     "source": "extraction",
@@ -12933,62 +12637,6 @@
   },
   "0D040": {
     "source": "extraction",
-    "confidence": 0.4
-  },
-  "0DE70": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DE80": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DE90": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DEA0": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DEB0": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DEC0": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DED0": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DEE0": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DEF0": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DF00": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DF20": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DF30": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DF40": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "0DF50": {
-    "source": "extraction",
     "confidence": 0.2
   },
   "0DF80": {
@@ -13121,7 +12769,7 @@
   },
   "0E180": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E190": {
     "source": "extraction",
@@ -13235,6 +12883,14 @@
     "source": "extraction",
     "confidence": 0.4
   },
+  "0E350": {
+    "source": "extraction",
+    "confidence": 0.4
+  },
+  "0E360": {
+    "source": "extraction",
+    "confidence": 0.4
+  },
   "0E390": {
     "source": "extraction",
     "confidence": 0.2
@@ -13261,27 +12917,27 @@
   },
   "0E3F0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E400": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E410": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E420": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E430": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E440": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E450": {
     "source": "extraction",
@@ -13289,15 +12945,15 @@
   },
   "0E460": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E470": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E480": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E490": {
     "source": "extraction",
@@ -13305,19 +12961,19 @@
   },
   "0E4A0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E4B0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E4C0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E4D0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0E4E0": {
     "source": "extraction",
@@ -14637,7 +14293,7 @@
   },
   "0F980": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0F990": {
     "source": "extraction",
@@ -14653,7 +14309,7 @@
   },
   "0F9C0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "0F9D0": {
     "source": "extraction",
@@ -15123,14 +14779,6 @@
     "source": "extraction",
     "confidence": 0.4
   },
-  "10370": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "10380": {
-    "source": "extraction",
-    "confidence": 0.4
-  },
   "10390": {
     "source": "extraction",
     "confidence": 0.6
@@ -15371,17 +15019,13 @@
     "source": "extraction",
     "confidence": 0.6
   },
-  "10930": {
-    "source": "extraction",
-    "confidence": 0.6
-  },
   "10940": {
     "source": "extraction",
     "confidence": 0.6
   },
   "10950": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "10960": {
     "source": "extraction",
@@ -15963,21 +15607,13 @@
     "source": "extraction",
     "confidence": 0.2
   },
-  "11360": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
-  "11370": {
-    "source": "extraction",
-    "confidence": 0.2
-  },
   "11380": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.2
   },
   "11390": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.2
   },
   "113A0": {
     "source": "extraction",
@@ -16013,7 +15649,7 @@
   },
   "11420": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.2
   },
   "11430": {
     "source": "extraction",
@@ -16265,7 +15901,7 @@
   },
   "11860": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "11870": {
     "source": "extraction",
@@ -16273,7 +15909,7 @@
   },
   "11880": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "11890": {
     "source": "extraction",
@@ -16281,11 +15917,11 @@
   },
   "118A0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "118B0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "118C0": {
     "source": "extraction",
@@ -16297,11 +15933,11 @@
   },
   "118E0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "118F0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "11900": {
     "source": "extraction",
@@ -16313,15 +15949,15 @@
   },
   "11920": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "11930": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "11940": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.6
   },
   "11950": {
     "source": "extraction",
