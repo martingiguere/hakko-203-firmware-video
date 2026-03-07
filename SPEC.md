@@ -117,6 +117,12 @@ Post-extraction analysis of `firmware_merged.txt` (4,373 lines recovered out of 
 | `$0D` scattered gaps | ~15 | Remaining small gaps in `$0D` range after Strategy 6 monotonicity fix recovered 208 lines. Both boundaries contain **non-FF code data**. |
 | Other ROM gaps (scattered) | ~256 | Small gaps (1–34 lines each) throughout `$04000`–`$12FFF`, all surrounded by non-FF data on at least one side. These are OCR coverage gaps in active code regions — must be resolved via the review tool, not FF-filled. |
 
+**Flagged for manual review (43 lines, `extraction-review`):**
+
+| Range | Lines | Reasoning |
+|-------|-------|-----------|
+| `$10070`–`$10920` (ROM data tables) | 43 | Repetitive byte patterns (e.g., all-`0A`, all-`05`, all-`08`) with 14+ of 16 bytes identical. High observation counts (up to 103) confirm consistent reads — these are real lookup/calibration tables, not OCR artifacts. Tagged `extraction-review` in source map with confidence 0.3. Individual bytes in the minority positions may have OCR errors. |
+
 **Already fully covered:**
 
 | Range | Lines | Status |

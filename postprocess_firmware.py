@@ -114,8 +114,10 @@ def load_extraction(filepath):
 def is_valid_line(addr, hex_bytes, obs):
     """Check if a line of hex data appears valid.
 
-    Filters out OCR artifacts like ASCII column bleed-through,
-    repetitive non-FF patterns, and out-of-range addresses.
+    Returns:
+        True     — line is valid
+        'review' — line has repetitive data (likely real table data, needs review)
+        False    — line is invalid (OCR artifact)
     """
     # Address must be 16-byte aligned
     if addr % 0x10 != 0:
@@ -130,13 +132,12 @@ def is_valid_line(addr, hex_bytes, obs):
     if count_7c >= 6:
         return False
 
-    # Reject lines where most bytes are a suspicious repeated value
+    # Flag lines where most bytes are a suspicious repeated value
     byte_counts = Counter(hex_bytes)
     most_common_byte, most_common_count = byte_counts.most_common(1)[0]
     if most_common_byte not in ('FF', '00'):
-        # Allow repetitive data in table regions
         if most_common_count >= 14:
-            return False
+            return 'review'
 
     # Reject lines that look like ASCII column bleed-through
     ascii_range_count = sum(1 for b in hex_bytes
@@ -174,19 +175,23 @@ def apply_corrections(addr, hex_bytes, context=None):
     return corrected
 
 
-def merge_and_vote(extraction, reference):
+def merge_and_vote(extraction, reference, review=None):
     """Merge extraction with reference data.
 
     Priority:
     1. Reference data (always wins)
     2. Extraction data weighted by observation count
+    3. Review-flagged data (repetitive patterns, needs human review)
 
     Returns dict of addr -> {bytes, source, confidence}.
     """
+    if review is None:
+        review = {}
     final = {}
 
     all_addrs = set()
     all_addrs.update(extraction.keys())
+    all_addrs.update(review.keys())
     all_addrs.update(reference.keys())
 
     for addr in sorted(all_addrs):
@@ -206,22 +211,31 @@ def merge_and_vote(extraction, reference):
 
         if addr in extraction:
             hex_bytes, obs = extraction[addr]
-            if is_valid_line(addr, hex_bytes, obs):
-                corrected = apply_corrections(addr, hex_bytes)
+            corrected = apply_corrections(addr, hex_bytes)
 
-                # Confidence based on observation count
-                if obs >= 5:
-                    confidence = 0.6
-                elif obs >= 2:
-                    confidence = 0.4
-                else:
-                    confidence = 0.2
+            # Confidence based on observation count
+            if obs >= 5:
+                confidence = 0.6
+            elif obs >= 2:
+                confidence = 0.4
+            else:
+                confidence = 0.2
 
-                final[addr] = {
-                    'bytes': corrected,
-                    'source': 'extraction',
-                    'confidence': confidence,
-                }
+            final[addr] = {
+                'bytes': corrected,
+                'source': 'extraction',
+                'confidence': confidence,
+            }
+            continue
+
+        if addr in review:
+            hex_bytes, obs = review[addr]
+            corrected = apply_corrections(addr, hex_bytes)
+            final[addr] = {
+                'bytes': corrected,
+                'source': 'extraction-review',
+                'confidence': 0.3,
+            }
 
     return final
 
@@ -666,19 +680,25 @@ def main():
 
     # Filter extraction
     valid_extraction = {}
+    review_extraction = {}
     filtered = 0
     for addr, (hex_bytes, obs) in raw_data.items():
-        if is_valid_line(addr, hex_bytes, obs):
+        status = is_valid_line(addr, hex_bytes, obs)
+        if status is True:
             corrected = apply_corrections(addr, hex_bytes)
             valid_extraction[addr] = (corrected, obs)
+        elif status == 'review':
+            corrected = apply_corrections(addr, hex_bytes)
+            review_extraction[addr] = (corrected, obs)
         else:
             filtered += 1
     print(f"\nFiltered {filtered} invalid lines")
     print(f"Valid extraction lines: {len(valid_extraction)}")
+    print(f"Flagged for review (repetitive data): {len(review_extraction)}")
 
     # Merge with reference
     print("\nMerging data sources...")
-    final = merge_and_vote(valid_extraction, reference)
+    final = merge_and_vote(valid_extraction, reference, review_extraction)
     print(f"Merged data (before FF-fill): {len(final)} addresses")
 
     # Pass 1: FF-fill neighbor gaps
