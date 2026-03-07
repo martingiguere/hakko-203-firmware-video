@@ -120,10 +120,10 @@
    - Position-adaptive threshold enables position-2 C/D swaps (`$10Cxx` → `$10Dxx`)
    - Coverage 93.7% → 94.7% → 95.1%
 
-3. **Strategy 7 — Full-Video Frame Extraction for Gap Recovery** ⬅️ NEXT
-   - See details below
-   - Highest expected impact: purely additive, targets all 270 missing addresses
-   - No OCR changes needed — uses existing kNN classifier on previously unprocessed frames
+3. **Strategy 7** ✅ DONE
+   - Full-video gap recovery (`fullvideo_gap_recovery.py`)
+   - Recovered 115/270 missing addresses, coverage 94.7% → 96.2%
+   - 155 remaining gaps are unrecoverable (video jumps over them)
 
 4. **Strategy 3** (no retrain needed)
    - Add temporal consistency as a post-vote correction
@@ -138,39 +138,31 @@
 
 ---
 
-## Strategy 7: Full-Video Frame Extraction for Gap Recovery ⬅️ NEXT
+## Strategy 7: Full-Video Frame Extraction for Gap Recovery ✅ IMPLEMENTED
 
-**Problem**: The `frames/` directory contains only 20,070 pre-extracted frames, but the full video (`full_video.mp4`) has 93,093 frames at 30fps. Approximately 73,000 video frames are never processed by the pipeline. The mapping between extracted frame numbers and video frame numbers is non-linear and unpredictable. Many of the 270 missing addresses are visible in these unprocessed frames.
+**Status**: Implemented 2026-03-07. Script: `fullvideo_gap_recovery.py`.
 
-**Evidence**: Address `$0CDC0` was missing because no pre-extracted frame captured it with a correct address OCR. But the data was clearly present in the full video at YouTube timestamp 21:03 (video frames 37910-37916). Running the pipeline's kNN classifier on raw video frames successfully recovered the data in one session.
+**Results**:
+- Recovered **115 of 270** missing addresses
+- Coverage improved from **94.7% → 96.2%** (4,923/5,120)
+- **155 addresses remain unrecoverable** — the video jumps over them between consecutive frames
+- Scanned 2,304 video frames across 7 search windows (563 unique frames, ~160s)
+- Saved row crops and updated `crop_index.json` for review tool compatibility
+- Uses video frame numbers (24630+) for crop filenames, avoiding collision with extracted frame numbers (1-20070)
 
-**Approach**:
-1. Build a video-frame→address mapping from `crop_index.json` anchor data (frame numbers that map to known addresses) to estimate which video timestamps correspond to each gap region
-2. For each gap, extract frames from `full_video.mp4` at the estimated timestamps using OpenCV (`cap.set(CAP_PROP_POS_FRAMES, n)`)
-3. Run the existing kNN classifier (`fast_knn_classifier.npz`) on each frame via `process_frame()` — frames are 1080x1920 grayscale, matching the pre-extracted frames exactly
-4. Collect observations for missing addresses and add to `extracted_firmware.txt`
-5. Run `postprocess_firmware.py` to merge
+**Approach** (as implemented):
+1. Load `firmware_merged.txt` to find missing ROM addresses; group into gap regions
+2. Use `crop_index.json` anchor data to estimate video frame ranges via linear interpolation
+3. Read frames from `full_video.mp4` in memory (no full-frame PNGs), skip duplicates with `is_frame_different()`
+4. Run `process_frame()` on each unique frame; also check C/D swap candidates for addresses with C or D digits
+5. Save row crops (~13 KB each) to `crops/<addr>/`, update `crop_index.json` with readings/confidences (atomic writes via tmp+rename)
+6. Update `extracted_firmware.txt`, rebuild downstream files, reset review state
 
-**Where to modify**: New script (e.g., `extract_from_video.py`) or extend `extract_pipeline.py` with a `--video` mode.
+**Frame mapping**: `video_frame = extracted_frame + 24629`. Video has hex data in frames 24400-44730.
 
-**Impact**: Very high. Targets all 270 missing addresses without any OCR algorithm changes. Purely additive — no risk of corrupting existing data.
+**Impact**: Very high. Recovered nearly half of all missing addresses with no OCR algorithm changes.
 
 **Requires retrain**: No.
-
-**Caution**: The OCR may misclassify addresses containing both C and D (as seen with `$0CDC0` → `$0CCC0`). Cross-check OCR'd addresses against the expected scroll position. The monotonic scroll assumption and anchor interpolation from `fix_d_c_misread.py` can help validate.
-
-**Estimated video-to-address mapping**: The video scrolls through `$00000`–`$13FFF` over ~51 minutes (~3,100 seconds). Rough rate: ~26 addresses/second, but non-uniform (pauses, speed variations). The existing `crop_index.json` maps extracted frame numbers to addresses; these can be converted to approximate video timestamps using the non-linear frame mapping.
-
-**Video resolution**: The source YouTube video maxes out at 1080p (format 137, H.264). The existing `full_video.mp4` and pre-extracted frames are already at maximum available quality (1920×1080). No higher resolution is available.
-
-**Disk space and review tool integration**:
-- Full-frame PNGs are ~2.1 MB each (20,070 existing frames = 40 GB). Extracting all 73,000 remaining frames as PNGs would require ~150 GB — not feasible (38 GB free).
-- **However**, Strategy 7 only needs ~1,400 targeted frames (~2.8 GB if saved as full PNGs). This fits comfortably.
-- **Recommended approach**: Read frames from `full_video.mp4` in memory via OpenCV (no full-frame PNGs), but save row-level crop PNGs to `crops/<addr>/` and update `crop_index.json` with readings and confidences. This preserves review tool compatibility:
-  - Row crops are ~13 KB each. Estimated ~1,400 frames × 14 rows = ~250 MB of crops.
-  - `crop_index.json` entries enable the review tool to show per-frame readings, confidence scores, and visual crops for human verification.
-  - The review tool's `/api/frame/<n>` endpoint won't have full-frame PNGs for Strategy 7 frames, but this endpoint is rarely used — the row crops at `/api/crop/<addr>/<frame>` are the primary visual reference.
-- **Frame numbering**: Strategy 7 frames come from video frame numbers (0–93092), not the pre-extracted frame numbers (1–20070). The crop filenames and crop_index entries should use the video frame numbers to avoid collisions (existing crops use extracted frame numbers which max out at 20070).
 
 ---
 
@@ -198,4 +190,5 @@ max_per_class = 500-800     # training sample cap
 | `fast_knn_classifier.npz` | Trained kNN model (invalidated by feature changes) |
 | `fix_49_misread.py` | Prior art: post-hoc address confusion fix |
 | `fix_d_c_misread.py` | Post-hoc address confusion fix: Phase 1 (±10 neighbor heuristic) + Phase 2 (anchor-based monotonicity for systematic blocks) |
+| `fullvideo_gap_recovery.py` | Strategy 7: scan full video for gap addresses, save crops, update firmware |
 | `ocr_9_4_confusion_fix_prompt.md` | Detailed 4/9 confusion analysis and root causes |

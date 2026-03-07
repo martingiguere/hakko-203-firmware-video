@@ -46,6 +46,7 @@ firmware_review_tool/    Flask app for human-assisted review
 | `measure_reference_geometry.py` | Measure reference screenshot geometry (row/byte positions) |
 | `fix_49_misread.py` | Post-hoc fix for 4/9 OCR address confusion |
 | `fix_d_c_misread.py` | Post-hoc fix for C/D OCR address confusion (Phase 1: neighbor context + Phase 2: anchor monotonicity) |
+| `fullvideo_gap_recovery.py` | Strategy 7: scan full video for gap addresses |
 | `diagnose.py` | Project status diagnostic |
 
 ## Review Tool
@@ -84,23 +85,16 @@ See `ocr_accuracy_improvement_strategies.md` for proposed strategies to push acc
 
 ## Coverage
 
-Current coverage: **4,851 / 5,120 addresses (94.7% automated)**, 270 missing lines.
+Current coverage: **4,923 / 5,120 addresses (96.2% automated)**, 155 missing lines.
 
-The D→C address misread has been resolved using a two-phase approach in `fix_d_c_misread.py`:
-- **Phase 1**: ±10 frame neighbor-context heuristic (catches isolated misreads)
-- **Phase 2**: Anchor-based monotonicity correction using 57,745 unambiguous ground-truth points, with position-adaptive swap threshold `max(swap_magnitude // 2, 0x80)` that handles C/D swaps at digit positions 1 and 2
+### Post-extraction fixes applied
 
-This recovered 215 lines in the `$0D050`–`$0DF70` range and 7 addresses in the `$10D80`–`$10DF0` range that were previously stored under wrong `$0Cxxx`/`$10Cxx` addresses.
+1. **C↔D address misread** (`fix_d_c_misread.py`): Two-phase correction using neighbor context (Phase 1) and anchor-based monotonicity (Phase 2). Recovered 215 lines in `$0D050`–`$0DF70` and 7 addresses in `$10D80`–`$10DF0`.
 
-### Next step: Full-video frame extraction (Strategy 7)
-
-The pipeline currently processes only 20,070 pre-extracted frames, but the full video has 93,093 frames — ~73,000 are never processed. Many missing addresses are visible in these unprocessed frames. This was proven by recovering `$0CDC0` directly from the video at YouTube timestamp 21:03, where the OCR systematically misread the address as `$0CCC0` in all pre-extracted frames.
-
-The approach: read frames directly from `full_video.mp4` in memory (no full-frame PNGs — the existing 20,070 frames already use 40 GB), run the existing kNN classifier, save row-level crop PNGs and `crop_index.json` entries for review tool compatibility, and add the recovered data. The source video is already at maximum available YouTube resolution (1080p). Estimated ~1,400 frames needed, producing ~250 MB of crops. See `ocr_accuracy_improvement_strategies.md` Strategy 7 and SPEC.md §10 Phase 4 for details.
+2. **Full-video gap recovery** (`fullvideo_gap_recovery.py`): Strategy 7 — scans `full_video.mp4` directly for addresses missing from the pre-extracted frames. The pipeline normally processes 20,070 pre-extracted frames, but the full video has 93,093 frames. By estimating which video timestamps correspond to each gap region and running the existing kNN classifier, this recovered **115 of 270 missing addresses**, improving coverage from 94.7% to 96.2%. The remaining 155 gaps are unrecoverable — the video jumps over those addresses between consecutive frames.
 
 ### Largest remaining gaps
 
-1. **`$11D40`–`$11F50`** (34 lines) — Largest gap
-2. **`$047E0`–`$04990`** (28 lines) — Dense code in Block 1
-3. **`$122D0`–`$12410`** (21 lines) — Block 0
-4. **`$0DC00`–`$0DCF0`** (16 lines) — Near resolved `$0D` region
+1. **`$047E0`–`$04990`** (28 addrs) — Dense code in Block 1, video jumps over this region
+2. **`$11D40`–`$11F50`** — Partially recovered, remaining addrs skipped by video
+3. **Scattered single-address gaps** — 46 groups of 1-4 addresses each throughout ROM

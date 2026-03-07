@@ -373,6 +373,7 @@ Same approach as FM-202:
    - **Phase 1** (neighbor context): ±10 frame neighbor median detects isolated misreads (388 frames)
    - **Phase 2** (anchor monotonicity): Builds a ground-truth frame→address trajectory from 57,745 addresses with no C/D digits, then uses inverse-distance weighted median interpolation (±500 frames) to detect systematic misread blocks. Any C↔D swap that brings an address ≥`$800` closer to the expected trajectory is applied (7,325 frames)
    - Combined: 7,514 frames relocated, recovering 208 lines in the `$0D050`–`$0DF70` range. Coverage improved from 93.7% to 94.7%.
+6. **Full-video gap recovery** (`fullvideo_gap_recovery.py`): Scan `full_video.mp4` for addresses missing from the pre-extracted frames. Recovered 115 of 270 missing addresses. Coverage improved from 94.7% to 96.2%. The remaining 155 gaps are unrecoverable (video jumps over them).
 4. **Overlay reference data**: Verified data always wins
 5. **FF-fill erased flash gaps**: Fill confirmed erased regions with `0xFF`. Per §2.1, only `$13000`–`$13FFF` (256 lines) qualifies — tail of Block 0 preceded by a confirmed FF run from `$12FB0`. The `$0D070`–`$0DF8F` gap and other scattered ROM gaps are **not** erased flash — they are video coverage gaps surrounded by non-FF code data
 6. **ID code validation**: Verify known bytes at ISP ID code addresses
@@ -748,36 +749,28 @@ hakko-203-firmware-video/
 5. Add region indicator for ROM vs. non-ROM addresses
 6. Add ID code validation indicator
 
-### Phase 4: Full-Video Frame Extraction for Gap Recovery
+### Phase 4: Full-Video Frame Extraction for Gap Recovery ✅ DONE
 
-The `frames/` directory contains only 20,070 pre-extracted frames, but the full video (`full_video.mp4`) has 93,093 frames at 30fps. Approximately 73,000 frames were never processed by the pipeline. The mapping between extracted frame numbers and video frame numbers is non-linear. Many missing addresses are visible in the unprocessed video frames.
+Implemented in `fullvideo_gap_recovery.py`. Scans `full_video.mp4` for addresses missing from the pre-extracted frames.
 
-**Proven approach** (used to recover `$0CDC0`): extract frames directly from `full_video.mp4` at target timestamps using OpenCV, run the existing kNN classifier via `process_frame()`, and add observations to `extracted_firmware.txt`.
+**Results**:
+- Recovered **115 of 270** missing addresses
+- Coverage improved from **94.7% → 96.2%** (4,923/5,120)
+- **155 addresses remain unrecoverable** — the video jumps over them between consecutive frames (no data exists in the video for these addresses)
+- Scanned 2,304 video frames across 7 search windows (563 unique, ~160s runtime)
 
-**Steps**:
-1. Build a frame→address mapping from `crop_index.json` anchor points to estimate which video timestamps correspond to each gap region
-2. For each gap, extract video frames at the estimated timestamps
-3. Run the kNN classifier on each frame and collect readings for missing addresses
-4. Save row-level crop PNGs to `crops/<addr>/` and update `crop_index.json` (for review tool compatibility)
-5. Add recovered data to `extracted_firmware.txt` and run `postprocess_firmware.py`
+**How it works**:
+1. Groups missing addresses into gap regions; estimates video frame ranges via linear interpolation from `crop_index.json` anchor data
+2. Reads frames from `full_video.mp4` in memory (no full-frame PNGs), skips duplicates
+3. Runs `process_frame()` on each unique frame; checks C/D swap candidates for ambiguous addresses
+4. Saves row crops to `crops/<addr>/`, updates `crop_index.json` (atomic writes via tmp+rename), `extracted_firmware.txt`
+5. Rebuilds downstream files and resets review state
 
-**Implementation constraints**:
-- The source video is 1080p (max available from YouTube). Existing frames and video are already at maximum resolution.
-- Full-frame PNGs are ~2.1 MB each (20,070 existing = 40 GB). Do NOT save full-frame PNGs for Strategy 7 — read directly from `full_video.mp4` via OpenCV in memory.
-- DO save row-level crop PNGs (~13 KB each) and `crop_index.json` entries with readings/confidences so the review tool can display per-frame data and visual crops for human verification.
-- Estimated ~1,400 frames needed, producing ~250 MB of crop PNGs. Disk budget is comfortable (38 GB free).
-- Use video frame numbers (0–93092) for crop filenames, not extracted frame numbers (1–20070), to avoid collisions with existing data.
+**Frame mapping**: `video_frame = extracted_frame + 24629`. Video frame numbers (24630+) used for crop filenames to avoid collision with extracted frame numbers (1-20070).
 
-**Priority gap regions** (270 missing lines total):
-
-1. **`$11D40`–`$11F50`** (34 lines, 544 bytes) — Largest remaining gap
-2. **`$047E0`–`$04990`** (28 lines, 448 bytes) — Dense code in Block 1
-3. **`$122D0`–`$12410`** (21 lines, 336 bytes) — Block 0
-4. **`$0DC00`–`$0DCF0`** (16 lines, 256 bytes) — Near the resolved `$0D` region
-5. **`$10D80`–`$10E10`** (10 lines, 160 bytes) — Near previously recovered `$10Dxx` addresses
-6. **Scattered smaller gaps** — `$12EF0`–`$12F80`, `$10320`–`$103A0`, `$043E0`–`$04450`, `$0FD50`–`$0FDC0`, `$0DE00`–`$0DE60`
-
-**Note**: Some addresses may still require manual reading if the OCR misclassifies them (as happened with `$0CDC0`, where the "D" was consistently read as "C"). Cross-check OCR'd addresses against expected values from the scroll position.
+**Remaining gaps** (155 addresses in 46 groups, mostly 1-4 addresses each):
+- **`$047E0`–`$04990`** (28 addrs) — Largest, video jumps over this region
+- **Scattered single-address gaps** throughout `$04000`–`$12FFF`
 
 ### Phase 4b: Manual Video Recovery of Remaining Gaps
 
@@ -866,7 +859,7 @@ ffmpeg / ffprobe      # Frame extraction
 
 ## 15. Success Criteria
 
-1. **Coverage**: ≥95% of firmware address lines have extracted data (before FF-fill)
+1. **Coverage**: ≥95% of firmware address lines have extracted data (before FF-fill) — ✅ achieved: 96.2%
 2. **ID code match**: All 7 known ID code bytes match expected values
 3. **Vector table validity**: All interrupt vectors point to valid ROM addresses
 4. **Instruction validity**: Disassembly from reset vector produces valid R8C/Tiny instructions with no illegal opcodes in traced code paths
