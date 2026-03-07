@@ -5,7 +5,7 @@
 - **Per-digit accuracy**: ~99.7% on reference-visible frames
 - **Classifier**: FastKNNClassifier, 67-dim structural features, k=7, weighted inverse-distance voting
 - **Known confusions**: 8<->6 (most common remaining), D<->C, 4<->9
-- **Post-hoc fixes applied**: `fix_49_misread.py` (826 frames relocated), `fix_d_c_misread.py` (7,514 frames relocated — Phase 1 neighbor + Phase 2 monotonicity)
+- **Post-hoc fixes applied**: `fix_49_misread.py` (826 frames relocated), `fix_d_c_misread.py` (Phase 1 neighbor + Phase 2 monotonicity with position-adaptive threshold)
 - **Training**: 2-pass (Tesseract-labeled Pass 1, kNN-detected Pass 2 with 80 frames), max 500-800 samples/class
 
 ---
@@ -93,9 +93,12 @@
 **Status**: Implemented 2026-03-07. Added as Phase 2 in `fix_d_c_misread.py`:
 - **Anchor trajectory**: Built from 57,745 addresses with no C/D digits (unambiguous ground truth)
 - **Interpolation**: For each C/D-containing address, estimate expected address via inverse-distance weighted median of nearby anchors (±500 frames)
-- **Swap detection**: If a C↔D swap brings the address ≥`$800` closer to expected, generate a move
-- **Results**: 7,325 frames moved (vs 388 from Phase 1 alone), coverage 93.7% → 94.7%
-- **Key fix**: `$0DB00`–`$0DC40` region (frames 14290–14340) now correctly mapped to `$0Dxxx` addresses
+- **Swap detection**: Position-adaptive threshold `max(swap_magnitude // 2, 0x80)` — handles C/D swaps at any digit position:
+  - Position 1 (`$0Cxxx` → `$0Dxxx`): magnitude `$1000`, threshold `$800`
+  - Position 2 (`$10Cxx` → `$10Dxx`): magnitude `$100`, threshold `$80`
+  - Position 3+ disabled by floor (magnitude `$10`, threshold `$80` > improvement) — too noisy
+- **Results**: Coverage 93.7% → 94.7% → 95.1% (position-adaptive threshold recovered 7 additional `$10Dxx` addresses)
+- **Key fixes**: `$0DB00`–`$0DC40` region correctly mapped to `$0Dxxx`; `$10D80`–`$10DF0` recovered from `$10Cxx` misreads
 
 **Where modified**: `fix_d_c_misread.py` — added `build_anchor_trajectory()`, `estimate_expected_address()`, `detect_monotonicity_moves()`, `deduplicate_moves()`, and updated `main()` to run both phases.
 
@@ -114,7 +117,8 @@
 
 2. **Strategy 6** ✅ DONE
    - Anchor-based monotonicity correction (Phase 2 in `fix_d_c_misread.py`)
-   - Recovered 208 lines in `$0D050`–`$0DF70`, coverage 93.7% → 94.7%
+   - Position-adaptive threshold enables position-2 C/D swaps (`$10Cxx` → `$10Dxx`)
+   - Coverage 93.7% → 94.7% → 95.1%
 
 3. **Strategy 3** (no retrain needed)
    - Add temporal consistency as a post-vote correction

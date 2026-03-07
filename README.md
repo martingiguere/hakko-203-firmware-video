@@ -84,13 +84,13 @@ See `ocr_accuracy_improvement_strategies.md` for proposed strategies to push acc
 
 ## Coverage
 
-Current coverage: **4,849 / 5,120 addresses (94.7%)**, 271 missing lines.
+Current coverage: **4,869 / 5,120 addresses (95.1%)**, 251 missing lines.
 
 The D→C address misread has been resolved using a two-phase approach in `fix_d_c_misread.py`:
 - **Phase 1**: ±10 frame neighbor-context heuristic (catches isolated misreads)
-- **Phase 2**: Anchor-based monotonicity correction using 57,745 unambiguous ground-truth points (catches systematic blocks where all neighbors share the wrong address)
+- **Phase 2**: Anchor-based monotonicity correction using 57,745 unambiguous ground-truth points, with position-adaptive swap threshold `max(swap_magnitude // 2, 0x80)` that handles C/D swaps at digit positions 1 and 2
 
-This recovered 208 lines in the `$0D050`–`$0DF70` range that were previously stored under wrong `$0Cxxx` addresses.
+This recovered 215 lines in the `$0D050`–`$0DF70` range and 7 addresses in the `$10D80`–`$10DF0` range that were previously stored under wrong `$0Cxxx`/`$10Cxx` addresses.
 
 ### Remaining gaps requiring manual recovery
 

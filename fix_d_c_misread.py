@@ -167,8 +167,6 @@ def detect_monotonicity_moves(crop_index):
                 continue
 
             current_dist = abs(addr_val - expected)
-            if current_dist < SWAP_THRESHOLD:
-                continue  # already close enough
 
             # Try all C↔D swap candidates
             candidates = swap_candidates(addr)
@@ -178,7 +176,9 @@ def detect_monotonicity_moves(crop_index):
             for cand in candidates:
                 cand_val = int(cand, 16)
                 dist = abs(cand_val - expected)
-                if dist < best_dist and (current_dist - dist) >= SWAP_THRESHOLD:
+                swap_magnitude = abs(addr_val - cand_val)
+                adaptive_threshold = max(swap_magnitude // 2, 0x80)
+                if dist < best_dist and (current_dist - dist) >= adaptive_threshold:
                     best_dist = dist
                     best_swap = cand
 
