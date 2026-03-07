@@ -111,6 +111,66 @@ def load_extraction(filepath):
     return data
 
 
+def load_crop_index_fallback(extraction_addrs):
+    """Load addresses from crop_index.json not present in extraction.
+
+    For addresses seen by precompute.py but missed by extract_pipeline.py
+    (e.g., due to adaptive frame-skipping), perform weighted majority voting
+    on the per-frame readings and return as fallback data.
+
+    Returns dict of addr_int -> (hex_bytes_list, obs_count) for addresses
+    not already in extraction_addrs.
+    """
+    crop_index_path = 'crops/crop_index.json'
+    if not os.path.exists(crop_index_path):
+        return {}
+
+    with open(crop_index_path) as f:
+        ci = json.load(f)
+
+    fallback = {}
+    for addr_str, entry in ci.items():
+        if addr_str == 'ref_addresses':
+            continue
+        try:
+            addr = int(addr_str, 16)
+        except ValueError:
+            continue
+
+        if addr in extraction_addrs:
+            continue
+
+        readings = entry.get('readings', {})
+        confidences = entry.get('confidences', {})
+        if not readings:
+            continue
+
+        # Weighted majority vote per byte position
+        num_bytes = 16
+        voted_bytes = []
+        for byte_idx in range(num_bytes):
+            vote_counts = defaultdict(float)
+            for frame_key, reading in readings.items():
+                if len(reading) != num_bytes:
+                    continue
+                byte_val = reading[byte_idx].upper()
+                conf = 1.0
+                if frame_key in confidences and len(confidences[frame_key]) > byte_idx:
+                    conf = confidences[frame_key][byte_idx]
+                vote_counts[byte_val] += conf
+
+            if vote_counts:
+                winner = max(vote_counts, key=vote_counts.get)
+                voted_bytes.append(winner)
+            else:
+                voted_bytes.append('FF')
+
+        if len(voted_bytes) == num_bytes:
+            fallback[addr] = (voted_bytes, len(readings))
+
+    return fallback
+
+
 def is_valid_line(addr, hex_bytes, obs):
     """Check if a line of hex data appears valid.
 
@@ -175,24 +235,28 @@ def apply_corrections(addr, hex_bytes, context=None):
     return corrected
 
 
-def merge_and_vote(extraction, reference, review=None):
+def merge_and_vote(extraction, reference, review=None, crop_fallback=None):
     """Merge extraction with reference data.
 
     Priority:
     1. Reference data (always wins)
     2. Extraction data weighted by observation count
     3. Review-flagged data (repetitive patterns, needs human review)
+    4. Crop-index fallback (addresses seen by precompute but missed by extraction)
 
     Returns dict of addr -> {bytes, source, confidence}.
     """
     if review is None:
         review = {}
+    if crop_fallback is None:
+        crop_fallback = {}
     final = {}
 
     all_addrs = set()
     all_addrs.update(extraction.keys())
     all_addrs.update(review.keys())
     all_addrs.update(reference.keys())
+    all_addrs.update(crop_fallback.keys())
 
     for addr in sorted(all_addrs):
         if addr < BASE_ADDR or addr > END_ADDR - 0x0F or addr % 0x10 != 0:
@@ -236,6 +300,26 @@ def merge_and_vote(extraction, reference, review=None):
                 'source': 'extraction-review',
                 'confidence': 0.3,
             }
+            continue
+
+        if addr in crop_fallback:
+            hex_bytes, obs = crop_fallback[addr]
+            validity = is_valid_line(addr, hex_bytes, obs)
+            if validity is False:
+                continue
+            corrected = apply_corrections(addr, hex_bytes)
+            if validity == 'review':
+                final[addr] = {
+                    'bytes': corrected,
+                    'source': 'crop-index-review',
+                    'confidence': 0.2,
+                }
+            else:
+                final[addr] = {
+                    'bytes': corrected,
+                    'source': 'crop-index',
+                    'confidence': 0.3,
+                }
 
     return final
 
@@ -678,6 +762,10 @@ def main():
     raw_data = load_extraction(extraction_path)
     print(f"Extraction data: {len(raw_data)} lines")
 
+    # Load crop-index fallback
+    crop_fallback = load_crop_index_fallback(set(raw_data.keys()))
+    print(f"Crop index fallback: {len(crop_fallback)} additional lines")
+
     # Filter extraction
     valid_extraction = {}
     review_extraction = {}
@@ -698,7 +786,8 @@ def main():
 
     # Merge with reference
     print("\nMerging data sources...")
-    final = merge_and_vote(valid_extraction, reference, review_extraction)
+    final = merge_and_vote(valid_extraction, reference, review_extraction,
+                           crop_fallback)
     print(f"Merged data (before FF-fill): {len(final)} addresses")
 
     # Pass 1: FF-fill neighbor gaps

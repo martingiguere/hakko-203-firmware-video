@@ -779,6 +779,12 @@ Implemented in `fullvideo_gap_recovery.py`. Scans `full_video.mp4` for addresses
 - **`$047E0`–`$04990`** (28 addrs) — Largest, video jumps over this region
 - **Scattered single-address gaps** throughout `$04000`–`$12FFF`
 
+### Phase 4a: Crop-Index Fallback Recovery ✅ DONE
+
+`postprocess_firmware.py` reads `crops/crop_index.json` as a fallback data source for addresses present in the crop index (seen by `precompute.py`) but missing from `extracted_firmware.txt` (skipped by `extract_pipeline.py` during adaptive deduplication). For each missing address, weighted majority voting is performed on per-frame readings. These lines enter `merge_and_vote()` at the lowest priority tier (below extraction-review), with source `crop-index` and confidence 0.3.
+
+**Results**: Recovered **70 additional lines**, coverage **97.0% → 97.6%** (4,996/5,120).
+
 ### Phase 4b: Manual Video Recovery of Remaining Gaps
 
 For any addresses not recovered by automated full-video extraction, pause the YouTube video at the relevant timestamp, read the hex bytes manually, and add them to the extraction or review state. The `$0CDC0` recovery at YouTube timestamp 21:03-21:04 demonstrated this workflow.
