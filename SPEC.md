@@ -109,12 +109,12 @@ Post-extraction analysis of `firmware_merged.txt` (4,373 lines recovered out of 
 |-------|-------|-----------|
 | `$13000`–`$13FFF` | 256 | Tail of Block 0 upper half. The last extracted line is `$12FF0` (all-FF), and lines `$12FB0`–`$12FF0` are a confirmed FF run. Last non-FF data is at `$12FA0`. Since unused flash within a block remains `0xFF`, the remaining 4 KB is certainly erased. The video simply didn't scroll far enough to show these addresses. |
 
-**NOT safe to FF-fill (491 lines, 7,856 bytes):**
+**NOT safe to FF-fill (~271 lines):**
 
 | Range | Lines | Reasoning |
 |-------|-------|-----------|
-| `$0D070`–`$0DF8F` | 242 | Largest gap. Both boundaries (`$0D060`, `$0DF90`) contain **non-FF code data**. This is a video coverage gap — the video scrolls through the `$0D` range in ~20 frames, too fast to capture most addresses. These are missed code bytes, not erased flash. |
-| Other ROM gaps (scattered) | 249 | Small gaps (1–34 lines each) throughout `$04000`–`$12FFF`, all surrounded by non-FF data on at least one side. These are OCR coverage gaps in active code regions — must be resolved via the review tool, not FF-filled. |
+| `$0D` scattered gaps | ~15 | Remaining small gaps in `$0D` range after Strategy 6 monotonicity fix recovered 208 lines. Both boundaries contain **non-FF code data**. |
+| Other ROM gaps (scattered) | ~256 | Small gaps (1–34 lines each) throughout `$04000`–`$12FFF`, all surrounded by non-FF data on at least one side. These are OCR coverage gaps in active code regions — must be resolved via the review tool, not FF-filled. |
 
 **Already fully covered:**
 
@@ -369,7 +369,10 @@ Same approach as FM-202:
 
 1. **Filter invalid lines**: Non-aligned addresses, ASCII artifacts, implausible byte patterns
 2. **Systematic error corrections**: Identify and fix classifier-specific confusion patterns (analogous to FM-202's CF→FF correction)
-3. **D→C address misclassification fix**: The kNN classifier misreads hex digit `D` as `C` at address digit position 1 in a narrow frame window within the `$0D000`–`$0DFFF` range, causing some frame observations to be filed under `$0C000`–`$0CFFF` addresses. The `fix_d_c_misread.py` script dynamically detects the contamination window boundaries (searching for the last correctly-classified 0D entry before the gap and the first post-gap 0D entry), relocates frames to corrected `$0D` addresses (+0x1000), moves crop PNGs, recomputes byte consensus, and rebuilds all downstream files. Most of the `$0D050`–`$0DF70` gap is structural — the video scrolls through the 0D range in only ~20 frames, so most addresses aren't visible long enough to be captured.
+3. **D→C address misclassification fix**: The kNN classifier misreads hex digit `D` as `C` in address fields within the `$0D000`–`$0DFFF` range, causing frame observations to be filed under `$0C000`–`$0CFFF` addresses. The `fix_d_c_misread.py` script uses a two-phase approach:
+   - **Phase 1** (neighbor context): ±10 frame neighbor median detects isolated misreads (388 frames)
+   - **Phase 2** (anchor monotonicity): Builds a ground-truth frame→address trajectory from 57,745 addresses with no C/D digits, then uses inverse-distance weighted median interpolation (±500 frames) to detect systematic misread blocks. Any C↔D swap that brings an address ≥`$800` closer to the expected trajectory is applied (7,325 frames)
+   - Combined: 7,514 frames relocated, recovering 208 lines in the `$0D050`–`$0DF70` range. Coverage improved from 93.7% to 94.7%.
 4. **Overlay reference data**: Verified data always wins
 5. **FF-fill erased flash gaps**: Fill confirmed erased regions with `0xFF`. Per §2.1, only `$13000`–`$13FFF` (256 lines) qualifies — tail of Block 0 preceded by a confirmed FF run from `$12FB0`. The `$0D070`–`$0DF8F` gap and other scattered ROM gaps are **not** erased flash — they are video coverage gaps surrounded by non-FF code data
 6. **ID code validation**: Verify known bytes at ISP ID code addresses
@@ -749,7 +752,7 @@ hakko-203-firmware-video/
 
 Before running the review tool, manually recover data from the YouTube video for the three highest-priority missing regions. These are gaps where the video scrolled too fast for the OCR pipeline to capture, but the data is visible in individual frames:
 
-1. **`$0D070`–`$0DF8F`** (242 lines, 3,872 bytes) — Largest gap. The video scrolls through the `$0D` range in ~20 frames. Both boundaries contain active code (`$0D060` = `F8 E7 90 07...`, `$0DF90` = `03 02 FF FE...`). Look for frames where the address column shows `$0D0xx`–`$0DFxx`.
+1. **`$0D` scattered gaps** (~15 lines remaining) — The former 242-line gap has been largely resolved by Strategy 6 (anchor-based monotonicity correction), which recovered 208 lines by detecting systematic D→C misreads. Small remaining gaps in the `$0D` range may still need manual recovery.
 
 2. **`$047E0`–`$0499F`** (28 lines, 448 bytes) — Second-largest ROM gap, in dense code early in Block 1. Boundaries: `$047D0` and `$049A0` both have non-FF data.
 

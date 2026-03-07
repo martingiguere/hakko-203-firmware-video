@@ -31,7 +31,7 @@ firmware_review_tool/    Flask app for human-assisted review
 1. **Training** -- Tesseract reads addresses on frames showing the known reference region. Matching rows provide labeled digit samples for a kNN classifier (67-dim structural features, including 8↔6 discriminative features).
 2. **Extraction** -- Every frame is OCR'd: read 10-digit address, read 16 hex bytes. Duplicate/transitional frames are skipped.
 3. **Voting** -- Each address+byte gets multiple observations across frames. Weighted majority vote picks the best reading.
-4. **Post-processing** -- Reference data overlay, OCR misread fixes (4/9, C/D swaps), gap filling, binary output.
+4. **Post-processing** -- Reference data overlay, OCR misread fixes (4/9 swap, C/D two-phase correction), gap filling, binary output.
 
 ## Scripts
 
@@ -45,7 +45,7 @@ firmware_review_tool/    Flask app for human-assisted review
 | `analyze_reference.py` | Verify reference transcription against screenshot |
 | `measure_reference_geometry.py` | Measure reference screenshot geometry (row/byte positions) |
 | `fix_49_misread.py` | Post-hoc fix for 4/9 OCR address confusion |
-| `fix_d_c_misread.py` | Post-hoc fix for C/D OCR address confusion |
+| `fix_d_c_misread.py` | Post-hoc fix for C/D OCR address confusion (Phase 1: neighbor context + Phase 2: anchor monotonicity) |
 | `diagnose.py` | Project status diagnostic |
 
 ## Review Tool
@@ -82,11 +82,19 @@ The video-only kNN classifier achieves ~99.7% accuracy on reference-visible fram
 
 See `ocr_accuracy_improvement_strategies.md` for proposed strategies to push accuracy higher.
 
-## Next Steps
+## Coverage
 
-Manually recover data from the YouTube video for three critical gaps where the video scrolled too fast for OCR:
+Current coverage: **4,849 / 5,120 addresses (94.7%)**, 271 missing lines.
 
-1. **`$0D070`–`$0DF8F`** (242 lines) — Largest gap, video scrolls through `$0D` range in ~20 frames
+The D→C address misread has been resolved using a two-phase approach in `fix_d_c_misread.py`:
+- **Phase 1**: ±10 frame neighbor-context heuristic (catches isolated misreads)
+- **Phase 2**: Anchor-based monotonicity correction using 57,745 unambiguous ground-truth points (catches systematic blocks where all neighbors share the wrong address)
+
+This recovered 208 lines in the `$0D050`–`$0DF70` range that were previously stored under wrong `$0Cxxx` addresses.
+
+### Remaining gaps requiring manual recovery
+
+1. **Scattered `$0D` gaps** — Small remaining gaps in the `$0D` range after monotonicity fix
 2. **`$047E0`–`$0499F`** (28 lines) — Dense code in Block 1
 3. **`$0FD50`–`$0FDCF`** (8 lines) — Interrupt handler region near vector table
 

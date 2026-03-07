@@ -85,7 +85,131 @@ def swap_candidates(addr):
     return candidates
 
 
-# ── Step 1 & 2: Detect suspicious frames and determine corrections ───────────
+# ── Phase 2: Anchor-based monotonicity correction ────────────────────────────
+
+ANCHOR_RADIUS = 500   # frames to look for anchor points
+SWAP_THRESHOLD = 0x800  # minimum improvement to justify a swap (~half of $1000)
+
+
+def build_anchor_trajectory(crop_index):
+    """
+    Build ground-truth frame→address trajectory from addresses with NO C or D
+    digits (unambiguous anchors).  Returns sorted list of (frame, addr_value).
+    """
+    anchors = []
+    for addr, entry in crop_index.items():
+        if addr == 'ref_addresses':
+            continue
+        if 'C' in addr or 'D' in addr:
+            continue
+        addr_val = int(addr, 16)
+        for frame in entry.get('frames', []):
+            anchors.append((frame, addr_val))
+    anchors.sort()
+    return anchors
+
+
+def estimate_expected_address(frame, anchors, radius=ANCHOR_RADIUS):
+    """
+    Estimate expected address at a given frame using nearby anchor points.
+    Uses inverse-distance weighted median of anchors within ±radius frames.
+    Returns expected address value, or None if no anchors in range.
+    """
+    nearby = []
+    weights = []
+    for af, av in anchors:
+        dist = abs(af - frame)
+        if dist <= radius and dist > 0:
+            nearby.append(av)
+            weights.append(1.0 / dist)
+
+    if not nearby:
+        return None
+
+    # Weighted median: sort by value, find weight midpoint
+    paired = sorted(zip(nearby, weights))
+    total_w = sum(weights)
+    cumulative = 0.0
+    for val, w in paired:
+        cumulative += w
+        if cumulative >= total_w / 2.0:
+            return val
+    return paired[-1][0]
+
+
+def detect_monotonicity_moves(crop_index):
+    """
+    Phase 2: Use anchor-based interpolation to detect C↔D misreads in blocks
+    where all neighbors share the same wrong address (defeating the ±10 heuristic).
+
+    Returns list of (source_addr, frame, dest_addr) tuples.
+    """
+    anchors = build_anchor_trajectory(crop_index)
+    if not anchors:
+        print("  Phase 2: No anchor points found — skipping")
+        return []
+
+    print(f"  Phase 2: Built anchor trajectory with {len(anchors)} points")
+
+    moves = []
+    for addr in sorted(crop_index):
+        if addr == 'ref_addresses':
+            continue
+        if 'C' not in addr and 'D' not in addr:
+            continue
+
+        entry = crop_index[addr]
+        addr_val = int(addr, 16)
+
+        for frame in entry.get('frames', []):
+            expected = estimate_expected_address(frame, anchors)
+            if expected is None:
+                continue
+
+            current_dist = abs(addr_val - expected)
+            if current_dist < SWAP_THRESHOLD:
+                continue  # already close enough
+
+            # Try all C↔D swap candidates
+            candidates = swap_candidates(addr)
+            best_swap = None
+            best_dist = current_dist
+
+            for cand in candidates:
+                cand_val = int(cand, 16)
+                dist = abs(cand_val - expected)
+                if dist < best_dist and (current_dist - dist) >= SWAP_THRESHOLD:
+                    best_dist = dist
+                    best_swap = cand
+
+            if best_swap is not None:
+                moves.append((addr, frame, best_swap))
+
+    print(f"  Phase 2: Detected {len(moves)} frames to move via monotonicity")
+
+    # Summarize
+    mapping = {}
+    for src, frame, dest in moves:
+        mapping.setdefault((src, dest), []).append(frame)
+    print(f"  Phase 2: Across {len(mapping)} unique source→dest pairs")
+
+    return moves
+
+
+def deduplicate_moves(moves1, moves2):
+    """
+    Merge two move lists, deduplicating on (source_addr, frame).
+    Phase 2 (moves2) wins on conflict.
+    """
+    by_key = {}
+    for src, frame, dest in moves1:
+        by_key[(src, frame)] = (src, frame, dest)
+    for src, frame, dest in moves2:
+        by_key[(src, frame)] = (src, frame, dest)
+    return list(by_key.values())
+
+
+# ── Phase 1: Neighbor-context heuristic ──────────────────────────────────────
 
 def detect_and_plan_moves(crop_index):
     """
@@ -456,10 +580,18 @@ def main():
     print("Fix C\u2194D OCR Address Confusion")
     print("=" * 60)
 
-    # Step 1 & 2: Detect and plan
-    print("\nStep 1-2: Detect suspicious frames and plan corrections")
+    # Phase 1: Neighbor-context detection
+    print("\nPhase 1: Detect suspicious frames via neighbor context")
     crop_index = load_crop_index()
-    moves = detect_and_plan_moves(crop_index)
+    moves_p1 = detect_and_plan_moves(crop_index)
+
+    # Phase 2: Anchor-based monotonicity detection
+    print("\nPhase 2: Detect suspicious frames via anchor monotonicity")
+    moves_p2 = detect_monotonicity_moves(crop_index)
+
+    # Merge and deduplicate
+    moves = deduplicate_moves(moves_p1, moves_p2)
+    print(f"\n  Combined: {len(moves)} moves ({len(moves_p1)} phase 1, {len(moves_p2)} phase 2, {len(moves_p1) + len(moves_p2) - len(moves)} deduped)")
 
     if not moves:
         print("\nNo suspicious frames found. Nothing to do.")

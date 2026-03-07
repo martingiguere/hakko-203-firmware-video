@@ -5,7 +5,7 @@
 - **Per-digit accuracy**: ~99.7% on reference-visible frames
 - **Classifier**: FastKNNClassifier, 67-dim structural features, k=7, weighted inverse-distance voting
 - **Known confusions**: 8<->6 (most common remaining), D<->C, 4<->9
-- **Post-hoc fixes applied**: `fix_49_misread.py` (826 frames relocated), `fix_d_c_misread.py` (3693 frames relocated)
+- **Post-hoc fixes applied**: `fix_49_misread.py` (826 frames relocated), `fix_d_c_misread.py` (7,514 frames relocated — Phase 1 neighbor + Phase 2 monotonicity)
 - **Training**: 2-pass (Tesseract-labeled Pass 1, kNN-detected Pass 2 with 80 frames), max 500-800 samples/class
 
 ---
@@ -88,6 +88,23 @@
 
 ---
 
+## Strategy 6: Global Monotonicity Address Correction ✅ IMPLEMENTED
+
+**Status**: Implemented 2026-03-07. Added as Phase 2 in `fix_d_c_misread.py`:
+- **Anchor trajectory**: Built from 57,745 addresses with no C/D digits (unambiguous ground truth)
+- **Interpolation**: For each C/D-containing address, estimate expected address via inverse-distance weighted median of nearby anchors (±500 frames)
+- **Swap detection**: If a C↔D swap brings the address ≥`$800` closer to expected, generate a move
+- **Results**: 7,325 frames moved (vs 388 from Phase 1 alone), coverage 93.7% → 94.7%
+- **Key fix**: `$0DB00`–`$0DC40` region (frames 14290–14340) now correctly mapped to `$0Dxxx` addresses
+
+**Where modified**: `fix_d_c_misread.py` — added `build_anchor_trajectory()`, `estimate_expected_address()`, `detect_monotonicity_moves()`, `deduplicate_moves()`, and updated `main()` to run both phases.
+
+**Impact**: Very high. Recovered 208 lines in the `$0D050`–`$0DF70` range, reducing the `$0D` gap from 242 to ~34 lines.
+
+**Requires retrain**: No. Post-hoc address correction only.
+
+---
+
 ## Recommended Implementation Order
 
 1. **Strategy 2 + Strategy 4** ✅ DONE
@@ -95,15 +112,19 @@
    - Expanded Pass 2 training from 30→80 frames
    - Added per-class balance warnings
 
-2. **Strategy 3** (no retrain needed)
+2. **Strategy 6** ✅ DONE
+   - Anchor-based monotonicity correction (Phase 2 in `fix_d_c_misread.py`)
+   - Recovered 208 lines in `$0D050`–`$0DF70`, coverage 93.7% → 94.7%
+
+3. **Strategy 3** (no retrain needed)
    - Add temporal consistency as a post-vote correction
    - Can be applied to existing extraction results
 
-3. **Strategy 1** (no retrain needed)
+4. **Strategy 1** (no retrain needed)
    - Add confusion-aware voting penalties
    - Fine-tuning step after Strategies 2-4 establish a better baseline
 
-4. **Strategy 5** (optional, based on remaining error analysis)
+5. **Strategy 5** (optional, based on remaining error analysis)
    - Only if edge-row errors remain significant after Strategies 2-4
 
 ---
@@ -131,5 +152,5 @@ max_per_class = 500-800     # training sample cap
 | `grid_calibration.json` | Grid geometry constants |
 | `fast_knn_classifier.npz` | Trained kNN model (invalidated by feature changes) |
 | `fix_49_misread.py` | Prior art: post-hoc address confusion fix |
-| `fix_d_c_misread.py` | Prior art: post-hoc address confusion fix |
+| `fix_d_c_misread.py` | Post-hoc address confusion fix: Phase 1 (±10 neighbor heuristic) + Phase 2 (anchor-based monotonicity for systematic blocks) |
 | `ocr_9_4_confusion_fix_prompt.md` | Detailed 4/9 confusion analysis and root causes |
