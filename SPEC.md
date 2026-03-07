@@ -91,7 +91,8 @@ Based on the block structure and memory map, the following regions are expected 
    - `$00300`–`$003FF`: Reserved (undefined, likely FF)
    - `$00400`–`$00FFF`: RAM (runtime state at dump time, not necessarily FF)
    - `$01000`–`$023FF`: Reserved (not mapped, likely reads as FF)
-   - `$02400`–`$02BFF`: Data flash (FF if unused, or calibration/settings data)
+   - `$02400`–`$027FF`: Data flash A (contains calibration/settings data — NOT FF). 53 non-FF lines (`$02410`–`$02750`): repeating 16-byte records (alternating `41`/`43` prefix, paired channel calibration). Last non-FF at `$02750` (YouTube 14:15), FF from `$02760` onward. **Needs manual review** — OCR may confuse digits in these repeating structures.
+   - `$02800`–`$02BFF`: Data flash B (confirmed all-FF, YouTube 14:19)
    - `$02C00`–`$03FFF`: Reserved (likely FF)
 
 2. **Within Program ROM (`$04000`–`$13FFF`)** — 64 KB:
@@ -120,7 +121,7 @@ Post-extraction analysis of `firmware_merged.txt` (4,373 lines recovered out of 
 
 | Range | Lines | Status |
 |-------|-------|--------|
-| `$00000`–`$03FFF` (non-ROM) | 1,024 | All present: 817 lines `ff-forced`, 207 from extraction. All read as FF — the data flash blocks (`$02400`–`$02BFF`) are unused (Hakko does not use EEPROM emulation on this chip). |
+| `$00000`–`$03FFF` (non-ROM) | 1,024 | All present. Data flash A (`$02400`–`$027FF`) contains calibration/settings data (repeating 16-byte structures, 19-26 obs/line); last non-FF at `$02760` (YouTube 14:15). Data flash B (`$02800`–`$02BFF`) confirmed all-FF (YouTube 14:19). Remaining lines are `ff-forced` (SFR/RAM/reserved regions). |
 
 **Confirmed from reference screenshot**: The Xeltek SuperPro reads the full `$00000`–`$13FFF` range (80 KB) with physical addresses preserved. The buffer addresses correspond directly to MCU physical addresses — no offset translation is needed. The 64 KB of program ROM occupies `$04000`–`$0FFFF` (lower 48 KB) and `$10000`–`$13FFF` (upper 16 KB) within the 80 KB buffer. The reference screenshot shows rows at addresses `$0FF70`–`$10060`, confirming that the address space is contiguous across the `$0FFFF`/`$10000` boundary in the buffer.
 

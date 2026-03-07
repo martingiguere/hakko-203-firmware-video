@@ -46,8 +46,12 @@ BLOCKLIST = set()
 # More regions added after first extraction analysis.
 FF_FORCED_REGIONS = [
     # SFR ($00000-$002FF) + reserved ($00300-$003FF) + RAM ($00400-$00FFF)
-    # + unmapped gap ($01000-$03FFF) — no ROM here
-    (0x00000, 0x03FFF),
+    # + unmapped ($01000-$023FF) — no ROM here, all reads as FF
+    (0x00000, 0x023FF),
+    # Data flash A ($02400-$027FF) is EXCLUDED — contains calibration data.
+    # Data flash B ($02800-$02BFF) is included — legitimately all-FF.
+    # Reserved region after data flash ($02C00-$03FFF) — no ROM here
+    (0x02800, 0x03FFF),
     # Tail of Block 0 upper half — erased flash confirmed by FF run from $12FB0.
     # Last non-FF data at $12FA0. Video didn't scroll past $12FF0.
     # See SPEC.md §2.1 "Observed FF Regions and Missing Line Analysis".
@@ -711,7 +715,7 @@ def main():
     # Force confirmed erased flash regions to all-FF
     ff_forced = 0
     for region_start, region_end in FF_FORCED_REGIONS:
-        for addr in range(region_start, region_end + 0x10, 0x10):
+        for addr in range(region_start, (region_end & ~0xF) + 1, 0x10):
             if addr in final:
                 if not all(b == 'FF' for b in final[addr]['bytes']):
                     final[addr]['bytes'] = ['FF'] * 16
