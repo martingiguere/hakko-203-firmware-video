@@ -1,5 +1,5 @@
 # Hakko FM-203 Firmware — Merged extraction
-# 4850 address lines recovered
+# 4851 address lines recovered
 # Address range: 0x00000 - 0x14000
 # Sources: extraction + reference + FF-fill
 #
@@ -3229,6 +3229,7 @@
 0CD90: 0D 74 80 6F 04 01 73 B4 06 72 06 7D F2 73 B4 FE
 0CDA0: 77 84 64 00 74 90 E0 02 01 73 B4 06 72 06 7D F2
 0CDB0: 77 8B FE F3 01 7D CE 0D 74 80 FF 05 01 73 B4 06
+0CDC0: A4 73 1B FC E4 08 6C E8 C4 01 7D F2 D8 02 73 0B
 0CDD0: 73 CA 06 72 06 F8 F2 77 07 FE F3 01 60 CE 80 74
 0CDE0: 80 8F 07 01 73 B4 06 72 06 7D F2 73 B4 FE 77 54
 0CDF0: 64 00 74 90 00 06 01 70 E4 06 72 06 7E F2 7C F2
