@@ -748,17 +748,32 @@ hakko-203-firmware-video/
 5. Add region indicator for ROM vs. non-ROM addresses
 6. Add ID code validation indicator
 
-### Phase 4: Manual Video Recovery of Critical Gaps
+### Phase 4: Full-Video Frame Extraction for Gap Recovery
 
-Before running the review tool, manually recover data from the YouTube video for the three highest-priority missing regions. These are gaps where the video scrolled too fast for the OCR pipeline to capture, but the data is visible in individual frames:
+The `frames/` directory contains only 20,070 pre-extracted frames, but the full video (`full_video.mp4`) has 93,093 frames at 30fps. Approximately 73,000 frames were never processed by the pipeline. The mapping between extracted frame numbers and video frame numbers is non-linear. Many missing addresses are visible in the unprocessed video frames.
 
-1. **`$0D` scattered gaps** (~15 lines remaining) — The former 242-line gap has been largely resolved by Strategy 6 (anchor-based monotonicity correction), which recovered 208 lines by detecting systematic D→C misreads. Small remaining gaps in the `$0D` range may still need manual recovery.
+**Proven approach** (used to recover `$0CDC0`): extract frames directly from `full_video.mp4` at target timestamps using OpenCV, run the existing kNN classifier via `process_frame()`, and add observations to `extracted_firmware.txt`.
 
-2. **`$047E0`–`$0499F`** (28 lines, 448 bytes) — Second-largest ROM gap, in dense code early in Block 1. Boundaries: `$047D0` and `$049A0` both have non-FF data.
+**Steps**:
+1. Build a frame→address mapping from `crop_index.json` anchor points to estimate which video timestamps correspond to each gap region
+2. For each gap, extract video frames at the estimated timestamps
+3. Run the kNN classifier on each frame and collect readings for missing addresses
+4. Add recovered data to `extracted_firmware.txt` and run `postprocess_firmware.py`
 
-3. **`$0FD50`–`$0FDCF`** (8 lines, 128 bytes) — Gap in the interrupt handler / vector trampoline region just before the vector table. `$0FD40` = `4E FF FF FF...`, `$0FDD0` = `08 08 08 0C...`. Critical for correct execution.
+**Priority gap regions** (270 missing lines total):
 
-For each, pause the video at the relevant timestamp, read the hex bytes manually, and add them to the extraction or review state.
+1. **`$11D40`–`$11F50`** (34 lines, 544 bytes) — Largest remaining gap
+2. **`$047E0`–`$04990`** (28 lines, 448 bytes) — Dense code in Block 1
+3. **`$122D0`–`$12410`** (21 lines, 336 bytes) — Block 0
+4. **`$0DC00`–`$0DCF0`** (16 lines, 256 bytes) — Near the resolved `$0D` region
+5. **`$10D80`–`$10E10`** (10 lines, 160 bytes) — Near previously recovered `$10Dxx` addresses
+6. **Scattered smaller gaps** — `$12EF0`–`$12F80`, `$10320`–`$103A0`, `$043E0`–`$04450`, `$0FD50`–`$0FDC0`, `$0DE00`–`$0DE60`
+
+**Note**: Some addresses may still require manual reading if the OCR misclassifies them (as happened with `$0CDC0`, where the "D" was consistently read as "C"). Cross-check OCR'd addresses against expected values from the scroll position.
+
+### Phase 4b: Manual Video Recovery of Remaining Gaps
+
+For any addresses not recovered by automated full-video extraction, pause the YouTube video at the relevant timestamp, read the hex bytes manually, and add them to the extraction or review state. The `$0CDC0` recovery at YouTube timestamp 21:03-21:04 demonstrated this workflow.
 
 ### Phase 5: Review & Export
 1. Run human review using the web tool

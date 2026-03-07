@@ -120,16 +120,46 @@
    - Position-adaptive threshold enables position-2 C/D swaps (`$10Cxx` → `$10Dxx`)
    - Coverage 93.7% → 94.7% → 95.1%
 
-3. **Strategy 3** (no retrain needed)
+3. **Strategy 7 — Full-Video Frame Extraction for Gap Recovery** ⬅️ NEXT
+   - See details below
+   - Highest expected impact: purely additive, targets all 270 missing addresses
+   - No OCR changes needed — uses existing kNN classifier on previously unprocessed frames
+
+4. **Strategy 3** (no retrain needed)
    - Add temporal consistency as a post-vote correction
    - Can be applied to existing extraction results
 
-4. **Strategy 1** (no retrain needed)
+5. **Strategy 1** (no retrain needed)
    - Add confusion-aware voting penalties
    - Fine-tuning step after Strategies 2-4 establish a better baseline
 
-5. **Strategy 5** (optional, based on remaining error analysis)
+6. **Strategy 5** (optional, based on remaining error analysis)
    - Only if edge-row errors remain significant after Strategies 2-4
+
+---
+
+## Strategy 7: Full-Video Frame Extraction for Gap Recovery ⬅️ NEXT
+
+**Problem**: The `frames/` directory contains only 20,070 pre-extracted frames, but the full video (`full_video.mp4`) has 93,093 frames at 30fps. Approximately 73,000 video frames are never processed by the pipeline. The mapping between extracted frame numbers and video frame numbers is non-linear and unpredictable. Many of the 270 missing addresses are visible in these unprocessed frames.
+
+**Evidence**: Address `$0CDC0` was missing because no pre-extracted frame captured it with a correct address OCR. But the data was clearly present in the full video at YouTube timestamp 21:03 (video frames 37910-37916). Running the pipeline's kNN classifier on raw video frames successfully recovered the data in one session.
+
+**Approach**:
+1. Build a video-frame→address mapping from `crop_index.json` anchor data (frame numbers that map to known addresses) to estimate which video timestamps correspond to each gap region
+2. For each gap, extract frames from `full_video.mp4` at the estimated timestamps using OpenCV (`cap.set(CAP_PROP_POS_FRAMES, n)`)
+3. Run the existing kNN classifier (`fast_knn_classifier.npz`) on each frame via `process_frame()` — frames are 1080x1920 grayscale, matching the pre-extracted frames exactly
+4. Collect observations for missing addresses and add to `extracted_firmware.txt`
+5. Run `postprocess_firmware.py` to merge
+
+**Where to modify**: New script (e.g., `extract_from_video.py`) or extend `extract_pipeline.py` with a `--video` mode.
+
+**Impact**: Very high. Targets all 270 missing addresses without any OCR algorithm changes. Purely additive — no risk of corrupting existing data.
+
+**Requires retrain**: No.
+
+**Caution**: The OCR may misclassify addresses containing both C and D (as seen with `$0CDC0` → `$0CCC0`). Cross-check OCR'd addresses against the expected scroll position. The monotonic scroll assumption and anchor interpolation from `fix_d_c_misread.py` can help validate.
+
+**Estimated video-to-address mapping**: The video scrolls through `$00000`–`$13FFF` over ~51 minutes (~3,100 seconds). Rough rate: ~26 addresses/second, but non-uniform (pauses, speed variations). The existing `crop_index.json` maps extracted frame numbers to addresses; these can be converted to approximate video timestamps using the non-linear frame mapping.
 
 ---
 

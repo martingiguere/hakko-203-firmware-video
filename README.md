@@ -9,7 +9,7 @@ Extract the firmware of a **Hakko FM-203** soldering station from a YouTube vide
 | MCU | Renesas R5F21258SNFP (R8C/24, 52-pin TQFP) |
 | Program ROM | 64 KB (`$04000`-`$13FFF`) in two 32 KB erase blocks |
 | Programmer | Xeltek SuperPro 6100N with DX3063 adapter |
-| Video | 20,070 frames of scrolling hex dump |
+| Video | 93,093 frames at 30fps (20,070 pre-extracted for pipeline; full video available for gap recovery) |
 | Reference | 256 verified bytes at `$0FF70`-`$1006F` from screenshot |
 
 ## Pipeline
@@ -84,7 +84,7 @@ See `ocr_accuracy_improvement_strategies.md` for proposed strategies to push acc
 
 ## Coverage
 
-Current coverage: **4,869 / 5,120 addresses (95.1%)**, 251 missing lines.
+Current coverage: **4,851 / 5,120 addresses (94.7% automated)**, 270 missing lines.
 
 The D→C address misread has been resolved using a two-phase approach in `fix_d_c_misread.py`:
 - **Phase 1**: ±10 frame neighbor-context heuristic (catches isolated misreads)
@@ -92,10 +92,15 @@ The D→C address misread has been resolved using a two-phase approach in `fix_d
 
 This recovered 215 lines in the `$0D050`–`$0DF70` range and 7 addresses in the `$10D80`–`$10DF0` range that were previously stored under wrong `$0Cxxx`/`$10Cxx` addresses.
 
-### Remaining gaps requiring manual recovery
+### Next step: Full-video frame extraction (Strategy 7)
 
-1. **Scattered `$0D` gaps** — Small remaining gaps in the `$0D` range after monotonicity fix
-2. **`$047E0`–`$0499F`** (28 lines) — Dense code in Block 1
-3. **`$0FD50`–`$0FDCF`** (8 lines) — Interrupt handler region near vector table
+The pipeline currently processes only 20,070 pre-extracted frames, but the full video has 93,093 frames — ~73,000 are never processed. Many missing addresses are visible in these unprocessed frames. This was proven by recovering `$0CDC0` directly from the video at YouTube timestamp 21:03, where the OCR systematically misread the address as `$0CCC0` in all pre-extracted frames.
 
-See SPEC.md §10 Phase 4 for details.
+The approach: extract frames from `full_video.mp4` at timestamps corresponding to gap regions, run the existing kNN classifier, and add the recovered data. See `ocr_accuracy_improvement_strategies.md` Strategy 7 and SPEC.md §10 Phase 4 for details.
+
+### Largest remaining gaps
+
+1. **`$11D40`–`$11F50`** (34 lines) — Largest gap
+2. **`$047E0`–`$04990`** (28 lines) — Dense code in Block 1
+3. **`$122D0`–`$12410`** (21 lines) — Block 0
+4. **`$0DC00`–`$0DCF0`** (16 lines) — Near resolved `$0D` region
