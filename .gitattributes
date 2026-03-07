@@ -1,0 +1,2 @@
+crops/crop_index.json filter=lfs diff=lfs merge=lfs -text
+fast_knn_classifier.npz filter=lfs diff=lfs merge=lfs -text

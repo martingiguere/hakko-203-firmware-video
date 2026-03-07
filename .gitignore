@@ -11,8 +11,9 @@ __pycache__/
 # Data and Artifacts
 frames/
 frames
-crops/
-*.npz
+crops/*
+!crops/crop_index.json
+classifier_data.npz
 *.pkl
 calibration_debug.png
 

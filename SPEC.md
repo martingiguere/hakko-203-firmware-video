@@ -696,7 +696,7 @@ hakko-203-firmware-video/
 ├── firmware_merged_sources.json     # Per-address source tracking
 ├── hakko_fm203.bin                  # 64 KB ROM-only firmware binary
 ├── hakko_fm203_full.bin             # 80 KB full buffer binary
-├── fast_knn_classifier.npz          # Trained kNN model
+├── fast_knn_classifier.npz          # Trained kNN model (Git LFS)
 │
 ├── firmware_review_tool/            # Flask review application
 │   ├── app.py                       # Flask backend
@@ -707,8 +707,8 @@ hakko-203-firmware-video/
 │   │   └── index.html               # Single-page frontend
 │   └── test_review_tool.py          # Test suite
 │
-├── crops/                           # Precomputed frame crops (gitignored)
-│   ├── crop_index.json
+├── crops/                           # Precomputed frame crops (PNGs gitignored)
+│   ├── crop_index.json              # Frame mapping + readings (Git LFS)
 │   ├── gap_context_index.json
 │   ├── <offset>/
 │   │   └── frame_NNNNN.png

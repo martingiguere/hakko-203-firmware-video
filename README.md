@@ -56,12 +56,15 @@ firmware_review_tool/    Flask app for human-assisted review
 ## Setup
 
 ```bash
+sudo apt install git-lfs tesseract-ocr
+git lfs install
+git lfs pull            # fetch crop_index.json and fast_knn_classifier.npz
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Requires Tesseract OCR installed (`apt install tesseract-ocr`).
+`crop_index.json` and `fast_knn_classifier.npz` are stored via Git LFS. A fresh clone with LFS support provides these automatically — no need for the 40 GB `frames/` directory or 70+ minutes of regeneration to use the review tool.
 
 ## Reference Data
 
