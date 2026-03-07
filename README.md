@@ -96,7 +96,7 @@ This recovered 215 lines in the `$0D050`–`$0DF70` range and 7 addresses in the
 
 The pipeline currently processes only 20,070 pre-extracted frames, but the full video has 93,093 frames — ~73,000 are never processed. Many missing addresses are visible in these unprocessed frames. This was proven by recovering `$0CDC0` directly from the video at YouTube timestamp 21:03, where the OCR systematically misread the address as `$0CCC0` in all pre-extracted frames.
 
-The approach: extract frames from `full_video.mp4` at timestamps corresponding to gap regions, run the existing kNN classifier, and add the recovered data. See `ocr_accuracy_improvement_strategies.md` Strategy 7 and SPEC.md §10 Phase 4 for details.
+The approach: read frames directly from `full_video.mp4` in memory (no full-frame PNGs — the existing 20,070 frames already use 40 GB), run the existing kNN classifier, save row-level crop PNGs and `crop_index.json` entries for review tool compatibility, and add the recovered data. The source video is already at maximum available YouTube resolution (1080p). Estimated ~1,400 frames needed, producing ~250 MB of crops. See `ocr_accuracy_improvement_strategies.md` Strategy 7 and SPEC.md §10 Phase 4 for details.
 
 ### Largest remaining gaps
 

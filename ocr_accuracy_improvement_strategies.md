@@ -161,6 +161,17 @@
 
 **Estimated video-to-address mapping**: The video scrolls through `$00000`–`$13FFF` over ~51 minutes (~3,100 seconds). Rough rate: ~26 addresses/second, but non-uniform (pauses, speed variations). The existing `crop_index.json` maps extracted frame numbers to addresses; these can be converted to approximate video timestamps using the non-linear frame mapping.
 
+**Video resolution**: The source YouTube video maxes out at 1080p (format 137, H.264). The existing `full_video.mp4` and pre-extracted frames are already at maximum available quality (1920×1080). No higher resolution is available.
+
+**Disk space and review tool integration**:
+- Full-frame PNGs are ~2.1 MB each (20,070 existing frames = 40 GB). Extracting all 73,000 remaining frames as PNGs would require ~150 GB — not feasible (38 GB free).
+- **However**, Strategy 7 only needs ~1,400 targeted frames (~2.8 GB if saved as full PNGs). This fits comfortably.
+- **Recommended approach**: Read frames from `full_video.mp4` in memory via OpenCV (no full-frame PNGs), but save row-level crop PNGs to `crops/<addr>/` and update `crop_index.json` with readings and confidences. This preserves review tool compatibility:
+  - Row crops are ~13 KB each. Estimated ~1,400 frames × 14 rows = ~250 MB of crops.
+  - `crop_index.json` entries enable the review tool to show per-frame readings, confidence scores, and visual crops for human verification.
+  - The review tool's `/api/frame/<n>` endpoint won't have full-frame PNGs for Strategy 7 frames, but this endpoint is rarely used — the row crops at `/api/crop/<addr>/<frame>` are the primary visual reference.
+- **Frame numbering**: Strategy 7 frames come from video frame numbers (0–93092), not the pre-extracted frame numbers (1–20070). The crop filenames and crop_index entries should use the video frame numbers to avoid collisions (existing crops use extracted frame numbers which max out at 20070).
+
 ---
 
 ## Key Constants Reference

@@ -758,7 +758,15 @@ The `frames/` directory contains only 20,070 pre-extracted frames, but the full 
 1. Build a frame→address mapping from `crop_index.json` anchor points to estimate which video timestamps correspond to each gap region
 2. For each gap, extract video frames at the estimated timestamps
 3. Run the kNN classifier on each frame and collect readings for missing addresses
-4. Add recovered data to `extracted_firmware.txt` and run `postprocess_firmware.py`
+4. Save row-level crop PNGs to `crops/<addr>/` and update `crop_index.json` (for review tool compatibility)
+5. Add recovered data to `extracted_firmware.txt` and run `postprocess_firmware.py`
+
+**Implementation constraints**:
+- The source video is 1080p (max available from YouTube). Existing frames and video are already at maximum resolution.
+- Full-frame PNGs are ~2.1 MB each (20,070 existing = 40 GB). Do NOT save full-frame PNGs for Strategy 7 — read directly from `full_video.mp4` via OpenCV in memory.
+- DO save row-level crop PNGs (~13 KB each) and `crop_index.json` entries with readings/confidences so the review tool can display per-frame data and visual crops for human verification.
+- Estimated ~1,400 frames needed, producing ~250 MB of crop PNGs. Disk budget is comfortable (38 GB free).
+- Use video frame numbers (0–93092) for crop filenames, not extracted frame numbers (1–20070), to avoid collisions with existing data.
 
 **Priority gap regions** (270 missing lines total):
 
