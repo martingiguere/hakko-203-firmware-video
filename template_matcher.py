@@ -3,12 +3,12 @@
 Hex digit recognition for Xeltek SuperPro 6100N firmware dump video.
 
 Adapts the FM-202 (Segger) template matching approach for the FM-203's
-larger cells (14x28 pixels, producing 64-dim feature vectors).
+larger cells (14x28 pixels, producing 67-dim feature vectors).
 
 Combines:
 1. Template matching (averaged per-class templates)
 2. kNN classification on raw pixel cells
-3. kNN classification on structural features (64-dim)
+3. kNN classification on structural features (67-dim)
 4. Ensemble voting across all three methods
 """
 
@@ -109,10 +109,10 @@ def is_blank_cell(cell, threshold=BLANK_INK_THRESHOLD):
 def extract_features(cell):
     """Extract structural features from a character cell.
 
-    For 28x14 cells produces a 64-dim vector:
+    For 28x14 cells produces a 67-dim vector:
         h_profile(28) + v_profile(14) + quadrants(4) + center(3) +
         asymmetry(2) + center_bar(1) + symmetry(1) + corners(2) +
-        3x3_grid(9) = 64
+        3x3_grid(9) + 8v6_discriminative(3) = 67
 
     Dimension auto-adapts to cell size via h,w = cell.shape.
     Returns None if the cell is blank.
@@ -182,6 +182,11 @@ def extract_features(cell):
             xs = xi * w // 3
             xe = (xi + 1) * w // 3
             features.append(np.mean(ink[ys:ye, xs:xe]))
+
+    # 10. 8-vs-6 discriminative features
+    features.append(np.mean(ink[:h//4, w//2:]))                              # upper-right quarter density
+    features.append(np.mean(ink[y23:, :w//3]) - np.mean(ink[:y3, 2*w//3:]))  # bottom-left vs top-right asymmetry
+    features.append(np.mean(ink[:mid_y, x23:]) - np.mean(ink[mid_y:, x23:])) # right-side vertical balance
 
     return np.array(features, dtype=np.float32)
 

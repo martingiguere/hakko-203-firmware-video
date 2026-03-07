@@ -58,12 +58,69 @@ These can be used for validation: once extracted, the firmware at these addresse
 $00000 - $002FF   SFR (Special Function Registers)     768 B
 $00300 - $003FF   Reserved                              256 B
 $00400 - $00FFF   Internal RAM                          3 KB
-$01000 - $03FFF   Reserved                              12 KB
-$04000 - $0FFFF   Program ROM (lower 48 KB)             48 KB
-$10000 - $13FFF   Program ROM (upper 16 KB)             16 KB
-$0FFDC - $0FFFF   Fixed interrupt vector table           36 B
+$01000 - $023FF   Reserved                              5 KB
+$02400 - $027FF   Data flash Block A                    1 KB
+$02800 - $02BFF   Data flash Block B                    1 KB
+$02C00 - $03FFF   Reserved                              5 KB
+$04000 - $0BFFF   Program ROM — Block 1 (lower 32 KB)  32 KB
+$0C000 - $0FFFF   Program ROM — Block 0 (lower half)   16 KB
+$0FFDC - $0FFFF   Fixed interrupt vector table           36 B (within Block 0)
 $0FFFC - $0FFFF   Reset vector (20-bit entry point)
+$10000 - $13FFF   Program ROM — Block 0 (upper half)   16 KB
 ```
+
+### 2.1 Flash Erase Block Structure (from R8C/25 Hardware Manual, Figure 19.2)
+
+Flash erase is performed on a **per-block** basis; programming is byte-unit. Erased state is `0xFF`. Within a block, any byte not programmed remains `0xFF`.
+
+| Erase Block | Address Range | Size | Erase Endurance |
+|-------------|--------------|------|-----------------|
+| Block 1 | `$04000`–`$0BFFF` | 32 KB | 1,000 cycles |
+| Block 0 | `$0C000`–`$0FFFF` + `$10000`–`$13FFF` | 32 KB | 1,000 cycles |
+| Data flash A | `$02400`–`$027FF` | 1 KB | 10,000 cycles |
+| Data flash B | `$02800`–`$02BFF` | 1 KB | 10,000 cycles |
+
+**Note**: Block 0 spans the `$0FFFF`/`$10000` address boundary. The vector table at `$0FFDC`–`$0FFFF` is within Block 0, so Block 0 is always programmed. The OFS (Option Function Select) register at `$0FFFF` reads as `0xFF` when its containing block is erased.
+
+#### Expected FF Regions in the 80 KB Buffer
+
+Based on the block structure and memory map, the following regions are expected to contain `0xFF` or non-firmware data:
+
+1. **Non-ROM prefix (`$00000`–`$03FFF`)** — 16 KB, not flash:
+   - `$00000`–`$002FF`: SFR (register reset values, not necessarily FF)
+   - `$00300`–`$003FF`: Reserved (undefined, likely FF)
+   - `$00400`–`$00FFF`: RAM (runtime state at dump time, not necessarily FF)
+   - `$01000`–`$023FF`: Reserved (not mapped, likely reads as FF)
+   - `$02400`–`$02BFF`: Data flash (FF if unused, or calibration/settings data)
+   - `$02C00`–`$03FFF`: Reserved (likely FF)
+
+2. **Within Program ROM (`$04000`–`$13FFF`)** — 64 KB:
+   - Unused portions of Block 0 and Block 1 remain `0xFF`
+   - The largest FF gap is expected between the end of program code and the vector table area near `$0FFD0`–`$0FFFF` (analogous to FM-202's `$8A50`–`$FFC0` gap)
+   - Block erase granularity (32 KB) means FF regions are contiguous within each block
+
+#### Observed FF Regions and Missing Line Analysis
+
+Post-extraction analysis of `firmware_merged.txt` (4,373 lines recovered out of 5,120) identified 747 missing lines. Cross-referencing with the flash block structure:
+
+**Safe to FF-fill (256 lines, 4,096 bytes):**
+
+| Range | Lines | Reasoning |
+|-------|-------|-----------|
+| `$13000`–`$13FFF` | 256 | Tail of Block 0 upper half. The last extracted line is `$12FF0` (all-FF), and lines `$12FB0`–`$12FF0` are a confirmed FF run. Last non-FF data is at `$12FA0`. Since unused flash within a block remains `0xFF`, the remaining 4 KB is certainly erased. The video simply didn't scroll far enough to show these addresses. |
+
+**NOT safe to FF-fill (491 lines, 7,856 bytes):**
+
+| Range | Lines | Reasoning |
+|-------|-------|-----------|
+| `$0D070`–`$0DF8F` | 242 | Largest gap. Both boundaries (`$0D060`, `$0DF90`) contain **non-FF code data**. This is a video coverage gap — the video scrolls through the `$0D` range in ~20 frames, too fast to capture most addresses. These are missed code bytes, not erased flash. |
+| Other ROM gaps (scattered) | 249 | Small gaps (1–34 lines each) throughout `$04000`–`$12FFF`, all surrounded by non-FF data on at least one side. These are OCR coverage gaps in active code regions — must be resolved via the review tool, not FF-filled. |
+
+**Already fully covered:**
+
+| Range | Lines | Status |
+|-------|-------|--------|
+| `$00000`–`$03FFF` (non-ROM) | 1,024 | All present: 817 lines `ff-forced`, 207 from extraction. All read as FF — the data flash blocks (`$02400`–`$02BFF`) are unused (Hakko does not use EEPROM emulation on this chip). |
 
 **Confirmed from reference screenshot**: The Xeltek SuperPro reads the full `$00000`–`$13FFF` range (80 KB) with physical addresses preserved. The buffer addresses correspond directly to MCU physical addresses — no offset translation is needed. The 64 KB of program ROM occupies `$04000`–`$0FFFF` (lower 48 KB) and `$10000`–`$13FFF` (upper 16 KB) within the 80 KB buffer. The reference screenshot shows rows at addresses `$0FF70`–`$10060`, confirming that the address space is contiguous across the `$0FFFF`/`$10000` boundary in the buffer.
 
@@ -190,7 +247,7 @@ firmware_reviewed.txt + hakko_fm203.bin (exports)
 | **Video source** | Camera pointed at monitor | Camera pointed at monitor (TBC) |
 | **Expected checksum** | CRC-16 `0x0657` | 32-bit `00D2F2FFH` (from Xeltek UI) |
 | **Instruction validation** | MELPS 740 opcode table | R8C/Tiny opcode table (from emulator) |
-| **Erased flash range** | `$1000`–`$4070`, `$8A50`–`$FFC0` | TBD from extraction |
+| **Erased flash range** | `$1000`–`$4070`, `$8A50`–`$FFC0` | See §2.1 Flash Erase Block Structure |
 | **Reference data** | 69 verified lines from screenshot | Reference screenshot available (see below) |
 
 ---
@@ -273,10 +330,12 @@ Reuse the FM-202 project's proven kNN approach with 45-dimensional structural fe
 3. **Build training set**:
    - **Pass 1**: Use Tesseract OCR to label characters in high-confidence frames where addresses are clearly readable
    - **Pass 2**: Use the Pass 1 kNN to label additional frames from diverse timestamps, validated against any known reference data
-4. **Feature extraction**: Same 45-dimensional feature vector as FM-202 (horizontal/vertical profiles, quadrant densities, center bar, corners, symmetry, sub-grid)
+4. **Feature extraction**: 67-dimensional feature vector (horizontal/vertical profiles, quadrant densities, center bar, corners, symmetry, sub-grid, 8↔6 discriminative features)
 5. **Classifier**: FastKNNClassifier with k=7, weighted voting
 
 The Xeltek font may differ significantly from the Segger Flasher font — character cell dimensions, stroke weights, and distinguishing features may require tuning the feature extraction parameters.
+
+**Accuracy improvement strategies**: The current 67-dim kNN achieves ~99.7% accuracy with residual 8<->6, C<->D, and 4<->9 confusions. Strategies 2 (8↔6 discriminative features) and 4 (expanded training from 30→80 Pass 2 frames) have been implemented. See `ocr_accuracy_improvement_strategies.md` for remaining strategies including temporal consistency voting and row-position-aware classification.
 
 ### 6.2 Frame Processing
 
@@ -312,7 +371,7 @@ Same approach as FM-202:
 2. **Systematic error corrections**: Identify and fix classifier-specific confusion patterns (analogous to FM-202's CF→FF correction)
 3. **D→C address misclassification fix**: The kNN classifier misreads hex digit `D` as `C` at address digit position 1 in a narrow frame window within the `$0D000`–`$0DFFF` range, causing some frame observations to be filed under `$0C000`–`$0CFFF` addresses. The `fix_d_c_misread.py` script dynamically detects the contamination window boundaries (searching for the last correctly-classified 0D entry before the gap and the first post-gap 0D entry), relocates frames to corrected `$0D` addresses (+0x1000), moves crop PNGs, recomputes byte consensus, and rebuilds all downstream files. Most of the `$0D050`–`$0DF70` gap is structural — the video scrolls through the 0D range in only ~20 frames, so most addresses aren't visible long enough to be captured.
 4. **Overlay reference data**: Verified data always wins
-5. **FF-fill erased flash gaps**: Identify regions where both boundary lines are all-FF and fill the gap
+5. **FF-fill erased flash gaps**: Fill confirmed erased regions with `0xFF`. Per §2.1, only `$13000`–`$13FFF` (256 lines) qualifies — tail of Block 0 preceded by a confirmed FF run from `$12FB0`. The `$0D070`–`$0DF8F` gap and other scattered ROM gaps are **not** erased flash — they are video coverage gaps surrounded by non-FF code data
 6. **ID code validation**: Verify known bytes at ISP ID code addresses
 7. **Interrupt vector validation**: Check that the vector table at `$0FFDC`–`$0FFFF` contains plausible 20-bit code addresses
 

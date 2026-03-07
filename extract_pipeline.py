@@ -8,7 +8,7 @@ uses multi-frame voting to produce a high-quality firmware dump.
 
 Adapts the FM-202 (Segger) extraction approach for:
 - 10-digit addresses ($00000-$13FFF, 80 KB buffer)
-- 14x28 pixel cells → 64-dim feature vectors
+- 14x28 pixel cells → 67-dim feature vectors
 - Byte positions from calibration array (not formula)
 """
 
@@ -82,9 +82,25 @@ class FastKNNClassifier:
 
         if skipped_blank > 0:
             print(f"  (skipped {skipped_blank} blank cells)")
+        # Per-class sample counts and balance warnings
+        from collections import Counter
+        label_counts = Counter(self.labels.tolist())
+        min_threshold = 100
+        low_classes = []
+        for idx in sorted(label_counts):
+            char = self.idx_to_char[idx]
+            count = label_counts[idx]
+            if count < min_threshold:
+                low_classes.append((char, count))
+
         print(f"FastKNN built: {len(self.chars)} classes, "
               f"{self.feature_matrix.shape[0]} samples, "
               f"{self.feature_matrix.shape[1]} features")
+
+        if low_classes:
+            print(f"  WARNING: {len(low_classes)} class(es) below {min_threshold} samples:")
+            for char, count in low_classes:
+                print(f"    '{char}': {count}")
 
     def classify_batch(self, cells, k=7):
         """Classify multiple cells at once using vectorized operations.
@@ -844,12 +860,12 @@ def main():
         # Sample frames at various timestamps for diversity
         pass2_paths = []
         all_frames = sorted(os.listdir('frames'))
-        # Evenly sample ~30 frames across the full video
-        step = max(1, len(all_frames) // 30)
+        # Evenly sample ~80 frames across the full video
+        step = max(1, len(all_frames) // 80)
         for i in range(0, len(all_frames), step):
             path = os.path.join('frames', all_frames[i])
             pass2_paths.append(path)
-            if len(pass2_paths) >= 30:
+            if len(pass2_paths) >= 80:
                 break
 
         new_samples = build_training_samples_knn(classifier, ref_data, pass2_paths)

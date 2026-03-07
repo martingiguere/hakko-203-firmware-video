@@ -48,6 +48,10 @@ FF_FORCED_REGIONS = [
     # SFR ($00000-$002FF) + reserved ($00300-$003FF) + RAM ($00400-$00FFF)
     # + unmapped gap ($01000-$03FFF) — no ROM here
     (0x00000, 0x03FFF),
+    # Tail of Block 0 upper half — erased flash confirmed by FF run from $12FB0.
+    # Last non-FF data at $12FA0. Video didn't scroll past $12FF0.
+    # See SPEC.md §2.1 "Observed FF Regions and Missing Line Analysis".
+    (0x13000, 0x13FFF),
 ]
 
 

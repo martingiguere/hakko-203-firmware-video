@@ -7,7 +7,7 @@ Extract the firmware of a **Hakko FM-203** soldering station from a YouTube vide
 | Parameter | Value |
 |-----------|-------|
 | MCU | Renesas R5F21258SNFP (R8C/24, 52-pin TQFP) |
-| Program ROM | 64 KB (`$04000`-`$13FFF`) |
+| Program ROM | 64 KB (`$04000`-`$13FFF`) in two 32 KB erase blocks |
 | Programmer | Xeltek SuperPro 6100N with DX3063 adapter |
 | Video | 20,070 frames of scrolling hex dump |
 | Reference | 256 verified bytes at `$0FF70`-`$1006F` from screenshot |
@@ -28,7 +28,7 @@ firmware_review_tool/    Flask app for human-assisted review
 
 ### How it works
 
-1. **Training** -- Tesseract reads addresses on frames showing the known reference region. Matching rows provide labeled digit samples for a kNN classifier (64-dim structural features).
+1. **Training** -- Tesseract reads addresses on frames showing the known reference region. Matching rows provide labeled digit samples for a kNN classifier (67-dim structural features, including 8↔6 discriminative features).
 2. **Extraction** -- Every frame is OCR'd: read 10-digit address, read 16 hex bytes. Duplicate/transitional frames are skipped.
 3. **Voting** -- Each address+byte gets multiple observations across frames. Weighted majority vote picks the best reading.
 4. **Post-processing** -- Reference data overlay, OCR misread fixes (4/9, C/D swaps), gap filling, binary output.
@@ -79,3 +79,5 @@ Attempted using the 512 digit cells from the reference screenshot to train a sep
 ## Accuracy
 
 The video-only kNN classifier achieves ~99.7% accuracy on reference-visible frames. Remaining confusions (8/6, D/C) are rare and handled by post-hoc correction scripts.
+
+See `ocr_accuracy_improvement_strategies.md` for proposed strategies to push accuracy higher.
