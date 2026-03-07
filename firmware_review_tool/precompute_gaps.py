@@ -121,7 +121,8 @@ def find_candidate_frames(missing_addr, crop_index, neighbor_range=8):
         distance = abs(offset)
         proximity_score = (neighbor_range + 1 - distance) ** 2
 
-        for frame_num in crop_index[neighbor_key]["frames"]:
+        # Only use extracted frames (video frames don't have PNGs in frames/ dir)
+        for frame_num in crop_index[neighbor_key].get("frames", []):
             if frame_num not in candidates or candidates[frame_num][0] < proximity_score:
                 candidates[frame_num] = (proximity_score, neighbor, offset)
 

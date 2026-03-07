@@ -521,7 +521,23 @@ For each (offset, frame) pair:
 
 #### 7.3.3 OCR Disagreement Data
 
-For each (offset, frame) pair, record the kNN reading and per-byte confidence. Store in `crop_index.json` (same format as FM-202 project).
+For each (offset, frame) pair, record the kNN reading and per-byte confidence. Store in `crop_index.json`:
+
+```json
+{
+  "0FF70": {
+    "frames": [16019, 16020],
+    "video_frames": [40649, 40650],
+    "readings":    {"16019": [...], "v40649": [...]},
+    "confidences": {"16019": [...], "v40649": [...]}
+  }
+}
+```
+
+- `frames`: extracted frame integers (from `frames/` PNGs)
+- `video_frames`: full-video frame integers (from `full_video.mp4`)
+- Dict keys in `readings`/`confidences`: bare string for extracted (`"16019"`), `"v"` prefix for video (`"v40649"`)
+- Crop PNGs: `frame_16019.png` (extracted), `frame_v40649.png` (video)
 
 #### 7.3.4 Gap Frame Discovery
 
@@ -589,10 +605,18 @@ All moves are recorded in a persistent `frame_moves.json` ledger at the project 
       "from_addr": "04C60",
       "to_addr": "04B80",
       "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "frame": "v35040",
+      "from_addr": "0CC00",
+      "to_addr": "0DC00",
+      "timestamp": "2026-03-07T15:00:00Z"
     }
   ]
 }
 ```
+
+Frame identifiers are integers for extracted frames and `"v"`-prefixed strings for full-video frames (e.g., `"v35040"`).
 
 The ledger survives `precompute.py` re-runs — after regenerating the base `crop_index.json`, all recorded moves are replayed automatically. This ensures manual corrections persist across pipeline rebuilds.
 
@@ -695,6 +719,7 @@ hakko-203-firmware-video/
 ├── template_matcher.py              # kNN classifier (adapted from FM-202)
 ├── postprocess_firmware.py          # Filtering, correction, merge, binary gen
 ├── fix_d_c_misread.py               # D→C address misclassification correction
+├── frame_utils.py                   # Frame numbering helpers (extracted vs video)
 ├── r8c_opcode_table.py              # R8C/Tiny opcode table for validation
 ├── r8c_disassembler.py              # R8C/Tiny disassembler for validation
 │
@@ -773,7 +798,12 @@ Implemented in `fullvideo_gap_recovery.py`. Scans `full_video.mp4` for addresses
 4. Saves row crops to `crops/<addr>/`, updates `crop_index.json` (atomic writes via tmp+rename), `extracted_firmware.txt`
 5. Rebuilds downstream files and resets review state
 
-**Frame mapping**: `video_frame = extracted_frame + 24629`. Video frame numbers (24630+) used for crop filenames to avoid collision with extracted frame numbers (1-20070).
+**Frame numbering**: The pipeline uses two frame numbering systems with overlapping integer ranges:
+
+- **Extracted frames** (`frames` array): integers 1–20,070 from `frames/` PNGs. Dict keys are bare strings (`"1234"`), crop PNGs named `frame_01234.png`.
+- **Full-video frames** (`video_frames` array): integers from `full_video.mp4`. Dict keys use `"v"` prefix (`"v35040"`), crop PNGs named `frame_v35040.png`.
+
+Conversion: `video_frame = extracted_frame + 24629`. The `v` prefix in keys and filenames distinguishes the two systems. Helper functions in `frame_utils.py`.
 
 **Remaining gaps** (155 addresses in 46 groups, mostly 1-4 addresses each):
 - **`$047E0`–`$04990`** (28 addrs) — Largest, video jumps over this region

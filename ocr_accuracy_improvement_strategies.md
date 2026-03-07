@@ -148,7 +148,7 @@
 - **155 addresses remain unrecoverable** — the video jumps over them between consecutive frames
 - Scanned 2,304 video frames across 7 search windows (563 unique frames, ~160s)
 - Saved row crops and updated `crop_index.json` for review tool compatibility
-- Uses video frame numbers (24630+) for crop filenames, avoiding collision with extracted frame numbers (1-20070)
+- Video frames stored in separate `video_frames` array with `"v"`-prefixed dict keys (e.g., `"v35040"`) and crop PNGs named `frame_v35040.png`, distinct from extracted frames in `frames` array
 
 **Approach** (as implemented):
 1. Load `firmware_merged.txt` to find missing ROM addresses; group into gap regions
@@ -158,7 +158,7 @@
 5. Save row crops (~13 KB each) to `crops/<addr>/`, update `crop_index.json` with readings/confidences (atomic writes via tmp+rename)
 6. Update `extracted_firmware.txt`, rebuild downstream files, reset review state
 
-**Frame mapping**: `video_frame = extracted_frame + 24629`. Video has hex data in frames 24400-44730.
+**Frame mapping**: `video_frame = extracted_frame + 24629`. Video has hex data in frames 24400-44730. Frame numbering uses `"v"` prefix for video frames in `crop_index.json` keys/filenames (see `frame_utils.py`).
 
 **Impact**: Very high. Recovered nearly half of all missing addresses with no OCR algorithm changes.
 

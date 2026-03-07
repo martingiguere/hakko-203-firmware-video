@@ -7,6 +7,7 @@ and handles save/export operations.
 """
 
 import os
+import sys
 import json
 import datetime
 import argparse
@@ -18,6 +19,12 @@ from crc import compute_byte_sum_32, build_firmware_binary, build_rom_binary, \
     BASE_ADDR, BUFFER_SIZE, EXPECTED_CHECKSUM
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, PROJECT_ROOT)
+
+from frame_utils import (
+    is_video_frame_key, video_frame_key, extracted_frame_key,
+    crop_filename, parse_frame_key, total_frame_count,
+)
 
 CROPS_DIR = os.path.join(PROJECT_ROOT, 'crops')
 CROP_INDEX_PATH = os.path.join(CROPS_DIR, 'crop_index.json')
@@ -148,16 +155,28 @@ def weighted_majority_vote(readings, confidences):
 
 
 def apply_single_move(frame, from_addr, to_addr):
-    """Move a frame's data within the in-memory crop_index."""
-    frame_str = str(frame)
+    """Move a frame's data within the in-memory crop_index.
+
+    frame can be an int (extracted) or a string like "v35040" (video).
+    """
+    if isinstance(frame, str) and frame.startswith('v'):
+        is_video = True
+        frame_int = int(frame[1:])
+        frame_str = frame
+    else:
+        is_video = False
+        frame_int = int(frame)
+        frame_str = str(frame_int)
+
     src = crop_index.get(from_addr)
     if not src:
         return False
 
     # Create destination entry if needed
     if to_addr not in crop_index:
-        crop_index[to_addr] = {"frames": [], "readings": {}, "confidences": {}}
+        crop_index[to_addr] = {"frames": [], "video_frames": [], "readings": {}, "confidences": {}}
     dst = crop_index[to_addr]
+    dst.setdefault("video_frames", [])
 
     # Move readings and confidences
     if frame_str in src.get("readings", {}):
@@ -165,23 +184,29 @@ def apply_single_move(frame, from_addr, to_addr):
     if frame_str in src.get("confidences", {}):
         dst.setdefault("confidences", {})[frame_str] = src["confidences"].pop(frame_str)
 
-    # Move frame number
-    if frame in src.get("frames", []):
-        src["frames"].remove(frame)
-    if frame not in dst["frames"]:
-        dst["frames"].append(frame)
-        dst["frames"].sort()
+    # Move frame number from correct array
+    if is_video:
+        src_arr = "video_frames"
+    else:
+        src_arr = "frames"
+
+    if frame_int in src.get(src_arr, []):
+        src[src_arr].remove(frame_int)
+    if frame_int not in dst.get(src_arr, []):
+        dst.setdefault(src_arr, []).append(frame_int)
+        dst[src_arr].sort()
 
     # Move crop PNG
-    src_png = os.path.join(CROPS_DIR, from_addr.lower(), f"frame_{frame:05d}.png")
+    png_name = crop_filename(frame_int, is_video=is_video)
+    src_png = os.path.join(CROPS_DIR, from_addr.lower(), png_name)
     dst_dir = os.path.join(CROPS_DIR, to_addr.lower())
-    dst_png = os.path.join(dst_dir, f"frame_{frame:05d}.png")
+    dst_png = os.path.join(dst_dir, png_name)
     if os.path.exists(src_png):
         os.makedirs(dst_dir, exist_ok=True)
         shutil.move(src_png, dst_png)
 
     # Clean up empty source entry/directory
-    if not src["frames"] and not src.get("readings"):
+    if not src.get("frames") and not src.get("video_frames") and not src.get("readings"):
         del crop_index[from_addr]
         src_dir = os.path.join(CROPS_DIR, from_addr.lower())
         if os.path.isdir(src_dir) and not os.listdir(src_dir):
@@ -307,7 +332,7 @@ def compute_byte_confidence(addr):
 
     readings = entry["readings"]  # {frame_str: [16 bytes]}
     knn_confs = entry.get("confidences", {})  # {frame_str: [16 floats]}
-    n_frames = len(readings)
+    n_frames = total_frame_count(entry)
     if n_frames == 0:
         return ["none"] * 16
 
@@ -495,6 +520,7 @@ def get_line(addr):
     confidence = compute_byte_confidence(addr)
     entry = crop_index.get(addr, {})
     frames = entry.get("frames", [])
+    video_frames = entry.get("video_frames", [])
 
     return jsonify({
         "address": addr,
@@ -503,8 +529,9 @@ def get_line(addr):
         "source": line.get("source", "unknown"),
         "edited_positions": line.get("edited_positions", []),
         "confidence": confidence,
-        "frame_count": len(frames),
+        "frame_count": len(frames) + len(video_frames),
         "frames": frames,
+        "video_frames": video_frames,
     })
 
 
@@ -513,21 +540,36 @@ def get_frames(addr):
     addr = normalize_addr(addr)
     entry = crop_index.get(addr, {})
     frames = entry.get("frames", [])
+    video_frames = entry.get("video_frames", [])
     readings = entry.get("readings", {})
     knn_confidences = entry.get("confidences", {})
     return jsonify({
         "address": addr,
         "frames": frames,
+        "video_frames": video_frames,
         "readings": readings,
         "knn_confidences": knn_confidences,
         "has_ref": addr in ref_addresses,
     })
 
 
-@app.route('/api/crop/<addr>/<int:frame>')
+@app.route('/api/crop/<addr>/<frame>')
 def get_crop(addr, frame):
     addr_lower = normalize_addr(addr).lower()
-    crop_path = os.path.join(CROPS_DIR, addr_lower, f'frame_{frame:05d}.png')
+    if frame.startswith('v'):
+        # Video frame
+        try:
+            vf = int(frame[1:])
+        except ValueError:
+            return jsonify({"error": "Invalid frame identifier"}), 400
+        png_name = crop_filename(vf, is_video=True)
+    else:
+        try:
+            ef = int(frame)
+        except ValueError:
+            return jsonify({"error": "Invalid frame identifier"}), 400
+        png_name = crop_filename(ef, is_video=False)
+    crop_path = os.path.join(CROPS_DIR, addr_lower, png_name)
     if not os.path.exists(crop_path):
         return jsonify({"error": "Crop not found"}), 404
     return send_file(crop_path, mimetype='image/png')
@@ -776,9 +818,12 @@ def move_frame():
     if frame is None:
         return jsonify({"error": "Missing 'frame'"}), 400
 
+    # Normalize frame key
+    frame_str = str(frame) if not str(frame).startswith('v') else str(frame)
+
     # Validate source
     src = crop_index.get(from_addr)
-    if not src or str(frame) not in src.get("readings", {}):
+    if not src or frame_str not in src.get("readings", {}):
         return jsonify({"error": f"Frame {frame} not found in {from_addr}"}), 404
 
     # Validate destination address
@@ -831,8 +876,9 @@ def move_frames_batch():
         if frame is None or from_addr == to_addr:
             continue
 
+        frame_str = str(frame) if not str(frame).startswith('v') else str(frame)
         src = crop_index.get(from_addr)
-        if not src or str(frame) not in src.get("readings", {}):
+        if not src or frame_str not in src.get("readings", {}):
             continue
 
         try:
@@ -864,10 +910,10 @@ def move_frames_batch():
     return jsonify({"ok": True, "applied": applied, "total": len(moves)})
 
 
-@app.route('/api/suggest_address/<int:frame>')
+@app.route('/api/suggest_address/<frame>')
 def suggest_address(frame):
     """Suggest the best address for a frame based on byte-match against consensus."""
-    frame_str = str(frame)
+    frame_str = frame if frame.startswith('v') else str(frame)
 
     # Find all addresses that contain this frame
     candidates = []

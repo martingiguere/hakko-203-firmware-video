@@ -47,6 +47,7 @@ firmware_review_tool/    Flask app for human-assisted review
 | `fix_49_misread.py` | Post-hoc fix for 4/9 OCR address confusion |
 | `fix_d_c_misread.py` | Post-hoc fix for C/D OCR address confusion (Phase 1: neighbor context + Phase 2: anchor monotonicity) |
 | `fullvideo_gap_recovery.py` | Strategy 7: scan full video for gap addresses |
+| `frame_utils.py` | Frame numbering helpers (extracted vs full-video frames) |
 | `diagnose.py` | Project status diagnostic |
 
 ## Review Tool
@@ -108,6 +109,15 @@ Current coverage: **4,923 / 5,120 addresses (96.2% automated)**, 155 missing lin
 1. **C↔D address misread** (`fix_d_c_misread.py`): Two-phase correction using neighbor context (Phase 1) and anchor-based monotonicity (Phase 2). Recovered 215 lines in `$0D050`–`$0DF70` and 7 addresses in `$10D80`–`$10DF0`.
 
 2. **Full-video gap recovery** (`fullvideo_gap_recovery.py`): Strategy 7 — scans `full_video.mp4` directly for addresses missing from the pre-extracted frames. The pipeline normally processes 20,070 pre-extracted frames, but the full video has 93,093 frames. By estimating which video timestamps correspond to each gap region and running the existing kNN classifier, this recovered **115 of 270 missing addresses**, improving coverage from 94.7% to 96.2%. The remaining 155 gaps are unrecoverable — the video jumps over those addresses between consecutive frames.
+
+### Frame numbering
+
+`crop_index.json` uses two separate frame numbering systems:
+
+- **Extracted frames** (`frames` array, keys like `"1234"`): frames 1–20,070 from `frames/` PNGs, produced by `precompute.py`. Crop PNGs named `frame_01234.png`.
+- **Full-video frames** (`video_frames` array, keys like `"v35040"`): frames from `full_video.mp4`, produced by `fullvideo_gap_recovery.py`. Crop PNGs named `frame_v35040.png`.
+
+The `v` prefix in dict keys and filenames distinguishes the two numbering systems, which have overlapping integer ranges. See `frame_utils.py` for helper functions.
 
 ### Largest remaining gaps
 

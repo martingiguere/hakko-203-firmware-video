@@ -30,6 +30,7 @@ os.chdir(PROJECT_ROOT)
 
 sys.path.insert(0, PROJECT_ROOT)
 from extract_pipeline import FastKNNClassifier, process_frame, is_frame_different
+from frame_utils import video_frame_key, crop_filename
 
 CROP_INDEX_PATH = os.path.join(PROJECT_ROOT, 'crops', 'crop_index.json')
 EXTRACTED_FW_PATH = os.path.join(PROJECT_ROOT, 'extracted_firmware.txt')
@@ -87,6 +88,7 @@ def build_frame_address_map(crop_index):
     """Build sorted list of (video_frame, addr_int) from crop_index.
 
     Converts extracted frame numbers to video frame numbers.
+    Video frames are used as-is (already in video coordinates).
     """
     points = []
     for addr_str, entry in crop_index.items():
@@ -99,6 +101,8 @@ def build_frame_address_map(crop_index):
         for frame in entry.get('frames', []):
             # Convert extracted frame → video frame
             vf = frame + EXTRACTED_TO_VIDEO_OFFSET
+            points.append((vf, addr_int))
+        for vf in entry.get('video_frames', []):
             points.append((vf, addr_int))
     points.sort()
     return points
@@ -355,6 +359,7 @@ def save_crops_and_update_index(observations, crop_index, classifier):
         if is_new:
             crop_index[addr_hex] = {
                 'frames': [],
+                'video_frames': [],
                 'readings': {},
                 'confidences': {},
             }
@@ -363,6 +368,7 @@ def save_crops_and_update_index(observations, crop_index, classifier):
             updated_addrs.add(addr_hex)
 
         entry = crop_index[addr_hex]
+        entry.setdefault('video_frames', [])
 
         for vf, obs in sorted(best_by_frame.items()):
             gray = obs['gray']
@@ -383,24 +389,25 @@ def save_crops_and_update_index(observations, crop_index, classifier):
             y_bot = min(gray.shape[0], row_y + 14)
             crop = gray[y_top:y_bot, 270:1100]
 
-            crop_name = f"frame_{vf:05d}.png"
+            crop_name = crop_filename(vf, is_video=True)
             crop_path = os.path.join(crop_dir, crop_name)
             cv2.imwrite(crop_path, crop)
 
-            # Update crop_index entry
-            if vf not in entry['frames']:
-                entry['frames'].append(vf)
+            # Update crop_index entry — video frames go in video_frames array
+            if vf not in entry['video_frames']:
+                entry['video_frames'].append(vf)
 
-            vf_str = str(vf)
-            entry.setdefault('readings', {})[vf_str] = [
+            vf_key = video_frame_key(vf)
+            entry.setdefault('readings', {})[vf_key] = [
                 b.upper() for b in obs['hex_bytes']
             ]
-            entry.setdefault('confidences', {})[vf_str] = [
+            entry.setdefault('confidences', {})[vf_key] = [
                 round(float(c), 3) for c in obs['byte_confs']
             ]
 
         # Sort frames
         entry['frames'] = sorted(entry['frames'])
+        entry['video_frames'] = sorted(entry['video_frames'])
 
     print(f"  New addresses: {len(new_addrs)}")
     print(f"  Updated addresses: {len(updated_addrs)}")

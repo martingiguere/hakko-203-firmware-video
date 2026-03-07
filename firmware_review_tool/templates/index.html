@@ -745,7 +745,9 @@ async function loadLine(addr) {
     // Check if this is a missing address with no standard frames -- enter gap context mode
     state.gapContextMode = false;
     state.gapData = null;
-    if (lineData.source === "missing" && (!frameData.frames || frameData.frames.length === 0)) {
+    const allFrameCount = (frameData.frames ? frameData.frames.length : 0) +
+                          (frameData.video_frames ? frameData.video_frames.length : 0);
+    if (lineData.source === "missing" && allFrameCount === 0) {
         try {
             const gapResp = await fetch(`/api/gap_frames/${addr}`);
             if (gapResp.ok) {
@@ -1010,7 +1012,9 @@ function renderCrops() {
     noFramesMsg.textContent = "No frame data available for this address.";
 
     const fd = state.frameData;
-    const hasFrames = fd && fd.frames && fd.frames.length > 0;
+    const extractedFrames = fd && fd.frames ? fd.frames : [];
+    const videoFrames = fd && fd.video_frames ? fd.video_frames : [];
+    const hasFrames = extractedFrames.length > 0 || videoFrames.length > 0;
     const hasRef = fd && fd.has_ref;
 
     if (!hasFrames && !hasRef) {
@@ -1045,10 +1049,22 @@ function renderCrops() {
     state.selectedFrames.clear();
     updateBatchBar();
 
-    const sortedFrames = [...fd.frames].sort((a, b) => a - b);
+    // Build combined frame list: [{key, num, isVideo}, ...]
+    const allFrames = [];
+    for (const f of extractedFrames) {
+        allFrames.push({key: String(f), num: f, isVideo: false});
+    }
+    for (const vf of videoFrames) {
+        allFrames.push({key: "v" + vf, num: vf, isVideo: true});
+    }
+    // Sort: extracted first (by num), then video (by num)
+    allFrames.sort((a, b) => {
+        if (a.isVideo !== b.isVideo) return a.isVideo ? 1 : -1;
+        return a.num - b.num;
+    });
 
-    for (let fi = 0; fi < sortedFrames.length; fi++) {
-        const frame = sortedFrames[fi];
+    for (let fi = 0; fi < allFrames.length; fi++) {
+        const {key: frameKey, num: frameNum, isVideo} = allFrames[fi];
         const wrapper = document.createElement("div");
         wrapper.className = "crop-wrapper";
         wrapper.id = `crop-${fi + 1}`;
@@ -1060,19 +1076,22 @@ function renderCrops() {
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.className = "frame-select-cb";
-        cb.dataset.frame = frame;
+        cb.dataset.frame = frameKey;
         cb.onchange = () => {
-            if (cb.checked) state.selectedFrames.add(frame);
-            else state.selectedFrames.delete(frame);
+            if (cb.checked) state.selectedFrames.add(frameKey);
+            else state.selectedFrames.delete(frameKey);
             updateBatchBar();
         };
         label.appendChild(cb);
 
         const labelText = document.createElement("span");
-        labelText.textContent = `Frame ${String(frame).padStart(5, "0")}`;
+        const frameLabel = isVideo
+            ? `Video v${String(frameNum).padStart(5, "0")}`
+            : `Frame ${String(frameNum).padStart(5, "0")}`;
+        labelText.textContent = frameLabel;
 
         // Reading for this frame
-        const reading = fd.readings ? fd.readings[String(frame)] : null;
+        const reading = fd.readings ? fd.readings[frameKey] : null;
         let hasDiffs = false;
         if (reading) {
             const disagreements = [];
@@ -1097,7 +1116,7 @@ function renderCrops() {
         moveBtn.title = "Move this frame to a different address";
         moveBtn.onclick = (e) => {
             e.stopPropagation();
-            showMoveInput(wrapper, frame);
+            showMoveInput(wrapper, frameKey);
         };
         label.appendChild(moveBtn);
 
@@ -1106,20 +1125,20 @@ function renderCrops() {
 
         const img = document.createElement("img");
         img.className = "crop-img";
-        img.src = `/api/crop/${state.currentAddr}/${frame}`;
-        img.dataset.frame = frame;
+        img.src = `/api/crop/${state.currentAddr}/${frameKey}`;
+        img.dataset.frame = frameKey;
         img.style.transform = `scale(${state.zoom})`;
         // Set explicit dimensions so container knows the scaled size
         img.onload = () => {
             cropContainer.style.width = (img.naturalWidth * state.zoom) + "px";
             cropContainer.style.height = (img.naturalHeight * state.zoom) + "px";
             // Render overlay after image loads
-            renderSingleOverlay(canvas, frame, img.naturalWidth, img.naturalHeight);
+            renderSingleOverlay(canvas, frameKey, img.naturalWidth, img.naturalHeight);
         };
 
         const canvas = document.createElement("canvas");
         canvas.className = "crop-overlay";
-        canvas.dataset.frame = frame;
+        canvas.dataset.frame = frameKey;
 
         cropContainer.appendChild(img);
         cropContainer.appendChild(canvas);
@@ -1177,14 +1196,14 @@ async function showMoveInput(wrapper, frame) {
     addrInput.focus();
 }
 
-async function doSingleMove(frame, rawAddr) {
+async function doSingleMove(frameKey, rawAddr) {
     const toAddr = rawAddr.trim().toUpperCase().replace(/^0X/, "").padStart(5, "0");
     if (!toAddr || toAddr === state.currentAddr) {
         showToast("Enter a different destination address");
         return;
     }
     const result = await api("POST", "/api/move_frame", {
-        frame: frame,
+        frame: frameKey,
         from_addr: state.currentAddr,
         to_addr: toAddr,
     });
@@ -1192,7 +1211,7 @@ async function doSingleMove(frame, rawAddr) {
         showToast("Error: " + result.error, 4000);
         return;
     }
-    showToast(`Frame ${frame} moved to 0x${toAddr}`);
+    showToast(`Frame ${frameKey} moved to 0x${toAddr}`);
     loadLine(state.currentAddr);
     refreshStats();
 }
@@ -1221,8 +1240,8 @@ async function doBatchMove() {
         showToast("Enter a destination address and select frames");
         return;
     }
-    const moves = [...state.selectedFrames].map(frame => ({
-        frame: frame,
+    const moves = [...state.selectedFrames].map(frameKey => ({
+        frame: frameKey,
         from_addr: state.currentAddr,
         to_addr: toAddr,
     }));
@@ -1239,7 +1258,7 @@ async function doBatchMove() {
     refreshStats();
 }
 
-function renderSingleOverlay(canvas, frame, natW, natH) {
+function renderSingleOverlay(canvas, frameKey, natW, natH) {
     canvas.width = natW;
     canvas.height = natH;
     canvas.style.transform = `scale(${state.zoom})`;
@@ -1251,7 +1270,7 @@ function renderSingleOverlay(canvas, frame, natW, natH) {
 
     const fd = state.frameData;
     if (!fd || !fd.readings) return;
-    const reading = fd.readings[String(frame)];
+    const reading = fd.readings[String(frameKey)];
     if (!reading) return;
 
     const currentBytes = state.lineData.bytes;
@@ -1283,10 +1302,10 @@ function renderCropOverlays() {
     // Re-render all overlays without reloading images
     const canvases = document.querySelectorAll(".crop-overlay");
     canvases.forEach(canvas => {
-        const frame = parseInt(canvas.dataset.frame, 10);
+        const frameKey = canvas.dataset.frame;
         const img = canvas.parentElement.querySelector(".crop-img");
         if (img && img.naturalWidth) {
-            renderSingleOverlay(canvas, frame, img.naturalWidth, img.naturalHeight);
+            renderSingleOverlay(canvas, frameKey, img.naturalWidth, img.naturalHeight);
         }
     });
 }

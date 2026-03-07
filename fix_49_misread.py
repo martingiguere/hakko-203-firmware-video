@@ -27,6 +27,7 @@ import subprocess
 import sys
 from collections import Counter
 from itertools import combinations
+from frame_utils import crop_filename
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(PROJECT_ROOT)
@@ -174,10 +175,12 @@ def execute_moves(crop_index, moves):
         if dst_key not in crop_index:
             crop_index[dst_key] = {
                 'frames': [],
+                'video_frames': [],
                 'readings': {},
                 'confidences': {},
             }
         dst_entry = crop_index[dst_key]
+        dst_entry.setdefault('video_frames', [])
 
         for frame in frame_list:
             if frame not in src_entry.get('frames', []):
@@ -203,7 +206,7 @@ def execute_moves(crop_index, moves):
             # Move crop PNG
             src_dir = os.path.join(CROPS_DIR, src_key.lower())
             dst_dir = os.path.join(CROPS_DIR, dst_key.lower())
-            crop_name = f"frame_{frame:05d}.png"
+            crop_name = crop_filename(frame, is_video=False)
             src_path = os.path.join(src_dir, crop_name)
             dst_path = os.path.join(dst_dir, crop_name)
 
@@ -220,7 +223,7 @@ def execute_moves(crop_index, moves):
         dst_entry['frames'] = sorted(dst_entry['frames'])
 
         # Clean up empty source entries
-        if not src_entry['frames']:
+        if not src_entry.get('frames') and not src_entry.get('video_frames'):
             del crop_index[src_key]
             entries_emptied += 1
             src_dir = os.path.join(CROPS_DIR, src_key.lower())

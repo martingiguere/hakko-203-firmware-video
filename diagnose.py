@@ -59,7 +59,8 @@ def main():
         ci = json.load(open(ci_path))
         ci_addrs = {k: v for k, v in ci.items() if isinstance(v, dict)}
         ref_list = ci.get('ref_addresses', [])
-        total_frame_refs = sum(len(v.get('frames', [])) for v in ci_addrs.values())
+        total_frame_refs = sum(len(v.get('frames', [])) + len(v.get('video_frames', []))
+                               for v in ci_addrs.values())
         addrs_with_readings = sum(1 for v in ci_addrs.values() if v.get('readings'))
         print(f'[OK]      Crop index: {len(ci_addrs)} addresses, {total_frame_refs} frame refs, '
               f'{addrs_with_readings} with readings, {len(ref_list)} ref addresses')
@@ -164,6 +165,10 @@ def main():
             for fr in info.get('frames', []):
                 checked += 1
                 if f'frame_{fr:05d}.png' not in actual:
+                    missing_pngs += 1
+            for vf in info.get('video_frames', []):
+                checked += 1
+                if f'frame_v{vf:05d}.png' not in actual:
                     missing_pngs += 1
         print(f'Sampled 100 addrs, checked {checked} frame refs: {missing_pngs} missing crop PNGs')
     else:

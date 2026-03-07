@@ -33,6 +33,7 @@ from extract_pipeline import (
     is_frame_different,
 )
 from template_matcher import CAL, ADDR_X_START, BYTE_POSITIONS, BYTE_DIGIT_SPACING
+from frame_utils import is_video_frame_key, parse_frame_key, crop_filename
 
 FRAMES_DIR = os.path.join(PROJECT_ROOT, 'frames')
 CROPS_DIR = os.path.join(PROJECT_ROOT, 'crops')
@@ -210,7 +211,10 @@ def precompute():
 
 
 def apply_frame_moves(crop_index):
-    """Replay frame_moves.json onto the freshly-generated crop_index."""
+    """Replay frame_moves.json onto the freshly-generated crop_index.
+
+    Handles both extracted frames (integer) and video frames ("vNNNNN" string).
+    """
     if not os.path.exists(FRAME_MOVES_PATH):
         return 0
     with open(FRAME_MOVES_PATH) as f:
@@ -221,31 +225,45 @@ def apply_frame_moves(crop_index):
         frame = move["frame"]
         from_addr = move["from_addr"]
         to_addr = move["to_addr"]
-        frame_str = str(frame)
+
+        # Determine frame type
+        if isinstance(frame, str) and frame.startswith('v'):
+            is_video = True
+            frame_int = int(frame[1:])
+            frame_str = frame
+            arr_key = 'video_frames'
+        else:
+            is_video = False
+            frame_int = int(frame)
+            frame_str = str(frame_int)
+            arr_key = 'frames'
+
         if from_addr not in crop_index:
             continue
         src = crop_index[from_addr]
-        if frame not in src.get("frames", []):
+        if frame_int not in src.get(arr_key, []):
             continue
         # Move readings + confidences
-        dst = crop_index.setdefault(to_addr, {"frames": [], "readings": {}, "confidences": {}})
+        dst = crop_index.setdefault(to_addr, {"frames": [], "video_frames": [], "readings": {}, "confidences": {}})
+        dst.setdefault(arr_key, [])
         if frame_str in src.get("readings", {}):
             dst["readings"][frame_str] = src["readings"].pop(frame_str)
         if frame_str in src.get("confidences", {}):
             dst["confidences"][frame_str] = src["confidences"].pop(frame_str)
-        src["frames"].remove(frame)
-        if frame not in dst["frames"]:
-            dst["frames"].append(frame)
-            dst["frames"].sort()
+        src[arr_key].remove(frame_int)
+        if frame_int not in dst[arr_key]:
+            dst[arr_key].append(frame_int)
+            dst[arr_key].sort()
         # Move crop PNG
-        src_png = os.path.join(CROPS_DIR, from_addr.lower(), f"frame_{frame:05d}.png")
+        png_name = crop_filename(frame_int, is_video=is_video)
+        src_png = os.path.join(CROPS_DIR, from_addr.lower(), png_name)
         dst_dir = os.path.join(CROPS_DIR, to_addr.lower())
-        dst_png = os.path.join(dst_dir, f"frame_{frame:05d}.png")
+        dst_png = os.path.join(dst_dir, png_name)
         if os.path.exists(src_png):
             os.makedirs(dst_dir, exist_ok=True)
             shutil.move(src_png, dst_png)
         # Clean up empty source
-        if not src["frames"] and not src.get("readings"):
+        if not src.get("frames") and not src.get("video_frames") and not src.get("readings"):
             del crop_index[from_addr]
             src_dir_path = os.path.join(CROPS_DIR, from_addr.lower())
             if os.path.isdir(src_dir_path) and not os.listdir(src_dir_path):

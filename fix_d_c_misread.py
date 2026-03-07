@@ -28,6 +28,7 @@ import subprocess
 import sys
 from collections import Counter
 from itertools import combinations
+from frame_utils import is_video_frame_key, video_frame_key, crop_filename
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(PROJECT_ROOT)
@@ -56,7 +57,12 @@ def save_crop_index(crop_index):
 
 
 def build_frame_to_addrs(crop_index):
-    """Build reverse map: frame number → list of addresses that claim it."""
+    """Build reverse map: frame number → list of addresses that claim it.
+
+    Uses extracted frame numbers for extracted frames. Video frames are
+    stored separately and not included in the neighbor-context heuristic
+    (they use different numbering).
+    """
     mapping = {}
     for addr, entry in crop_index.items():
         if addr == 'ref_addresses':
@@ -95,6 +101,9 @@ def build_anchor_trajectory(crop_index):
     """
     Build ground-truth frame→address trajectory from addresses with NO C or D
     digits (unambiguous anchors).  Returns sorted list of (frame, addr_value).
+
+    Includes both extracted and video frames (video frames use their own
+    numbering but are internally consistent for proximity comparisons).
     """
     anchors = []
     for addr, entry in crop_index.items():
@@ -105,6 +114,8 @@ def build_anchor_trajectory(crop_index):
         addr_val = int(addr, 16)
         for frame in entry.get('frames', []):
             anchors.append((frame, addr_val))
+        for vf in entry.get('video_frames', []):
+            anchors.append((vf, addr_val))
     anchors.sort()
     return anchors
 
@@ -161,7 +172,11 @@ def detect_monotonicity_moves(crop_index):
         entry = crop_index[addr]
         addr_val = int(addr, 16)
 
-        for frame in entry.get('frames', []):
+        # Check both extracted and video frames
+        all_frames = [(f, False) for f in entry.get('frames', [])] + \
+                     [(vf, True) for vf in entry.get('video_frames', [])]
+
+        for frame, is_video in all_frames:
             expected = estimate_expected_address(frame, anchors)
             if expected is None:
                 continue
@@ -183,7 +198,8 @@ def detect_monotonicity_moves(crop_index):
                     best_swap = cand
 
             if best_swap is not None:
-                moves.append((addr, frame, best_swap))
+                frame_id = video_frame_key(frame) if is_video else frame
+                moves.append((addr, frame_id, best_swap))
 
     print(f"  Phase 2: Detected {len(moves)} frames to move via monotonicity")
 
@@ -309,16 +325,29 @@ def execute_moves(crop_index, moves):
         if dst_key not in crop_index:
             crop_index[dst_key] = {
                 'frames': [],
+                'video_frames': [],
                 'readings': {},
                 'confidences': {},
             }
         dst_entry = crop_index[dst_key]
+        dst_entry.setdefault('video_frames', [])
 
         for frame in frame_list:
-            if frame not in src_entry.get('frames', []):
-                continue  # already moved or not present
+            # Determine if this is a video frame (string starting with 'v')
+            if isinstance(frame, str) and frame.startswith('v'):
+                is_video = True
+                frame_int = int(frame[1:])
+                frame_str = frame
+                arr_key = 'video_frames'
+            else:
+                is_video = False
+                frame_int = frame
+                frame_str = str(frame)
+                arr_key = 'frames'
 
-            frame_str = str(frame)
+            src_entry.setdefault(arr_key, [])
+            if frame_int not in src_entry.get(arr_key, []):
+                continue  # already moved or not present
 
             # Move readings and confidences
             if frame_str in src_entry.get('readings', {}):
@@ -329,18 +358,18 @@ def execute_moves(crop_index, moves):
                     src_entry['confidences'].pop(frame_str)
 
             # Add frame to destination
-            if frame not in dst_entry['frames']:
-                dst_entry['frames'].append(frame)
+            if frame_int not in dst_entry[arr_key]:
+                dst_entry[arr_key].append(frame_int)
 
             # Remove frame from source
-            src_entry['frames'].remove(frame)
+            src_entry[arr_key].remove(frame_int)
 
             # Move crop PNG
             src_dir = os.path.join(CROPS_DIR, src_key.lower())
             dst_dir = os.path.join(CROPS_DIR, dst_key.lower())
-            crop_name = f"frame_{frame:05d}.png"
-            src_path = os.path.join(src_dir, crop_name)
-            dst_path = os.path.join(dst_dir, crop_name)
+            png_name = crop_filename(frame_int, is_video=is_video)
+            src_path = os.path.join(src_dir, png_name)
+            dst_path = os.path.join(dst_dir, png_name)
 
             if os.path.exists(src_path):
                 os.makedirs(dst_dir, exist_ok=True)
@@ -353,9 +382,10 @@ def execute_moves(crop_index, moves):
 
         # Sort destination frames
         dst_entry['frames'] = sorted(dst_entry['frames'])
+        dst_entry['video_frames'] = sorted(dst_entry['video_frames'])
 
         # Clean up empty source entries
-        if not src_entry['frames']:
+        if not src_entry.get('frames') and not src_entry.get('video_frames'):
             del crop_index[src_key]
             entries_emptied += 1
             src_dir = os.path.join(CROPS_DIR, src_key.lower())
