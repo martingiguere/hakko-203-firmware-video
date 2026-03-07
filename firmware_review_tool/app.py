@@ -477,6 +477,14 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/viewer')
+def viewer():
+    return render_template('viewer.html',
+                           SEGMENT_START=821,
+                           FPS=30,
+                           TOTAL_FRAMES=20070)
+
+
 @app.route('/api/line/<addr>')
 def get_line(addr):
     addr = normalize_addr(addr)

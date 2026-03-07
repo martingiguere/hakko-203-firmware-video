@@ -53,6 +53,19 @@ firmware_review_tool/    Flask app for human-assisted review
 
 `firmware_review_tool/` contains a Flask web app for human-assisted byte verification. Shows frame crops alongside kNN readings, allows manual correction, and tracks review progress.
 
+### Frame Viewer
+
+Available at `/viewer` — a frame-by-frame viewer for the hex dump video segment (frames 1–20,070). Displays full 1920x1080 frames with frame number, segment time, and YouTube timestamp. Navigate with buttons (-100, -10, -1, +1, +10, +100), keyboard shortcuts (Arrow ±1, Shift+Arrow ±10, Ctrl+Arrow ±100), or jump to a YouTube timestamp (MM:SS) or frame number directly. Useful for manual review of gap regions where automated OCR missed data.
+
+## Testing
+
+```bash
+source venv/bin/activate
+pytest tests/ -v
+```
+
+Tests cover the frame viewer Flask routes (`/viewer`, `/api/frame/<N>`) and validate the JavaScript timestamp/navigation math against the backend constants.
+
 ## Setup
 
 ```bash
