@@ -81,3 +81,13 @@ Attempted using the 512 digit cells from the reference screenshot to train a sep
 The video-only kNN classifier achieves ~99.7% accuracy on reference-visible frames. Remaining confusions (8/6, D/C) are rare and handled by post-hoc correction scripts.
 
 See `ocr_accuracy_improvement_strategies.md` for proposed strategies to push accuracy higher.
+
+## Next Steps
+
+Manually recover data from the YouTube video for three critical gaps where the video scrolled too fast for OCR:
+
+1. **`$0D070`–`$0DF8F`** (242 lines) — Largest gap, video scrolls through `$0D` range in ~20 frames
+2. **`$047E0`–`$0499F`** (28 lines) — Dense code in Block 1
+3. **`$0FD50`–`$0FDCF`** (8 lines) — Interrupt handler region near vector table
+
+See SPEC.md §10 Phase 4 for details.

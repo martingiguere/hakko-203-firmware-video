@@ -745,7 +745,19 @@ hakko-203-firmware-video/
 5. Add region indicator for ROM vs. non-ROM addresses
 6. Add ID code validation indicator
 
-### Phase 4: Review & Export
+### Phase 4: Manual Video Recovery of Critical Gaps
+
+Before running the review tool, manually recover data from the YouTube video for the three highest-priority missing regions. These are gaps where the video scrolled too fast for the OCR pipeline to capture, but the data is visible in individual frames:
+
+1. **`$0D070`–`$0DF8F`** (242 lines, 3,872 bytes) — Largest gap. The video scrolls through the `$0D` range in ~20 frames. Both boundaries contain active code (`$0D060` = `F8 E7 90 07...`, `$0DF90` = `03 02 FF FE...`). Look for frames where the address column shows `$0D0xx`–`$0DFxx`.
+
+2. **`$047E0`–`$0499F`** (28 lines, 448 bytes) — Second-largest ROM gap, in dense code early in Block 1. Boundaries: `$047D0` and `$049A0` both have non-FF data.
+
+3. **`$0FD50`–`$0FDCF`** (8 lines, 128 bytes) — Gap in the interrupt handler / vector trampoline region just before the vector table. `$0FD40` = `4E FF FF FF...`, `$0FDD0` = `08 08 08 0C...`. Critical for correct execution.
+
+For each, pause the video at the relevant timestamp, read the hex bytes manually, and add them to the extraction or review state.
+
+### Phase 5: Review & Export
 1. Run human review using the web tool
 2. Iterate on corrections using frame crops as visual reference
 3. Export final firmware binary
