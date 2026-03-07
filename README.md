@@ -31,7 +31,7 @@ firmware_review_tool/    Flask app for human-assisted review
 1. **Training** -- Tesseract reads addresses on frames showing the known reference region. Matching rows provide labeled digit samples for a kNN classifier (67-dim structural features, including 8↔6 discriminative features).
 2. **Extraction** -- Every frame is OCR'd: read 10-digit address, read 16 hex bytes. Duplicate/transitional frames are skipped.
 3. **Voting** -- Each address+byte gets multiple observations across frames. Weighted majority vote picks the best reading.
-4. **Post-processing** -- Reference data overlay, OCR misread fixes (4/9 swap, C/D two-phase correction), gap filling, binary output.
+4. **Post-processing** -- Reference data overlay, unified trajectory-based address correction (C/D, 4/9, 8/6 confusion pairs), gap filling, binary output.
 
 ## Scripts
 
@@ -44,8 +44,9 @@ firmware_review_tool/    Flask app for human-assisted review
 | `postprocess_firmware.py` | Merge extractions, produce firmware binary |
 | `analyze_reference.py` | Verify reference transcription against screenshot |
 | `measure_reference_geometry.py` | Measure reference screenshot geometry (row/byte positions) |
-| `fix_49_misread.py` | Post-hoc fix for 4/9 OCR address confusion |
-| `fix_d_c_misread.py` | Post-hoc fix for C/D OCR address confusion (Phase 1: neighbor context + Phase 2: anchor monotonicity) |
+| `fix_address_trajectory.py` | Strategy 8: unified trajectory-based address correction (C/D, 4/9, 8/6) — supersedes piecemeal fix scripts |
+| `fix_49_misread.py` | Post-hoc fix for 4/9 OCR address confusion (superseded by `fix_address_trajectory.py`) |
+| `fix_d_c_misread.py` | Post-hoc fix for C/D OCR address confusion (superseded by `fix_address_trajectory.py`) |
 | `fullvideo_gap_recovery.py` | Strategy 7: scan full video for gap addresses |
 | `frame_utils.py` | Frame numbering helpers (extracted vs full-video frames) |
 | `diagnose.py` | Project status diagnostic |
@@ -96,19 +97,19 @@ Attempted using the 512 digit cells from the reference screenshot to train a sep
 
 ## Accuracy
 
-The video-only kNN classifier achieves ~99.7% accuracy on reference-visible frames. Remaining confusions (8/6, D/C) are rare and handled by post-hoc correction scripts.
+The video-only kNN classifier achieves ~99.7% accuracy on reference-visible frames. Remaining confusions (8/6, D/C, 4/9) are rare and handled by the unified trajectory-based address correction script (`fix_address_trajectory.py`).
 
-See `ocr_accuracy_improvement_strategies.md` for proposed strategies to push accuracy higher.
+See `ocr_accuracy_improvement_strategies.md` for all strategies.
 
 ## Coverage
 
-Current coverage: **4,923 / 5,120 addresses (96.2% automated)**, 155 missing lines.
+Current coverage: **4,946 / 5,120 addresses (96.6% automated)**, 174 missing lines.
 
 ### Post-extraction fixes applied
 
-1. **C↔D address misread** (`fix_d_c_misread.py`): Two-phase correction using neighbor context (Phase 1) and anchor-based monotonicity (Phase 2). Recovered 215 lines in `$0D050`–`$0DF70` and 7 addresses in `$10D80`–`$10DF0`.
+1. **Unified address trajectory correction** (`fix_address_trajectory.py`, Strategy 8): Builds a piecewise-monotone trajectory through 1,019 anchor addresses (those with no confusable characters), detects 14 scroll-direction breakpoints, and corrects C↔D, 4↔9, and 8↔6 address OCR confusions in a single pass. Moved 2,794 frames across 587 address pairs. Supersedes the earlier piecemeal `fix_d_c_misread.py` and `fix_49_misread.py` scripts.
 
-2. **Full-video gap recovery** (`fullvideo_gap_recovery.py`): Strategy 7 — scans `full_video.mp4` directly for addresses missing from the pre-extracted frames. The pipeline normally processes 20,070 pre-extracted frames, but the full video has 93,093 frames. By estimating which video timestamps correspond to each gap region and running the existing kNN classifier, this recovered **115 of 270 missing addresses**, improving coverage from 94.7% to 96.2%. The remaining 155 gaps are unrecoverable — the video jumps over those addresses between consecutive frames.
+2. **Full-video gap recovery** (`fullvideo_gap_recovery.py`): Strategy 7 — scans `full_video.mp4` directly for addresses missing from the pre-extracted frames. The pipeline normally processes 20,070 pre-extracted frames, but the full video has 93,093 frames. By estimating which video timestamps correspond to each gap region and running the existing kNN classifier, this recovered **115 of 270 missing addresses**. The remaining 155 gaps are unrecoverable — the video jumps over those addresses between consecutive frames.
 
 ### Frame numbering
 

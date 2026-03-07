@@ -5,7 +5,7 @@
 - **Per-digit accuracy**: ~99.7% on reference-visible frames
 - **Classifier**: FastKNNClassifier, 67-dim structural features, k=7, weighted inverse-distance voting
 - **Known confusions**: 8<->6 (most common remaining), D<->C, 4<->9
-- **Post-hoc fixes applied**: `fix_49_misread.py` (826 frames relocated), `fix_d_c_misread.py` (Phase 1 neighbor + Phase 2 monotonicity with position-adaptive threshold)
+- **Post-hoc fixes applied**: `fix_address_trajectory.py` (Strategy 8: unified trajectory correction, 2,794 frames relocated across C/D, 4/9, 8/6 confusion pairs)
 - **Training**: 2-pass (Tesseract-labeled Pass 1, kNN-detected Pass 2 with 80 frames), max 500-800 samples/class
 
 ---
@@ -125,15 +125,20 @@
    - Recovered 115/270 missing addresses, coverage 94.7% → 96.2%
    - 155 remaining gaps are unrecoverable (video jumps over them)
 
-4. **Strategy 3** (no retrain needed)
+4. **Strategy 8** ✅ DONE
+   - Global address trajectory correction (`fix_address_trajectory.py`): unified replacement for fix_d_c_misread.py + fix_49_misread.py
+   - Moved 2,794 frames across 587 address pairs (C/D, 4/9, 8/6 confusions)
+   - Coverage 96.8% → 96.6% (net loss from removing incorrectly-populated addresses)
+
+5. **Strategy 3** (no retrain needed)
    - Add temporal consistency as a post-vote correction
    - Can be applied to existing extraction results
 
-5. **Strategy 1** (no retrain needed)
+6. **Strategy 1** (no retrain needed)
    - Add confusion-aware voting penalties
    - Fine-tuning step after Strategies 2-4 establish a better baseline
 
-6. **Strategy 5** (optional, based on remaining error analysis)
+7. **Strategy 5** (optional, based on remaining error analysis)
    - Only if edge-row errors remain significant after Strategies 2-4
 
 ---
@@ -166,6 +171,38 @@
 
 ---
 
+## Strategy 8: Global Address Trajectory Correction (Unified) ✅ IMPLEMENTED
+
+**Status**: Implemented 2026-03-07. Script: `fix_address_trajectory.py`. Supersedes `fix_d_c_misread.py` and `fix_49_misread.py`.
+
+**Results**:
+- Moved **2,794 frames** across **587 unique source→dest address pairs**
+- Top confusion types corrected: 9→4 (792), D→C (719), 8→6 (394), C→D (291), plus compound swaps
+- Coverage 96.8% → 96.6% (net loss: 71 incorrectly-populated addresses emptied, 5 new addresses created)
+- **Idempotent**: re-running produces 0 additional moves
+
+**How it works**:
+1. **Anchor trajectory**: Builds per-frame-median trajectory from 1,019 anchor addresses (no C/D/4/9/8/6 digits) — 3,328 extracted + 92 video anchor points
+2. **Breakpoint detection**: Finds 14 scroll-direction reversals using smoothed running median, creating 15 monotone segments
+3. **Expected address estimation**: Inverse-distance-weighted median of nearby per-frame-median anchors (±500 frame radius) within the same segment
+4. **Swap candidate generation**: For each non-anchor address, generates all combinations of C↔D, 4↔9, 8↔6 swaps at each digit position
+5. **Selection criteria**: Candidate must (a) reduce distance to expected by ≥ adaptive threshold `max(swap_magnitude // 2, 0x80)` AND (b) reduce distance by ≥50% (prevents false moves when both original and candidate are far from expected)
+6. **Execution**: Moves frames, crop PNGs, readings, confidences; recomputes byte consensus; rebuilds downstream files; resets review state
+
+**Key design decisions**:
+- 0↔8 excluded from swap map (too many false positives, not a documented confusion pair)
+- Per-frame-median aggregation prevents bias from multiple anchor rows per frame
+- Weighted median (not linear interpolation) avoids artifacts from video jumps between sparse anchor frames
+- 50% relative improvement threshold prevents false moves in regions far from any anchor
+
+**Where modified**: New file `fix_address_trajectory.py` — standalone post-hoc correction script.
+
+**Impact**: Very high. Unified approach handles compound errors (e.g., C→D + 8→6 in same address) that piecemeal scripts missed.
+
+**Requires retrain**: No. Post-hoc address correction only.
+
+---
+
 ## Key Constants Reference
 
 ```
@@ -188,7 +225,8 @@ max_per_class = 500-800     # training sample cap
 | `template_matcher.py` | `extract_features()` (67-dim), `extract_cell()`, calibration |
 | `grid_calibration.json` | Grid geometry constants |
 | `fast_knn_classifier.npz` | Trained kNN model (invalidated by feature changes) |
-| `fix_49_misread.py` | Prior art: post-hoc address confusion fix |
-| `fix_d_c_misread.py` | Post-hoc address confusion fix: Phase 1 (±10 neighbor heuristic) + Phase 2 (anchor-based monotonicity for systematic blocks) |
+| `fix_address_trajectory.py` | Strategy 8: unified global trajectory address correction (C/D, 4/9, 8/6) |
+| `fix_49_misread.py` | Prior art: post-hoc 4/9 address confusion fix (superseded by Strategy 8) |
+| `fix_d_c_misread.py` | Prior art: post-hoc C/D address confusion fix (superseded by Strategy 8) |
 | `fullvideo_gap_recovery.py` | Strategy 7: scan full video for gap addresses, save crops, update firmware |
 | `ocr_9_4_confusion_fix_prompt.md` | Detailed 4/9 confusion analysis and root causes |

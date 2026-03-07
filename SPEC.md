@@ -376,10 +376,7 @@ Same approach as FM-202:
 
 1. **Filter invalid lines**: Non-aligned addresses, ASCII artifacts, implausible byte patterns
 2. **Systematic error corrections**: Identify and fix classifier-specific confusion patterns (analogous to FM-202's CF→FF correction)
-3. **D→C address misclassification fix**: The kNN classifier misreads hex digit `D` as `C` in address fields within the `$0D000`–`$0DFFF` range, causing frame observations to be filed under `$0C000`–`$0CFFF` addresses. The `fix_d_c_misread.py` script uses a two-phase approach:
-   - **Phase 1** (neighbor context): ±10 frame neighbor median detects isolated misreads (388 frames)
-   - **Phase 2** (anchor monotonicity): Builds a ground-truth frame→address trajectory from 57,745 addresses with no C/D digits, then uses inverse-distance weighted median interpolation (±500 frames) to detect systematic misread blocks. Any C↔D swap that brings an address ≥`$800` closer to the expected trajectory is applied (7,325 frames)
-   - Combined: 7,514 frames relocated, recovering 208 lines in the `$0D050`–`$0DF70` range. Coverage improved from 93.7% to 94.7%.
+3. **Address misclassification fixes** (`fix_address_trajectory.py`, Strategy 8): Unified global address trajectory correction. Builds a piecewise-monotone trajectory through 1,019 anchor frames (addresses with no confusable characters — no C/D/8/6/4/9), detects 14 scroll-direction breakpoints creating 15 monotone segments, and corrects C↔D, 4↔9, and 8↔6 address misreads in a single pass. Moved 2,794 frames across 587 address pairs. Supersedes the earlier piecemeal `fix_d_c_misread.py` and `fix_49_misread.py` scripts.
 6. **Full-video gap recovery** (`fullvideo_gap_recovery.py`): Scan `full_video.mp4` for addresses missing from the pre-extracted frames. Recovered 115 of 270 missing addresses. Coverage improved from 94.7% to 96.2%. The remaining 155 gaps are unrecoverable (video jumps over them).
 4. **Overlay reference data**: Verified data always wins
 5. **FF-fill erased flash gaps**: Fill confirmed erased regions with `0xFF`. Per §2.1, only `$13000`–`$13FFF` (256 lines) qualifies — tail of Block 0 preceded by a confirmed FF run from `$12FB0`. The `$0D070`–`$0DF8F` gap and other scattered ROM gaps are **not** erased flash — they are video coverage gaps surrounded by non-FF code data
@@ -718,7 +715,9 @@ hakko-203-firmware-video/
 ├── extract_pipeline.py              # Main extraction pipeline
 ├── template_matcher.py              # kNN classifier (adapted from FM-202)
 ├── postprocess_firmware.py          # Filtering, correction, merge, binary gen
-├── fix_d_c_misread.py               # D→C address misclassification correction
+├── fix_address_trajectory.py        # Strategy 8: unified global trajectory address correction (C/D, 4/9, 8/6)
+├── fix_d_c_misread.py               # D→C address misclassification correction (superseded by Strategy 8)
+├── fix_49_misread.py                # 4→9 address misclassification correction (superseded by Strategy 8)
 ├── frame_utils.py                   # Frame numbering helpers (extracted vs video)
 ├── r8c_opcode_table.py              # R8C/Tiny opcode table for validation
 ├── r8c_disassembler.py              # R8C/Tiny disassembler for validation
@@ -787,7 +786,7 @@ Implemented in `fullvideo_gap_recovery.py`. Scans `full_video.mp4` for addresses
 
 **Results**:
 - Recovered **115 of 270** missing addresses
-- Coverage improved from **94.7% → 96.2%** (4,923/5,120)
+- Coverage improved from **94.7% → 96.2%** (4,923/5,120), then to **96.6%** (4,946/5,120) after Strategy 8 trajectory correction
 - **155 addresses remain unrecoverable** — the video jumps over them between consecutive frames (no data exists in the video for these addresses)
 - Scanned 2,304 video frames across 7 search windows (563 unique, ~160s runtime)
 
@@ -902,7 +901,7 @@ ffmpeg / ffprobe      # Frame extraction
 
 ## 15. Success Criteria
 
-1. **Coverage**: ≥95% of firmware address lines have extracted data (before FF-fill) — ✅ achieved: 96.2%
+1. **Coverage**: ≥95% of firmware address lines have extracted data (before FF-fill) — ✅ achieved: 96.6%
 2. **ID code match**: All 7 known ID code bytes match expected values
 3. **Vector table validity**: All interrupt vectors point to valid ROM addresses
 4. **Instruction validity**: Disassembly from reset vector produces valid R8C/Tiny instructions with no illegal opcodes in traced code paths
