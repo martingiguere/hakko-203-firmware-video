@@ -23,9 +23,8 @@ extract_pipeline.py          Main extraction: kNN OCR + multi-frame voting
         |                      then auto-runs post-pipeline steps:
         |                      1. precompute.py              rebuild crop_index.json
         |                      2. fix_address_trajectory.py  correct C/D, 4/9, 8/6 address misreads
-        |                      3. fullvideo_gap_recovery.py  scan full video for missing addresses
-        |                      4. postprocess_firmware.py    merge, fill gaps, produce binary
-        |                      5. precompute_gaps.py         rebuild gap_context_index.json
+        |                      3. postprocess_firmware.py    merge, fill gaps, produce binary
+        |                      4. precompute_gaps.py         rebuild gap_context_index.json
         |
 firmware_review_tool/        Flask app for human-assisted review
 ```

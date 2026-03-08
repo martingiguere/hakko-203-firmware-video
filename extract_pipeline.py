@@ -9,9 +9,11 @@ uses multi-frame voting to produce a high-quality firmware dump.
 After extraction, automatically runs post-pipeline steps in order:
 1. precompute.py — rebuild crop_index.json
 2. fix_address_trajectory.py — correct C/D, 4/9, 8/6 address misreads
-3. fullvideo_gap_recovery.py — scan full video for missing addresses
-4. postprocess_firmware.py — merge, fill gaps, produce binary
-5. precompute_gaps.py — rebuild gap_context_index.json
+3. postprocess_firmware.py — merge, fill gaps, produce binary
+4. precompute_gaps.py — rebuild gap_context_index.json
+
+Run fullvideo_gap_recovery.py separately on demand to scan full_video.mp4
+for addresses missing from the pre-extracted frames.
 
 Adapts the FM-202 (Segger) extraction approach for:
 - 10-digit addresses ($00000-$13FFF, 80 KB buffer)
@@ -950,7 +952,6 @@ def main():
     post_steps = [
         ('Precompute (crop index)',          os.path.join('firmware_review_tool', 'precompute.py')),
         ('Address trajectory correction',    'fix_address_trajectory.py'),
-        ('Full-video gap recovery',          'fullvideo_gap_recovery.py'),
         ('Post-processing (merge/binary)',   'postprocess_firmware.py'),
         ('Gap context precompute',           os.path.join('firmware_review_tool', 'precompute_gaps.py')),
     ]
