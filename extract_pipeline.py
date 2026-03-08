@@ -525,10 +525,11 @@ def process_frame(classifier, img):
 def is_frame_different(img1, img2, threshold=20000):
     """Check if two frames show different hex dump content.
 
-    Compares the hex data region (byte columns only) using absolute
-    pixel difference sum. Threshold scaled for FM-203's larger hex region
-    (~665x551 px). A scroll by one row produces ~2.4M diff, so 20000
-    safely catches tiny rendering variations while skipping true duplicates.
+    Compares two regions: the hex byte data region (threshold 20000) and
+    the address column (threshold 5000). Returns True if either region
+    differs enough. The address column check catches scrolling through
+    all-FF memory regions where byte data is identical but the address
+    has changed.
     """
     if img1 is None or img2 is None:
         return True
@@ -546,7 +547,21 @@ def is_frame_different(img1, img2, threshold=20000):
         return True
 
     diff = np.sum(np.abs(crop1.astype(np.int16) - crop2.astype(np.int16)))
-    return diff > threshold
+    if diff > threshold:
+        return True
+
+    # Also compare address column — catches scrolling through all-FF regions
+    # where byte data is identical but address has changed
+    ax1 = int(ADDR_X_START)
+    ax2 = int(ADDR_X_START + 5 * CAL['address_char_spacing'] + CELL_W)
+    addr_crop1 = img1[y1:y2, ax1:ax2]
+    addr_crop2 = img2[y1:y2, ax1:ax2]
+
+    if addr_crop1.shape != addr_crop2.shape:
+        return True
+
+    addr_diff = np.sum(np.abs(addr_crop1.astype(np.int16) - addr_crop2.astype(np.int16)))
+    return addr_diff > 5000
 
 
 def is_frame_stable(img1, img2, img3):
