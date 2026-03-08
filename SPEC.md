@@ -108,7 +108,7 @@ Post-extraction analysis of `firmware_merged.txt` (4,373 lines recovered out of 
 
 | Range | Lines | Reasoning |
 |-------|-------|-----------|
-| `$13000`–`$13FFF` | 256 | Tail of Block 0 upper half. The last extracted line is `$12FF0` (all-FF), and lines `$12FB0`–`$12FF0` are a confirmed FF run. Last non-FF data is at `$12FA0`. Since unused flash within a block remains `0xFF`, the remaining 4 KB is certainly erased. The video simply didn't scroll far enough to show these addresses. |
+| `$13000`–`$13FFF` | 256 | Tail of Block 0 upper half. **Directly confirmed all-FF from video**: frame 18842 shows all-FF screen at `$12E20`–`$12F00`, video continues scrolling through `$13xxx` (e.g. `$13870` at frame 18929, `$13FF0` at frame 19229) — all FF. The entire range is visible in the video but was not indexed due to the all-FF frame deduplication bug skipping these frames during extraction. |
 
 **NOT safe to FF-fill (~271 lines):**
 
@@ -130,6 +130,68 @@ Post-extraction analysis of `firmware_merged.txt` (4,373 lines recovered out of 
 | `$00000`–`$03FFF` (non-ROM) | 1,024 | All present. Data flash A (`$02400`–`$027FF`) contains calibration/settings data (repeating 16-byte structures, 19-26 obs/line); last non-FF at `$02760` (YouTube 14:15). Data flash B (`$02800`–`$02BFF`) confirmed all-FF (YouTube 14:19). Remaining lines are `ff-forced` (SFR/RAM/reserved regions). |
 
 **Confirmed from reference screenshot**: The Xeltek SuperPro reads the full `$00000`–`$13FFF` range (80 KB) with physical addresses preserved. The buffer addresses correspond directly to MCU physical addresses — no offset translation is needed. The 64 KB of program ROM occupies `$04000`–`$0FFFF` (lower 48 KB) and `$10000`–`$13FFF` (upper 16 KB) within the 80 KB buffer. The reference screenshot shows rows at addresses `$0FF70`–`$10060`, confirming that the address space is contiguous across the `$0FFFF`/`$10000` boundary in the buffer.
+
+#### Manual Video Frame Observations (2026-03-08)
+
+Boundaries of FF-forced regions verified by manual inspection of video frames in the frame viewer:
+
+| Boundary | Frame(s) | Observation |
+|----------|----------|-------------|
+| `$023F0` → `$02400` | 814–820 / 762–773 | `$023F0` is last all-FF line (SFR/RAM/unmapped region). `$02400` starts Data Flash A with real calibration data. |
+| `$02750` → `$02760` | ~1005–1025 | `$02750` is last non-FF line in Data Flash A. `$02760` onward is all-FF (unused tail of Data Flash A). |
+| `$02800` → `$02C50` | ~1022–1040 | Data Flash B (`$02800`–`$02BFF`) and start of reserved region (`$02C00`–`$02C50`) confirmed all-FF. |
+| `$02C50` → `$03FFF` | 690, 5710–5865, 5937–5980, 6228, 19392 | Entire reserved region confirmed all-FF. All 314 lines (`$02C60`–`$03FF0`) present in OCR with FF data across multiple frame groups. Manually confirmed from video. **Note**: frames 6419–6468 were previously listed here but are misassigned — they actually show `$05E70-$05F60` (ROM data), not `$03E90-$03F60`. See OCR Address Misassignment below. |
+| `$12E20` → `$13FF0` | 18842–19229 | Frame 18842 shows entire screen all-FF (`$12E20`–`$12F00`). Video continues scrolling: `$13870` visible at frame 18929, `$13FF0` at frame 19229 — all FF. Entire `$13000`–`$13FFF` directly confirmed from video (frames were skipped by extraction due to all-FF dedup bug). |
+
+**Status**: Remaining boundary to verify:
+- `$03FFF` → `$04000`: transition from reserved to Block 1 ROM — needs correct frames identified (frames 6419–6468 were misassigned by OCR)
+
+#### OCR Address Misassignment (discovered 2026-03-08)
+
+Frame 6419 (and neighbours 6420, 6436, 6452, 6468, 6484, 6517) are mapped to `$03E90-$03F60` in `crop_index.json`, but manual inspection shows they actually display `$05E70-$05F60` — real ROM code, not all-FF data.
+
+**Root cause**: `validate_address_sequence` has only ~35% raw OCR accuracy on address digits (median across all frames). It compensates by finding the best anchor pair among the 15 visible rows. On these frames, rows 7–8 coincidentally OCR'd as `$03F10/$03F20` (forming a valid sequence), so the validator forced all 15 rows to `$03E90-$03F60`. The real addresses contain no confusable characters (`C/D/4/9/8/6`), so `fix_address_trajectory.py` cannot detect or correct this.
+
+**Impact**: The `ff-forced` override in `postprocess_firmware.py` masks the damage for `$02800-$03FFF` (forces all-FF regardless of readings). Without it, real ROM code from `$05E70` would contaminate the firmware dump at `$03E90-$03F60`. Other misassignments in ROM areas may exist unmasked.
+
+**Mitigation**: The confirmed manual scroll trajectory (below) can be used to constrain address validation and reject outlier anchors.
+
+#### Manual Scroll Trajectory (confirmed 2026-03-08)
+
+Manually confirmed video scroll structure. The auto-detected trajectory segments in `fix_address_trajectory.py` do NOT match reality — the actual video has extensive oscillation in the `$02xxx-$04xxx` range.
+
+**Pass 1: Forward scroll**
+
+| Frame | Address Range | Event |
+|-------|--------------|-------|
+| F1 | `$00000` | Start of video, scrolling increasing |
+| F1–F1728 | `$00000`→`$0FF50-$10040` | Steady forward scroll |
+| F1728–F5044 | `$0FF50-$10040` | Static (no scrolling) |
+| F5045 | — | No hex data view (UI transition/dialog) |
+| F5230–F5287 | `$00000` | Static (view restarted) |
+
+**Pass 2: Oscillating start, then forward**
+
+| Frame | Address Range | Event |
+|-------|--------------|-------|
+| F5288 | `$00330-$00420` | Scrolling restarts (increasing) |
+| F5306–F5313 | `$03660-$03750` | Paused |
+| F5314 | `$02FF0-$030E0` | Reversal → decreasing |
+| F5319 | `$02330-$02420` | Paused |
+| F5336 | `$02660-$02420` | Scrolling |
+| F5339 | `$02990-$02A80` | Increasing |
+| F5367 | `$02CC0-$02DB0` | Increasing |
+| F5369 | `$02FF0-$030E0` | Increasing |
+| F5372 | `$03330-$03420` | Increasing |
+| F5373 | `$03660-$03750` | Increasing |
+| F5375 | `$03990-$03A80` | Increasing |
+| F5408 | `$04CC0-$04DB0` | Last frame before reversal |
+| F5409 | `$04990-$04A80` | Reversal → decreasing |
+| F5446 | `$04660-$04750` | Decreasing |
+| F5447 | `$04990-$04750` | Direction change |
+| F5502 | `$04990-$0????` | (observation cut off — to be continued) |
+
+**TODO**: Continue manual trajectory confirmation from F5502 onward to end of video.
 
 ### Fixed Interrupt Vector Table (`$0FFDC`–`$0FFFF`)
 
