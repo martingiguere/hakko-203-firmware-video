@@ -348,7 +348,7 @@ The Xeltek font may differ significantly from the Segger Flasher font — charac
 
 For each unique frame:
 
-1. **Deduplication**: Compare hex region pixels to previous frame; skip if difference < threshold
+1. **Deduplication**: Compare both hex byte region and address column pixels to previous frame; skip if neither region's difference exceeds its threshold. The address column check (threshold 5,000) catches scrolling through all-FF memory regions where byte data is identical but the address has changed. The byte data check uses threshold 20,000.
 2. **UI state detection**: Detect if the hex buffer area is fully visible (no dialog boxes, menus, or transitions obscuring it)
 3. **Address reading**: Extract and decode the address/offset column for each visible row
 4. **Address validation**: Verify addresses are sequential (incrementing by `$10` per row)
@@ -786,7 +786,7 @@ Implemented in `fullvideo_gap_recovery.py`. Scans `full_video.mp4` for addresses
 
 **Results**:
 - Recovered **115 of 270** missing addresses
-- Coverage improved from **94.7% → 96.2%** (4,923/5,120), then to **96.6%** (4,946/5,120) after Strategy 8 trajectory correction
+- Coverage improved from **94.7% → 96.2%** (4,923/5,120), then to **97.0%** (4,966/5,120) after Strategy 8 trajectory correction + pipeline re-run (2026-03-08)
 - **155 addresses remain unrecoverable** — the video jumps over them between consecutive frames (no data exists in the video for these addresses)
 - Scanned 2,304 video frames across 7 search windows (563 unique, ~160s runtime)
 
@@ -901,7 +901,7 @@ ffmpeg / ffprobe      # Frame extraction
 
 ## 15. Success Criteria
 
-1. **Coverage**: ≥95% of firmware address lines have extracted data (before FF-fill) — ✅ achieved: 96.6%
+1. **Coverage**: ≥95% of firmware address lines have extracted data (before FF-fill) — ✅ achieved: 97.0%
 2. **ID code match**: All 7 known ID code bytes match expected values
 3. **Vector table validity**: All interrupt vectors point to valid ROM addresses
 4. **Instruction validity**: Disassembly from reset vector produces valid R8C/Tiny instructions with no illegal opcodes in traced code paths

@@ -1,6 +1,6 @@
 # OCR Accuracy Improvement Strategies
 
-## Current State (2026-03-07)
+## Current State (2026-03-08)
 
 - **Per-digit accuracy**: ~99.7% on reference-visible frames
 - **Classifier**: FastKNNClassifier, 67-dim structural features, k=7, weighted inverse-distance voting
@@ -129,6 +129,11 @@
    - Global address trajectory correction (`fix_address_trajectory.py`): unified replacement for fix_d_c_misread.py + fix_49_misread.py
    - Moved 2,794 frames across 587 address pairs (C/D, 4/9, 8/6 confusions)
    - Coverage 96.8% → 96.6% (net loss from removing incorrectly-populated addresses)
+
+5. **All-FF duplicate detection fix** ✅ DONE (2026-03-08)
+   - `is_frame_different()` now also compares address column (threshold 5,000) alongside byte data (threshold 20,000)
+   - Catches scrolling through all-FF regions where byte data is identical but address changed
+   - Pipeline re-run + post-processing: coverage **96.6% → 97.0%** (4,966/5,120), 154 lines still missing
 
 5. **Strategy 3** (no retrain needed)
    - Add temporal consistency as a post-vote correction
