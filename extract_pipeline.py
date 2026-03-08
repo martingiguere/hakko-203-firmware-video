@@ -6,6 +6,13 @@ Processes all 20,070 video frames from the Xeltek SuperPro 6100N "Edit Buffer"
 scrolling display, extracts hex data using kNN character classification, and
 uses multi-frame voting to produce a high-quality firmware dump.
 
+After extraction, automatically runs post-pipeline steps in order:
+1. precompute.py — rebuild crop_index.json
+2. fix_address_trajectory.py — correct C/D, 4/9, 8/6 address misreads
+3. fullvideo_gap_recovery.py — scan full video for missing addresses
+4. postprocess_firmware.py — merge, fill gaps, produce binary
+5. precompute_gaps.py — rebuild gap_context_index.json
+
 Adapts the FM-202 (Segger) extraction approach for:
 - 10-digit addresses ($00000-$13FFF, 80 KB buffer)
 - 14x28 pixel cells → 67-dim feature vectors
@@ -935,6 +942,26 @@ def main():
     print("Starting full extraction...")
     print("=" * 60)
     final_dump = run_extraction(classifier)
+
+    # === Post-pipeline steps (order matters) ===
+    import subprocess
+    cwd = os.getcwd()
+
+    post_steps = [
+        ('Precompute (crop index)',          os.path.join('firmware_review_tool', 'precompute.py')),
+        ('Address trajectory correction',    'fix_address_trajectory.py'),
+        ('Full-video gap recovery',          'fullvideo_gap_recovery.py'),
+        ('Post-processing (merge/binary)',   'postprocess_firmware.py'),
+        ('Gap context precompute',           os.path.join('firmware_review_tool', 'precompute_gaps.py')),
+    ]
+
+    for step_name, script in post_steps:
+        print("\n" + "=" * 60)
+        print(f"Running: {step_name} ({script})")
+        print("=" * 60)
+        result = subprocess.run([sys.executable, script], cwd=cwd)
+        if result.returncode != 0:
+            print(f"WARNING: {script} exited with code {result.returncode}")
 
 
 if __name__ == '__main__':

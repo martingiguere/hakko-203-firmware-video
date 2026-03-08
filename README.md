@@ -15,15 +15,19 @@ Extract the firmware of a **Hakko FM-203** soldering station from a YouTube vide
 ## Pipeline
 
 ```
-download_video.py        Download video & extract frames
+download_video.py            Download video & extract frames
         |
-calibrate_grid.py        Detect cell geometry (14x28px cells, byte positions)
+calibrate_grid.py            Detect cell geometry (14x28px cells, byte positions)
         |
-extract_pipeline.py      Main extraction: kNN OCR + multi-frame voting
+extract_pipeline.py          Main extraction: kNN OCR + multi-frame voting
+        |                      then auto-runs post-pipeline steps:
+        |                      1. precompute.py              rebuild crop_index.json
+        |                      2. fix_address_trajectory.py  correct C/D, 4/9, 8/6 address misreads
+        |                      3. fullvideo_gap_recovery.py  scan full video for missing addresses
+        |                      4. postprocess_firmware.py    merge, fill gaps, produce binary
+        |                      5. precompute_gaps.py         rebuild gap_context_index.json
         |
-postprocess_firmware.py  Merge, fill gaps, produce binary
-        |
-firmware_review_tool/    Flask app for human-assisted review
+firmware_review_tool/        Flask app for human-assisted review
 ```
 
 ### How it works
@@ -40,7 +44,7 @@ firmware_review_tool/    Flask app for human-assisted review
 | `download_video.py` | Download video and extract PNG frames |
 | `calibrate_grid.py` | Calibrate character grid geometry -> `grid_calibration.json` |
 | `template_matcher.py` | Cell extraction, feature extraction, reference data loading |
-| `extract_pipeline.py` | Full extraction pipeline with FastKNNClassifier |
+| `extract_pipeline.py` | Full extraction pipeline with FastKNNClassifier (auto-runs precompute + gap context at end) |
 | `postprocess_firmware.py` | Merge extractions, produce firmware binary |
 | `analyze_reference.py` | Verify reference transcription against screenshot |
 | `measure_reference_geometry.py` | Measure reference screenshot geometry (row/byte positions) |

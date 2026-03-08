@@ -712,7 +712,7 @@ hakko-203-firmware-video/
 │   └── reference_transcription.txt  # Hand-verified hex from screenshot
 │
 ├── grid_calibration.json            # Xeltek UI grid parameters
-├── extract_pipeline.py              # Main extraction pipeline
+├── extract_pipeline.py              # Main extraction pipeline (auto-runs precompute + gap context)
 ├── template_matcher.py              # kNN classifier (adapted from FM-202)
 ├── postprocess_firmware.py          # Filtering, correction, merge, binary gen
 ├── fix_address_trajectory.py        # Strategy 8: unified global trajectory address correction (C/D, 4/9, 8/6)
