@@ -76,16 +76,35 @@
 **Problem**: Top rows (0-1) have reduced contrast (~200 vs ~255 for middle rows), per `ocr_9_4_confusion_fix_prompt.md`. The classifier treats all row positions equally, but edge rows are systematically harder to classify correctly.
 
 **Approach**: Two options:
-1. **Preprocessing**: Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) to each cell before feature extraction in `extract_features()`. Currently uses simple min-max normalization (line 125-129) which doesn't recover lost contrast.
+1. ~~**Preprocessing**: Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) to each cell before feature extraction in `extract_features()`.~~ **REJECTED** — see Option A results below.
 2. **Voting**: Track row position with each observation, down-weight top/bottom row observations (rows 0-1 and 11-12) in multi-frame voting.
 
-**Where to modify**:
-- Option A: `extract_features()` in `template_matcher.py:109-186` (add CLAHE before normalization)
-- Option B: `process_frame()` in `extract_pipeline.py:463-506` (record row position) and voting loop at line 697
+### Option A: CLAHE Preprocessing — REJECTED (2026-03-09)
 
-**Impact**: Medium. Specifically helps the errors concentrated in edge rows.
+**Tested via** `test_clahe_ab.py`: A/B comparison on 20 reference-visible frames (15 train, 5 test, 896 test digits).
 
-**Requires retrain**: Option A requires retrain. Option B does not.
+**Results**: CLAHE **significantly hurts** accuracy:
+- Overall: 96.76% → 81.25% (**-139 digits, -15.5%**)
+- Edge rows: 100% → 89.58% (-30 digits)
+- Middle rows: 95.23% → 77.30% (-109 digits)
+- 8/6 pair: 92.2% → 59.8% (-33 digits)
+- D/C pair: 93.3% → 50.0% (-26 digits)
+- '6' accuracy collapsed to 12% (misread as '0' or '8')
+- '2' accuracy collapsed to 34% (misread as '8')
+
+**Root cause**: CLAHE's local histogram equalization amplifies noise and distorts the subtle stroke-shape differences that the 67-dim structural features rely on. The existing min-max normalization already handles contrast differences adequately. CLAHE creates artifacts that make structurally distinct digits (e.g., 2 vs 8, 6 vs 0) appear similar in feature space.
+
+**Conclusion**: Option A is not viable for this classifier architecture. The kNN's structural features are sensitive to stroke shape, not absolute contrast — CLAHE changes shapes, not just contrast.
+
+### Option B: Edge-Row Vote Down-Weighting — REJECTED (2026-03-09)
+
+**Tested via** `test_strategy5b.py`: Used existing classifier on 20 reference-visible frames (295 observations across 16 reference addresses). Tested edge weights 1.0, 0.75, 0.5, 0.25, 0.1, 0.0.
+
+**Results**: No effect at any weight. Byte accuracy stayed at 94.53% (242/256) for all weights 0.1–1.0. At weight 0.0 (completely discard edge rows), accuracy dropped slightly to 94.14% (241/256, -1 byte).
+
+**Why it doesn't help**: Only 4 of 16 reference addresses had mixed edge+middle observations. With ~20 observations per address, middle-row votes already dominate the consensus — edge-row votes aren't numerous or wrong enough to swing the outcome.
+
+**Conclusion**: Strategy 5 is closed. Neither option improves accuracy. The remaining errors are not caused by edge-row contrast issues influencing the vote; they stem from fundamental kNN separation limits on the confusion pairs.
 
 ---
 
@@ -146,8 +165,9 @@
    - Add confusion-aware voting penalties
    - Fine-tuning step after Strategies 2-4 establish a better baseline
 
-7. **Strategy 5** (optional, based on remaining error analysis)
-   - Only if edge-row errors remain significant after Strategies 2-4
+7. **Strategy 5** ❌ REJECTED (2026-03-09)
+   - Option A (CLAHE): -15.5% accuracy, destroys structural features
+   - Option B (edge-row down-weighting): no effect, middle rows already dominate votes
 
 ---
 

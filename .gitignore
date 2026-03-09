@@ -11,6 +11,7 @@ __pycache__/
 # Data and Artifacts
 frames/
 frames
+test_frames/
 crops/*
 !crops/crop_index.json
 classifier_data.npz
