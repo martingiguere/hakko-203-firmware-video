@@ -223,6 +223,7 @@ Manually confirmed video scroll structure, now stored in `manual_trajectory.py` 
 1. ~~Continue manual trajectory confirmation~~ — COMPLETE (F1 through F20070 fully documented).
 2. ~~Use confirmed trajectory to constrain `validate_address_sequence` and fix misassigned frames.~~ — DONE (2026-03-09). Implemented as Phase 1 in `fix_address_trajectory.py` using `manual_trajectory.py`. Moved 2,897 frames (837 via constrained re-read, 2,060 via trajectory fallback). Only operates where waypoint spacing ≤ 500 frames (dense trajectory regions); Pass 1 F1–F1728 skipped (spacing 1,727 — linear interpolation unreliable due to variable scroll speed).
 3. **TODO**: Review suspect frames (split-scroll artifacts, low raw-to-validated match rates) for possible misassignment in ROM areas outside `ff-forced` regions.
+4. **TODO**: Manual review of 405 non-FF frames in FF-confirmed regions — verify none are misassigned ROM data. Full per-frame detail in `ff_region_nonff_report.txt`. Regions: $00000-$023FF (178 addrs, SFR/RAM reads), $02800-$02BFF (48 addrs, Data Flash B OCR noise), $02C00-$03FFF (173 addrs, reserved region), $13000-$13FFF (6 addrs, F19302 fast-rewind artifact). Initial automated analysis found no lost ROM data, but visual spot-check recommended.
 
 ### Fixed Interrupt Vector Table (`$0FFDC`–`$0FFFF`)
 
