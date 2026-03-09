@@ -2,19 +2,25 @@
 """
 Strategy 8: Global Address Trajectory Correction.
 
-Unified replacement for fix_d_c_misread.py + fix_49_misread.py.  Uses the full
-video trajectory (piecewise-monotone through anchor frames) to correct ALL
-address OCR confusions in one pass.
+Two-phase correction of address misassignments in crop_index.json:
 
-Confusion pairs: C<->D, 4<->9, 8<->6, 0<->8
+Phase 1 — Manual trajectory plausibility check (NEW):
+  Uses the manually confirmed scroll trajectory (manual_trajectory.py) to
+  detect frames whose crop_index address falls outside the expected screen
+  position.  Re-reads the frame with trajectory constraints to find the
+  correct address; falls back to trajectory interpolation if re-read fails.
+  Catches ALL misassignments, not just confusion pairs.
+
+Phase 2 — Confusion-pair refinement (existing):
+  Rebuilds anchor trajectory from the corrected crop_index and applies
+  confusion-pair swaps (C<->D, 4<->9, 8<->6) for subtle corrections
+  the manual trajectory margin can't catch.
 
 Steps:
-  1. Build raw frame->address trajectory from crop_index.json
-  2. Build anchor trajectory (addresses with no confusable chars)
-  3. Detect breakpoints (scroll direction reversals) and segment trajectory
-  4. For each non-anchor address+frame, generate swap candidates and pick
-     the one closest to the expected address from trajectory interpolation
-  5. Execute moves + rebuild downstream
+  1. Load crop_index + manual trajectory
+  2. Phase 1: detect implausible frames, re-read with constraints, move
+  3. Phase 2: rebuild anchor trajectory, detect confusion-pair swaps, move
+  4. Execute all moves, rebuild downstream
 """
 
 import argparse
@@ -28,9 +34,13 @@ import sys
 from collections import Counter
 from itertools import product
 
+import cv2
+import numpy as np
+
 from frame_utils import (
     is_video_frame_key, video_frame_key, crop_filename, parse_frame_key,
 )
+from manual_trajectory import interpolate_trajectory, get_waypoint_spacing
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(PROJECT_ROOT)
@@ -487,7 +497,7 @@ def execute_moves(crop_index, moves):
     return affected_src, affected_dst
 
 
-def log_frame_moves(moves):
+def log_frame_moves(moves, strategy="trajectory"):
     """Append move records to frame_moves.json ledger."""
     existing = {"moves": []}
     if os.path.exists(FRAME_MOVES_PATH):
@@ -501,7 +511,7 @@ def log_frame_moves(moves):
             "from_addr": src,
             "to_addr": dest,
             "timestamp": ts,
-            "strategy": "trajectory",
+            "strategy": strategy,
         })
 
     with open(FRAME_MOVES_PATH, 'w', encoding='utf-8') as f:
@@ -678,6 +688,208 @@ def reset_review_state(affected_src, affected_dst):
     print(f"  Reset {reset_count} addresses in review_state.json")
 
 
+# ── Phase 1: Manual trajectory plausibility ───────────────────────────────────
+
+# Margin around expected screen range for plausibility check.
+# Applied when waypoints are close enough for reliable interpolation.
+PLAUSIBILITY_MARGIN = 0x300
+
+# Maximum waypoint spacing (in frames) for Phase 1 to apply.
+# Beyond this, trajectory interpolation is unreliable (scroll speed varies
+# too much for linear interpolation to be meaningful).
+# 500 frames = ~17 seconds at 30fps.  The densely-sampled regions
+# (oscillation zone, paused regions) all have spacing < 500.
+MAX_WAYPOINT_SPACING = 500
+
+
+def detect_implausible_frames(crop_index):
+    """Find (addr, frame, expected_top) tuples where addr is outside
+    the expected screen range from the manual trajectory.
+
+    Only checks extracted frames (not video frames, which don't have PNGs
+    for re-reading).  Skips frames in trajectory regions where waypoints
+    are too far apart for reliable interpolation.
+    """
+    implausible = []
+    no_trajectory = 0
+    skipped_sparse = 0
+
+    for addr, entry in crop_index.items():
+        if addr == 'ref_addresses':
+            continue
+        addr_val = int(addr, 16)
+
+        for frame in entry.get('frames', []):
+            result = interpolate_trajectory(frame)
+            if result is None:
+                no_trajectory += 1
+                continue
+
+            spacing = get_waypoint_spacing(frame)
+            if spacing is not None and spacing > MAX_WAYPOINT_SPACING:
+                skipped_sparse += 1
+                continue
+
+            top, bottom = result
+            lo = max(0, top - PLAUSIBILITY_MARGIN)
+            hi = bottom + PLAUSIBILITY_MARGIN
+            if addr_val < lo or addr_val > hi:
+                implausible.append((addr, frame, top))
+
+    if no_trajectory:
+        print(f"  Skipped {no_trajectory} frames (no trajectory data)")
+    if skipped_sparse:
+        print(f"  Skipped {skipped_sparse} frames (waypoint spacing > "
+              f"{MAX_WAYPOINT_SPACING})")
+    return implausible
+
+
+def constrained_reread(classifier, frame_num, expected_top):
+    """Re-read addresses from a frame PNG with trajectory constraints.
+
+    Returns the best address (as 5-char hex string) for the top row,
+    or None if re-read fails entirely.
+    """
+    from template_matcher import CAL, ADDR_X_START, CELL_H
+    from extract_pipeline import read_address_from_row, validate_address_sequence
+
+    frame_path = os.path.join(PROJECT_ROOT, 'frames',
+                              f'frame_{frame_num:05d}.png')
+    if not os.path.exists(frame_path):
+        return None
+
+    img = cv2.imread(frame_path, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        return None
+
+    y_first = CAL['first_row_center_y']
+    row_h = CAL['row_height']
+    num_rows = CAL['visible_rows']
+
+    # Read all addresses from the frame
+    raw_reads = []
+    for row_idx in range(-2, num_rows):
+        row_y = y_first + row_idx * row_h
+        if row_y < CELL_H or row_y > img.shape[0] - CELL_H:
+            continue
+        addr_str, addr_conf = read_address_from_row(
+            classifier, img, row_y, ADDR_X_START
+        )
+        try:
+            addr_int = int(addr_str, 16)
+            if 0x00000 <= addr_int <= 0x13FFF:
+                raw_reads.append((addr_int, row_y, addr_conf))
+        except ValueError:
+            pass
+
+    if not raw_reads:
+        return None
+
+    # Filter: keep only reads within expected range (screen span + margin)
+    filtered = [(a, y, c) for a, y, c in raw_reads
+                if expected_top - 0x100 <= a <= expected_top + 0x200]
+
+    if len(filtered) >= 2:
+        validated = validate_address_sequence(filtered)
+    elif len(raw_reads) >= 2:
+        # Not enough filtered reads — try full set but validate
+        validated = validate_address_sequence(raw_reads)
+    else:
+        return None
+
+    if not validated:
+        return None
+
+    # Find the topmost validated row and compute the implied top address
+    validated.sort(key=lambda x: x[1])  # sort by row_y
+    top_addr_int, top_row_y, _ = validated[0]
+
+    # How many rows above y_first is this row?
+    row_offset = round((top_row_y - y_first) / row_h)
+    screen_top = top_addr_int - row_offset * 0x10
+
+    # Check plausibility against trajectory
+    if abs(screen_top - expected_top) <= PLAUSIBILITY_MARGIN:
+        return f"{screen_top:05X}"
+
+    # Fallback: use trajectory directly
+    return None
+
+
+def build_frame_to_addrs(crop_index):
+    """Pre-build frame → sorted list of addr_vals index for fast lookup."""
+    frame_to_addrs = {}
+    for addr, entry in crop_index.items():
+        if addr == 'ref_addresses':
+            continue
+        addr_val = int(addr, 16)
+        for f in entry.get('frames', []):
+            frame_to_addrs.setdefault(f, []).append(addr_val)
+    for f in frame_to_addrs:
+        frame_to_addrs[f].sort()
+    return frame_to_addrs
+
+
+def build_phase1_moves(crop_index, implausible, classifier):
+    """For each implausible (addr, frame, expected_top), try constrained
+    re-read to find the correct address.  Returns moves list.
+    """
+    moves = []
+    reread_success = 0
+    trajectory_fallback = 0
+    skipped = 0
+
+    # Pre-build frame→addrs index once
+    frame_to_addrs = build_frame_to_addrs(crop_index)
+
+    # Group by frame for efficiency (avoid re-loading same frame)
+    by_frame = {}
+    for addr, frame, expected_top in implausible:
+        by_frame.setdefault(frame, []).append((addr, expected_top))
+
+    total_frames = len(by_frame)
+    for idx, frame in enumerate(sorted(by_frame)):
+        if (idx + 1) % 100 == 0 or idx == 0:
+            print(f"  Processing frame {idx+1}/{total_frames}...")
+
+        items = by_frame[frame]
+        expected_top = items[0][1]
+
+        # Try constrained re-read once per frame
+        new_top_hex = constrained_reread(classifier, frame, expected_top)
+
+        # Get all addrs assigned to this frame (from pre-built index)
+        frame_addrs = frame_to_addrs.get(frame, [])
+        if not frame_addrs:
+            skipped += len(items)
+            continue
+        old_top = frame_addrs[0]
+
+        for addr, _ in items:
+            addr_val = int(addr, 16)
+
+            if new_top_hex is not None:
+                new_top_val = int(new_top_hex, 16)
+            else:
+                new_top_val = expected_top
+
+            row_offset = (addr_val - old_top) // 0x10
+            new_addr_val = new_top_val + row_offset * 0x10
+            new_addr = f"{new_addr_val:05X}"
+
+            if new_addr != addr:
+                moves.append((addr, frame, new_addr))
+                if new_top_hex is not None:
+                    reread_success += 1
+                else:
+                    trajectory_fallback += 1
+
+    print(f"  Re-read success: {reread_success} moves")
+    print(f"  Trajectory fallback: {trajectory_fallback} moves")
+    print(f"  Skipped: {skipped}")
+    return moves
+
+
 # ── Reporting ────────────────────────────────────────────────────────────────
 
 def summarize_moves(moves):
@@ -717,7 +929,14 @@ def main():
         description='Strategy 8: Global address trajectory correction')
     parser.add_argument('--dry-run', action='store_true',
                         help='Preview moves without modifying any files')
+    parser.add_argument('--phase1-only', action='store_true',
+                        help='Only run Phase 1 (manual trajectory)')
+    parser.add_argument('--phase2-only', action='store_true',
+                        help='Only run Phase 2 (confusion pairs)')
     args = parser.parse_args()
+
+    run_phase1 = not args.phase2_only
+    run_phase2 = not args.phase1_only
 
     print("=" * 60)
     print("Strategy 8: Global Address Trajectory Correction")
@@ -733,72 +952,143 @@ def main():
     print(f"  Anchor addresses (no confusable chars): {anchor_count}")
     print(f"  Non-anchor addresses (may need correction): {non_anchor_count}")
 
-    # Build extracted frame trajectory
-    print("\nStep 1: Build anchor trajectories")
-    anchors_extracted = build_anchor_trajectory(crop_index, use_extracted=True)
-    anchors_video = build_anchor_trajectory(crop_index, use_extracted=False)
-    print(f"  Extracted anchor points: {len(anchors_extracted)}")
-    print(f"  Video anchor points: {len(anchors_video)}")
+    all_moves = []
+    all_affected_src = set()
+    all_affected_dst = set()
 
-    # Detect breakpoints
-    print("\nStep 2: Detect breakpoints")
-    bp_extracted = detect_breakpoints(anchors_extracted)
-    bp_video = detect_breakpoints(anchors_video)
-    print(f"  Extracted trajectory breakpoints: {len(bp_extracted)}")
-    if bp_extracted:
-        for bp in bp_extracted:
-            print(f"    Frame {bp}")
-    print(f"  Video trajectory breakpoints: {len(bp_video)}")
-    if bp_video:
-        for bp in bp_video:
-            print(f"    Frame {bp}")
+    # ── Phase 1: Manual trajectory plausibility ──────────────────────────
+    if run_phase1:
+        print("\n" + "─" * 60)
+        print("Phase 1: Manual Trajectory Plausibility Check")
+        print("─" * 60)
 
-    # Build segments
-    segments_extracted = build_segments(anchors_extracted, bp_extracted)
-    segments_video = build_segments(anchors_video, bp_video)
-    print(f"  Extracted segments: {len(segments_extracted)}")
-    for i, seg in enumerate(segments_extracted):
-        if seg:
-            direction = "increasing" if seg[-1][1] >= seg[0][1] else "decreasing"
-            print(f"    Segment {i}: frames {seg[0][0]}-{seg[-1][0]}, "
-                  f"addr ${int(seg[0][1]):05X}-${int(seg[-1][1]):05X} ({direction})")
-    if segments_video:
-        print(f"  Video segments: {len(segments_video)}")
-        for i, seg in enumerate(segments_video):
+        print("\nStep 1.1: Detect implausible frames")
+        implausible = detect_implausible_frames(crop_index)
+        print(f"  Implausible frames detected: {len(implausible)}")
+
+        if implausible:
+            # Show sample
+            sample = implausible[:10]
+            print(f"  Sample (first {len(sample)}):")
+            for addr, frame, expected_top in sample:
+                result = interpolate_trajectory(frame)
+                exp_range = f"${expected_top:05X}-${result[1]:05X}" if result else "?"
+                print(f"    {addr} @ F{frame} — expected {exp_range}")
+            if len(implausible) > 10:
+                print(f"    ... and {len(implausible) - 10} more")
+
+            print("\nStep 1.2: Constrained re-read + trajectory fallback")
+            # Load classifier for re-reading
+            from extract_pipeline import FastKNNClassifier
+            classifier = FastKNNClassifier()
+            classifier_path = os.path.join(PROJECT_ROOT,
+                                           'fast_knn_classifier.npz')
+            classifier.load(classifier_path)
+
+            phase1_moves = build_phase1_moves(crop_index, implausible,
+                                              classifier)
+            print(f"  Phase 1 moves: {len(phase1_moves)}")
+
+            if phase1_moves:
+                summarize_moves(phase1_moves)
+
+                if not args.dry_run:
+                    print("\nStep 1.3: Execute Phase 1 moves")
+                    src, dst = execute_moves(crop_index, phase1_moves)
+                    log_frame_moves(phase1_moves,
+                                     strategy="manual_trajectory")
+                    all_affected_src |= src
+                    all_affected_dst |= dst
+                    save_crop_index(crop_index)
+
+                all_moves.extend(phase1_moves)
+        else:
+            print("  No implausible frames found.")
+
+    # ── Phase 2: Confusion-pair refinement ───────────────────────────────
+    if run_phase2:
+        print("\n" + "─" * 60)
+        print("Phase 2: Confusion-Pair Refinement")
+        print("─" * 60)
+
+        # Reload crop_index if Phase 1 modified it
+        if all_moves and not args.dry_run:
+            crop_index = load_crop_index()
+
+        print("\nStep 2.1: Build anchor trajectories")
+        anchors_extracted = build_anchor_trajectory(crop_index,
+                                                    use_extracted=True)
+        anchors_video = build_anchor_trajectory(crop_index,
+                                                use_extracted=False)
+        print(f"  Extracted anchor points: {len(anchors_extracted)}")
+        print(f"  Video anchor points: {len(anchors_video)}")
+
+        print("\nStep 2.2: Detect breakpoints")
+        bp_extracted = detect_breakpoints(anchors_extracted)
+        bp_video = detect_breakpoints(anchors_video)
+        print(f"  Extracted trajectory breakpoints: {len(bp_extracted)}")
+        if bp_extracted:
+            for bp in bp_extracted:
+                print(f"    Frame {bp}")
+        print(f"  Video trajectory breakpoints: {len(bp_video)}")
+        if bp_video:
+            for bp in bp_video:
+                print(f"    Frame {bp}")
+
+        segments_extracted = build_segments(anchors_extracted, bp_extracted)
+        segments_video = build_segments(anchors_video, bp_video)
+        print(f"  Extracted segments: {len(segments_extracted)}")
+        for i, seg in enumerate(segments_extracted):
             if seg:
-                direction = "increasing" if seg[-1][1] >= seg[0][1] else "decreasing"
+                direction = ("increasing" if seg[-1][1] >= seg[0][1]
+                             else "decreasing")
                 print(f"    Segment {i}: frames {seg[0][0]}-{seg[-1][0]}, "
-                      f"addr ${seg[0][1]:05X}-${seg[-1][1]:05X} ({direction})")
+                      f"addr ${int(seg[0][1]):05X}-"
+                      f"${int(seg[-1][1]):05X} ({direction})")
+        if segments_video:
+            print(f"  Video segments: {len(segments_video)}")
+            for i, seg in enumerate(segments_video):
+                if seg:
+                    direction = ("increasing" if seg[-1][1] >= seg[0][1]
+                                 else "decreasing")
+                    print(f"    Segment {i}: frames {seg[0][0]}-"
+                          f"{seg[-1][0]}, addr ${seg[0][1]:05X}-"
+                          f"${seg[-1][1]:05X} ({direction})")
 
-    # Detect moves
-    print("\nStep 3: Detect trajectory corrections")
-    moves = detect_trajectory_moves(crop_index, segments_extracted, segments_video)
-    print(f"  Total moves detected: {len(moves)}")
+        print("\nStep 2.3: Detect confusion-pair corrections")
+        phase2_moves = detect_trajectory_moves(crop_index,
+                                               segments_extracted,
+                                               segments_video)
+        print(f"  Phase 2 moves detected: {len(phase2_moves)}")
 
-    if not moves:
+        if phase2_moves:
+            summarize_moves(phase2_moves)
+
+            if not args.dry_run:
+                print("\nStep 2.4: Execute Phase 2 moves")
+                src, dst = execute_moves(crop_index, phase2_moves)
+                log_frame_moves(phase2_moves)
+                all_affected_src |= src
+                all_affected_dst |= dst
+                save_crop_index(crop_index)
+
+            all_moves.extend(phase2_moves)
+
+    # ── Finalize ─────────────────────────────────────────────────────────
+    total_moves = len(all_moves)
+    print(f"\n  Total moves across all phases: {total_moves}")
+
+    if not all_moves:
         print("\nNo corrections needed. Nothing to do.")
         return
-
-    summarize_moves(moves)
 
     if args.dry_run:
         print("\n  [DRY RUN] No files modified.")
         return
 
-    # Execute moves
-    print("\nStep 4: Execute moves")
-    affected_src, affected_dst = execute_moves(crop_index, moves)
-
-    # Log moves
-    log_frame_moves(moves)
-
-    # Save crop_index
-    print("\nSaving updated crop_index.json...")
-    save_crop_index(crop_index)
-
     # Recompute consensus
     print("\nStep 5: Recompute byte consensus")
-    update_extracted_firmware(crop_index, affected_src, affected_dst)
+    update_extracted_firmware(crop_index, all_affected_src, all_affected_dst)
 
     # Rebuild downstream
     print("\nStep 6: Rebuild downstream files")
@@ -806,31 +1096,29 @@ def main():
 
     # Reset review state
     print("\nStep 7: Reset review state")
-    reset_review_state(affected_src, affected_dst)
+    reset_review_state(all_affected_src, all_affected_dst)
 
     # Summary
     print("\n" + "=" * 60)
     print("Done!")
-    print(f"  Source addresses affected: {len(affected_src)}")
-    print(f"  Destination addresses affected: {len(affected_dst)}")
+    print(f"  Source addresses affected: {len(all_affected_src)}")
+    print(f"  Destination addresses affected: {len(all_affected_dst)}")
 
     # Verification: check known problem regions
     crop_index_check = load_crop_index()
 
-    # Check $0D region
     d_range = [k for k in crop_index_check
                if k != 'ref_addresses' and k.startswith('0D')
                and 0x0D050 <= int(k, 16) <= 0x0DF70]
     print(f"  $0D050-$0DF70 entries in crop_index: {len(d_range)}")
 
-    # Check $04xxx/$09xxx
     four_addrs = [k for k in crop_index_check
                   if k != 'ref_addresses' and k.startswith('04')]
     nine_addrs = [k for k in crop_index_check
                   if k != 'ref_addresses' and k.startswith('09')]
-    print(f"  $04xxx entries: {len(four_addrs)}, $09xxx entries: {len(nine_addrs)}")
+    print(f"  $04xxx entries: {len(four_addrs)}, "
+          f"$09xxx entries: {len(nine_addrs)}")
 
-    # Coverage from firmware_merged.txt
     if os.path.exists(MERGED_FW_PATH):
         line_count = 0
         with open(MERGED_FW_PATH) as f:

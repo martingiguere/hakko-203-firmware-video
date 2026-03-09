@@ -22,7 +22,7 @@ calibrate_grid.py            Detect cell geometry (14x28px cells, byte positions
 extract_pipeline.py          Main extraction: kNN OCR + multi-frame voting
         |                      then auto-runs post-pipeline steps:
         |                      1. precompute.py              rebuild crop_index.json
-        |                      2. fix_address_trajectory.py  correct C/D, 4/9, 8/6 address misreads
+        |                      2. fix_address_trajectory.py  trajectory plausibility + confusion-pair fix
         |                      3. postprocess_firmware.py    merge, fill gaps, produce binary
         |                      4. precompute_gaps.py         rebuild gap_context_index.json
         |
@@ -34,7 +34,7 @@ firmware_review_tool/        Flask app for human-assisted review
 1. **Training** -- Tesseract reads addresses on frames showing the known reference region. Matching rows provide labeled digit samples for a kNN classifier (67-dim structural features, including 8↔6 discriminative features).
 2. **Extraction** -- Every frame is OCR'd: read 10-digit address, read 16 hex bytes. Duplicate/transitional frames are skipped.
 3. **Voting** -- Each address+byte gets multiple observations across frames. Weighted majority vote picks the best reading.
-4. **Post-processing** -- Reference data overlay, unified trajectory-based address correction (C/D, 4/9, 8/6 confusion pairs), gap filling, binary output.
+4. **Post-processing** -- Reference data overlay, two-phase trajectory-based address correction (manual trajectory plausibility check + confusion-pair refinement for C/D, 4/9, 8/6), gap filling, binary output.
 
 ## Scripts
 
@@ -47,7 +47,8 @@ firmware_review_tool/        Flask app for human-assisted review
 | `postprocess_firmware.py` | Merge extractions, produce firmware binary |
 | `analyze_reference.py` | Verify reference transcription against screenshot |
 | `measure_reference_geometry.py` | Measure reference screenshot geometry (row/byte positions) |
-| `fix_address_trajectory.py` | Strategy 8: unified trajectory-based address correction (C/D, 4/9, 8/6) — supersedes piecemeal fix scripts |
+| `fix_address_trajectory.py` | Strategy 8: two-phase address correction — Phase 1 uses manual trajectory to detect/fix gross misassignments, Phase 2 refines confusion pairs (C/D, 4/9, 8/6) |
+| `manual_trajectory.py` | Manually confirmed scroll trajectory waypoints + `interpolate_trajectory()` helper |
 | `fix_49_misread.py` | Post-hoc fix for 4/9 OCR address confusion (superseded by `fix_address_trajectory.py`) |
 | `fix_d_c_misread.py` | Post-hoc fix for C/D OCR address confusion (superseded by `fix_address_trajectory.py`) |
 | `fullvideo_gap_recovery.py` | Strategy 7: scan full video for gap addresses |
@@ -100,17 +101,20 @@ Attempted using the 512 digit cells from the reference screenshot to train a sep
 
 ## Accuracy
 
-The video-only kNN classifier achieves ~99.7% accuracy on reference-visible frames. Remaining confusions (8/6, D/C, 4/9) are rare and handled by the unified trajectory-based address correction script (`fix_address_trajectory.py`).
+The video-only kNN classifier achieves ~99.7% accuracy on reference-visible frames. Remaining confusions (8/6, D/C, 4/9) are rare and handled by the two-phase trajectory-based address correction script (`fix_address_trajectory.py`): Phase 1 uses a manually confirmed scroll trajectory (`manual_trajectory.py`) to detect and fix gross address misassignments; Phase 2 refines confusion pairs using auto-detected anchor trajectories.
 
 See `ocr_accuracy_improvement_strategies.md` for all strategies.
 
 ## Coverage
 
-Current coverage: **4,946 / 5,120 addresses (96.6% automated)**, 174 missing lines.
+Current coverage: **4,951 / 5,120 addresses (96.7% automated)**, 169 missing lines.
 
 ### Post-extraction fixes applied
 
-1. **Unified address trajectory correction** (`fix_address_trajectory.py`, Strategy 8): Builds a piecewise-monotone trajectory through 1,019 anchor addresses (those with no confusable characters), detects 14 scroll-direction breakpoints, and corrects C↔D, 4↔9, and 8↔6 address OCR confusions in a single pass. Moved 2,794 frames across 587 address pairs. Supersedes the earlier piecemeal `fix_d_c_misread.py` and `fix_49_misread.py` scripts.
+1. **Two-phase address trajectory correction** (`fix_address_trajectory.py`, Strategy 8):
+   - **Phase 1 — Manual trajectory plausibility** (added 2026-03-09): Uses the manually confirmed scroll trajectory (`manual_trajectory.py`, 60+ waypoints covering F1–F20070) to detect frames whose crop_index address falls outside the expected screen position. Re-reads misassigned frames with trajectory-constrained OCR; falls back to trajectory interpolation when re-read fails. Only operates where trajectory waypoints are dense enough (spacing ≤ 500 frames). Moved 2,897 frames (837 re-read, 2,060 trajectory fallback). Fixed the known F6419 misassignment (`$03E90` → `$05E70`).
+   - **Phase 2 — Confusion-pair refinement**: Builds a piecewise-monotone trajectory through anchor addresses (no confusable characters), detects scroll-direction breakpoints, and corrects C↔D, 4↔9, and 8↔6 address OCR confusions. Runs on the Phase 1-corrected crop_index.
+   - Total: 3,004 moves. Supersedes the earlier piecemeal `fix_d_c_misread.py` and `fix_49_misread.py` scripts.
 
 2. **Full-video gap recovery** (`fullvideo_gap_recovery.py`): Strategy 7 — scans `full_video.mp4` directly for addresses missing from the pre-extracted frames. The pipeline normally processes 20,070 pre-extracted frames, but the full video has 93,093 frames. By estimating which video timestamps correspond to each gap region and running the existing kNN classifier, this recovered **115 of 270 missing addresses**. The remaining 155 gaps are unrecoverable — the video jumps over those addresses between consecutive frames.
 

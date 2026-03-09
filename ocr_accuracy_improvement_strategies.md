@@ -1,12 +1,13 @@
 # OCR Accuracy Improvement Strategies
 
-## Current State (2026-03-08)
+## Current State (2026-03-09)
 
 - **Per-digit accuracy**: ~99.7% on reference-visible frames
 - **Classifier**: FastKNNClassifier, 67-dim structural features, k=7, weighted inverse-distance voting
 - **Known confusions**: 8<->6 (most common remaining), D<->C, 4<->9
-- **Post-hoc fixes applied**: `fix_address_trajectory.py` (Strategy 8: unified trajectory correction, 2,794 frames relocated across C/D, 4/9, 8/6 confusion pairs)
+- **Post-hoc fixes applied**: `fix_address_trajectory.py` (Strategy 8: two-phase — Phase 1 manual trajectory plausibility moved 2,897 frames, Phase 2 confusion-pair refinement moved 107 frames; total 3,004 frames relocated)
 - **Training**: 2-pass (Tesseract-labeled Pass 1, kNN-detected Pass 2 with 80 frames), max 500-800 samples/class
+- **Coverage**: 4,951/5,120 (96.7%)
 
 ---
 
@@ -125,10 +126,12 @@
    - Recovered 115/270 missing addresses, coverage 94.7% → 96.2%
    - 155 remaining gaps are unrecoverable (video jumps over them)
 
-4. **Strategy 8** ✅ DONE
-   - Global address trajectory correction (`fix_address_trajectory.py`): unified replacement for fix_d_c_misread.py + fix_49_misread.py
-   - Moved 2,794 frames across 587 address pairs (C/D, 4/9, 8/6 confusions)
-   - Coverage 96.8% → 96.6% (net loss from removing incorrectly-populated addresses)
+4. **Strategy 8** ✅ DONE (updated 2026-03-09)
+   - Two-phase address trajectory correction (`fix_address_trajectory.py`):
+     - **Phase 1** (new): Manual trajectory plausibility check using `manual_trajectory.py` — detects ALL misassigned frames (not just confusable chars), moved 2,897 frames (837 re-read, 2,060 trajectory fallback). Only active where waypoint spacing ≤ 500 frames.
+     - **Phase 2**: Confusion-pair refinement (C/D, 4/9, 8/6) — moved 107 additional frames after Phase 1 cleanup
+   - Total: 3,004 moves. Coverage 97.0% → 96.7% (net loss from removing incorrectly-populated addresses)
+   - Fixed known F6419 misassignment: `$03E90` → `$05E70`
 
 5. **All-FF duplicate detection fix** ✅ DONE (2026-03-08)
    - `is_frame_different()` now also compares address column (threshold 5,000) alongside byte data (threshold 20,000)
@@ -176,33 +179,45 @@
 
 ---
 
-## Strategy 8: Global Address Trajectory Correction (Unified) ✅ IMPLEMENTED
+## Strategy 8: Two-Phase Address Trajectory Correction ✅ IMPLEMENTED
 
-**Status**: Implemented 2026-03-07. Script: `fix_address_trajectory.py`. Supersedes `fix_d_c_misread.py` and `fix_49_misread.py`.
+**Status**: Implemented 2026-03-07, updated 2026-03-09 with Phase 1 (manual trajectory). Script: `fix_address_trajectory.py` + `manual_trajectory.py`. Supersedes `fix_d_c_misread.py` and `fix_49_misread.py`.
 
-**Results**:
-- Moved **2,794 frames** across **587 unique source→dest address pairs**
-- Top confusion types corrected: 9→4 (792), D→C (719), 8→6 (394), C→D (291), plus compound swaps
-- Coverage 96.8% → 96.6% (net loss: 71 incorrectly-populated addresses emptied, 5 new addresses created)
-- **Idempotent**: re-running produces 0 additional moves
+**Results** (2026-03-09 run):
+- **Phase 1**: 2,897 frames moved (837 via constrained re-read, 2,060 via trajectory fallback)
+- **Phase 2**: 107 additional frames moved (newly detectable after Phase 1 cleanup)
+- **Total**: 3,004 moves across 776 source / 1,076 destination addresses
+- Coverage 97.0% → 96.7% (net loss from removing incorrectly-populated addresses)
+- Fixed known F6419 misassignment: `$03E90` → `$05E70`
 
 **How it works**:
-1. **Anchor trajectory**: Builds per-frame-median trajectory from 1,019 anchor addresses (no C/D/4/9/8/6 digits) — 3,328 extracted + 92 video anchor points
-2. **Breakpoint detection**: Finds 14 scroll-direction reversals using smoothed running median, creating 15 monotone segments
-3. **Expected address estimation**: Inverse-distance-weighted median of nearby per-frame-median anchors (±500 frame radius) within the same segment
-4. **Swap candidate generation**: For each non-anchor address, generates all combinations of C↔D, 4↔9, 8↔6 swaps at each digit position
-5. **Selection criteria**: Candidate must (a) reduce distance to expected by ≥ adaptive threshold `max(swap_magnitude // 2, 0x80)` AND (b) reduce distance by ≥50% (prevents false moves when both original and candidate are far from expected)
+
+*Phase 1 — Manual trajectory plausibility check (new)*:
+1. **Manual trajectory**: `manual_trajectory.py` stores 60+ manually confirmed waypoints (frame, top_address) covering F1–F20070. `interpolate_trajectory(frame)` returns expected (top, bottom) via piecewise linear interpolation.
+2. **Plausibility check**: For each (addr, frame) pair in crop_index, check if addr falls within [expected_top - margin, expected_bottom + margin]. Margin = 0x300 (48 rows). Only operates where waypoint spacing ≤ 500 frames — Pass 1 (F1–F1728, spacing 1,727) is skipped because linear interpolation is unreliable with only 2 waypoints.
+3. **Constrained re-read**: For each implausible frame, reload the PNG and re-OCR addresses with a trajectory-constrained filter (only keep reads near the expected address). `validate_address_sequence()` then picks the best anchor from filtered reads.
+4. **Trajectory fallback**: If re-read fails, assign addresses based on trajectory interpolation. No frames are dropped — maximum data recovery.
+
+*Phase 2 — Confusion-pair refinement (existing)*:
+1. **Anchor trajectory**: Builds per-frame-median trajectory from anchor addresses (no C/D/4/9/8/6 digits)
+2. **Breakpoint detection**: Finds scroll-direction reversals using smoothed running median, creating monotone segments
+3. **Expected address estimation**: Inverse-distance-weighted median of nearby anchors (±500 frame radius) within same segment
+4. **Swap candidate generation**: For each non-anchor address, generates all combinations of C↔D, 4↔9, 8↔6 swaps
+5. **Selection criteria**: Candidate must reduce distance to expected by ≥ adaptive threshold AND ≥50%
+
+*Shared execution*:
 6. **Execution**: Moves frames, crop PNGs, readings, confidences; recomputes byte consensus; rebuilds downstream files; resets review state
 
 **Key design decisions**:
-- 0↔8 excluded from swap map (too many false positives, not a documented confusion pair)
-- Per-frame-median aggregation prevents bias from multiple anchor rows per frame
-- Weighted median (not linear interpolation) avoids artifacts from video jumps between sparse anchor frames
-- 50% relative improvement threshold prevents false moves in regions far from any anchor
+- Phase 1 only applies where manual trajectory waypoints are dense (spacing ≤ 500 frames) — avoids false positives from interpolation error in sparse regions
+- Phase 1 catches ALL misassignments (not just confusable chars) — e.g., `$03E90` → `$05E70` where no characters are confusable
+- Phase 2 runs after Phase 1 on the corrected crop_index, catching subtle confusion-pair errors Phase 1's margin can't detect
+- 0↔8 excluded from swap map (too many false positives)
+- `--phase1-only` and `--phase2-only` flags for selective execution
 
-**Where modified**: New file `fix_address_trajectory.py` — standalone post-hoc correction script.
+**Where modified**: `fix_address_trajectory.py` (added Phase 1 functions + modified main flow), new file `manual_trajectory.py`.
 
-**Impact**: Very high. Unified approach handles compound errors (e.g., C→D + 8→6 in same address) that piecemeal scripts missed.
+**Impact**: Very high. Phase 1 fixes gross misassignments that were invisible to the confusion-pair approach.
 
 **Requires retrain**: No. Post-hoc address correction only.
 
@@ -230,7 +245,8 @@ max_per_class = 500-800     # training sample cap
 | `template_matcher.py` | `extract_features()` (67-dim), `extract_cell()`, calibration |
 | `grid_calibration.json` | Grid geometry constants |
 | `fast_knn_classifier.npz` | Trained kNN model (invalidated by feature changes) |
-| `fix_address_trajectory.py` | Strategy 8: unified global trajectory address correction (C/D, 4/9, 8/6) |
+| `fix_address_trajectory.py` | Strategy 8: two-phase address correction (manual trajectory + confusion pairs) |
+| `manual_trajectory.py` | Manually confirmed scroll trajectory waypoints + `interpolate_trajectory()` |
 | `fix_49_misread.py` | Prior art: post-hoc 4/9 address confusion fix (superseded by Strategy 8) |
 | `fix_d_c_misread.py` | Prior art: post-hoc C/D address confusion fix (superseded by Strategy 8) |
 | `fullvideo_gap_recovery.py` | Strategy 7: scan full video for gap addresses, save crops, update firmware |

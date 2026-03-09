@@ -154,11 +154,11 @@ Frame 6419 (and neighbours 6420, 6436, 6452, 6468, 6484, 6517) are mapped to `$0
 
 **Impact**: The `ff-forced` override in `postprocess_firmware.py` masks the damage for `$02800-$03FFF` (forces all-FF regardless of readings). Without it, real ROM code from `$05E70` would contaminate the firmware dump at `$03E90-$03F60`. Other misassignments in ROM areas may exist unmasked.
 
-**Mitigation**: The confirmed manual scroll trajectory (below) can be used to constrain address validation and reject outlier anchors.
+**Mitigation**: RESOLVED (2026-03-09). The confirmed manual scroll trajectory is now used in `fix_address_trajectory.py` Phase 1 to detect and reassign implausible frames. Frame 6419 correctly moved from `$03E90` → `$05E70`. See `manual_trajectory.py` for the trajectory data and `fix_address_trajectory.py` Phase 1 for the plausibility check logic.
 
 #### Manual Scroll Trajectory (confirmed 2026-03-08)
 
-Manually confirmed video scroll structure. The auto-detected trajectory segments in `fix_address_trajectory.py` do NOT match reality — the actual video has extensive oscillation in the `$02xxx-$04xxx` range.
+Manually confirmed video scroll structure, now stored in `manual_trajectory.py` as machine-readable waypoints. Used by `fix_address_trajectory.py` Phase 1 to detect and fix misassigned frames. The auto-detected trajectory segments (Phase 2) still handle confusion-pair refinement, but Phase 1 catches gross misassignments that Phase 2 cannot (e.g., non-confusable-character addresses like `$03E90` → `$05E70`).
 
 **Pass 1: Forward scroll**
 
@@ -188,10 +188,41 @@ Manually confirmed video scroll structure. The auto-detected trajectory segments
 | F5408 | `$04CC0-$04DB0` | Last frame before reversal |
 | F5409 | `$04990-$04A80` | Reversal → decreasing |
 | F5446 | `$04660-$04750` | Decreasing |
-| F5447 | `$04990-$04750` | Direction change |
-| F5502 | `$04990-$0????` | (observation cut off — to be continued) |
+| F5447 | `$04990-$04750` | Direction change — scrolling artifact: top 13 rows show `$04990-$04A50` (new position), bottom 3 rows show `$04730-$04750` (old position not yet redrawn). Confirms reversal back to increasing. |
+| F5502–F5504 | `$04990-$04AA0` | Steady increasing (`$049x0` +`$10`/frame) |
+| F5502–F6325 | `$04990`→`$05E70-$05F60` | Steady increasing |
+| F6325–F6660 | `$05E70-$05F60` | Paused (this is where misassigned frames 6419–6517 sit) |
+| F6661–F8610 | `$05E70`→`$086A0-$08790` | Steady increasing |
+| F8611–F8955 | `$086A0-$08790` | Paused |
+| F8956–F11557 | `$08790`→`$0B450-$0B540` | Steady increasing (with pause at F11557) |
+| F11557–F11812 | `$0B450-$0B540` | Paused |
+| F11813–F12213 | `$0B460`→`$0BFA0-$0C090` | Steady increasing |
+| F12213–F12242 | `$0BFA0-$0C090` | Paused |
+| F12243 | `$0BF90-$0C080` | Reversal → decreasing |
+| F12245–F12299 | `$0C050`→`$0BE60-$0BF50` | Short decreasing run |
+| F12300 | `$0BE80-$0BF60` | Reversal → increasing |
+| F12500 | `$0C460-$0C550` | Steady increasing |
+| F13000 | `$0C630-$0C720` | Steady increasing |
+| F13500 | `$0D210-$0D300` | Steady increasing |
+| F14500 | `$0DFA0-$0E090` | Steady increasing |
+| F15500 | `$0F2B0-$0F3A0` | Steady increasing |
+| F16020–F16083 | `$0FF90-$10080` | Paused |
+| F16084 | `$0FF80-$10070` | Reversal → decreasing |
+| F16106–F16133 | `$0FE80-$0FF70` | Paused (end of short decreasing run) |
+| F16134 | `$0FE90-$0FF80` | Reversal → increasing (with occasional stops) |
+| F16134–F19215 | `$0FE90`→`$13F00-$13FF0` | Steady increasing to end of address space |
+| F19215–F19298 | `$13F00-$13FF0` | Paused at top of address space |
+| F19299–F19410 | `$13F00`→`$00000-$000F0` | Fast decreasing (many addresses skipped due to scroll speed vs FPS) |
+| F19410–F19995 | `$00000-$000F0` | Paused at bottom of address space |
+| F19996 | `$00030-$00120` | Reversal → increasing |
+| F19996–F20070 | `$00030`→`$00970-$00A60` | Slow increasing — last frame of video |
 
-**TODO**: Continue manual trajectory confirmation from F5502 onward to end of video.
+**Scrolling artifacts**: The Xeltek SuperPro UI does not update all rows atomically. During a scroll, the display refreshes top-to-bottom, so a frame captured mid-scroll shows a split: new addresses at the top, old addresses at the bottom. `validate_address_sequence` should pick the majority group as anchor, but in noisy OCR conditions these split frames add confusion. Suspect frames showing non-consecutive address sequences should be flagged for review.
+
+**Status**:
+1. ~~Continue manual trajectory confirmation~~ — COMPLETE (F1 through F20070 fully documented).
+2. ~~Use confirmed trajectory to constrain `validate_address_sequence` and fix misassigned frames.~~ — DONE (2026-03-09). Implemented as Phase 1 in `fix_address_trajectory.py` using `manual_trajectory.py`. Moved 2,897 frames (837 via constrained re-read, 2,060 via trajectory fallback). Only operates where waypoint spacing ≤ 500 frames (dense trajectory regions); Pass 1 F1–F1728 skipped (spacing 1,727 — linear interpolation unreliable due to variable scroll speed).
+3. **TODO**: Review suspect frames (split-scroll artifacts, low raw-to-validated match rates) for possible misassignment in ROM areas outside `ff-forced` regions.
 
 ### Fixed Interrupt Vector Table (`$0FFDC`–`$0FFFF`)
 
