@@ -803,15 +803,6 @@ function addCropImage(container, frameNum, isVideo, fd) {
 
     wrap.appendChild(label);
 
-    // Show reading
-    const reading = (fd.readings || {})[frameKey];
-    if (reading) {
-        const readingDiv = document.createElement('div');
-        readingDiv.className = 'crop-label';
-        readingDiv.textContent = reading.join(' ');
-        wrap.appendChild(readingDiv);
-    }
-
     const img = document.createElement('img');
     img.className = 'crop-img';
     img.src = `/api/crop/${state.currentAddr}/${frameKey}`;
