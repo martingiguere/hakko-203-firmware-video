@@ -243,6 +243,55 @@
             cursor: pointer;
         }
 
+        /* --- Hex keypad --- */
+        #hex-keypad {
+            display: none;
+            position: fixed;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            background: #d1d5db;
+            padding: 8px;
+            z-index: 150;
+            border-top: 1px solid #999;
+        }
+        #hex-keypad-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin: 0 auto;
+        }
+        .hex-key {
+            height: 48px;
+            font-size: 20px;
+            font-weight: bold;
+            font-family: "SF Mono", "Menlo", monospace;
+            border: none;
+            border-radius: 6px;
+            background: #fff;
+            color: #222;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hex-key:active { background: #c8e6c9; }
+        .hex-key-action {
+            background: #1e88e5;
+            color: #fff;
+            font-size: 15px;
+        }
+        .hex-key-action:active { background: #1565c0; }
+        #hex-keypad-info {
+            text-align: center;
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 6px;
+        }
+        .byte-cell-active {
+            border-color: #1e88e5 !important;
+            border-width: 3px !important;
+            background: #e3f2fd !important;
+        }
+
         /* --- Crops --- */
         #crops-section {
             margin-top: 8px;
@@ -385,6 +434,33 @@
     </div>
 </div>
 
+<!-- Hex keypad -->
+<div id="hex-keypad">
+    <div id="hex-keypad-info">Byte <span id="hex-keypad-idx">0</span>: <span id="hex-keypad-val">--</span></div>
+    <div id="hex-keypad-grid">
+        <button class="hex-key" onclick="hexKey('0')">0</button>
+        <button class="hex-key" onclick="hexKey('1')">1</button>
+        <button class="hex-key" onclick="hexKey('2')">2</button>
+        <button class="hex-key" onclick="hexKey('3')">3</button>
+        <button class="hex-key" onclick="hexKey('4')">4</button>
+        <button class="hex-key" onclick="hexKey('5')">5</button>
+        <button class="hex-key" onclick="hexKey('6')">6</button>
+        <button class="hex-key" onclick="hexKey('7')">7</button>
+        <button class="hex-key" onclick="hexKey('8')">8</button>
+        <button class="hex-key" onclick="hexKey('9')">9</button>
+        <button class="hex-key" onclick="hexKey('A')">A</button>
+        <button class="hex-key" onclick="hexKey('B')">B</button>
+        <button class="hex-key" onclick="hexKey('C')">C</button>
+        <button class="hex-key" onclick="hexKey('D')">D</button>
+        <button class="hex-key" onclick="hexKey('E')">E</button>
+        <button class="hex-key" onclick="hexKey('F')">F</button>
+        <button class="hex-key hex-key-action" onclick="hexKeyBackspace()">&larr;</button>
+        <button class="hex-key hex-key-action" onclick="hexKeyNext()">Next</button>
+        <button class="hex-key hex-key-action" onclick="hexKeyDone()">Done</button>
+        <button class="hex-key hex-key-action" onclick="hexKeyCancel()">Close</button>
+    </div>
+</div>
+
 <!-- Bottom nav bar -->
 <div id="nav-bar">
     <button class="nav-btn" onclick="navigateSeq(-1)">&laquo;</button>
@@ -464,13 +540,8 @@ function buildByteGrid() {
         input.className = 'byte-cell';
         input.maxLength = 2;
         input.dataset.idx = i;
-        input.inputMode = 'text';
-        input.autocomplete = 'off';
-        input.autocapitalize = 'characters';
-        input.spellcheck = false;
-        input.addEventListener('input', onByteInput);
-        input.addEventListener('change', onByteChange);
-        input.addEventListener('blur', onByteChange);
+        input.readOnly = true;  // prevent system keyboard — use hex keypad
+        input.addEventListener('click', (e) => openHexKeypad(parseInt(e.target.dataset.idx)));
         wrap.appendChild(input);
 
         grid.appendChild(wrap);
@@ -564,28 +635,97 @@ function renderBytes() {
     }
 }
 
-// ── Byte editing ───────────────────────────────────────────────────────────
-function onByteInput(e) {
-    let val = e.target.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
-    if (val.length > 2) val = val.slice(0, 2);
-    e.target.value = val;
+// ── Hex keypad ─────────────────────────────────────────────────────────────
+let keypadIdx = -1;    // which byte cell is being edited
+let keypadBuf = '';    // current input buffer (0-2 hex chars)
 
-    // Auto-advance after 2 chars
-    if (val.length === 2) {
-        const idx = parseInt(e.target.dataset.idx);
-        if (idx < 15) {
-            const next = document.querySelector(`.byte-cell[data-idx="${idx + 1}"]`);
-            if (next) next.focus();
-        }
+function openHexKeypad(idx) {
+    keypadIdx = idx;
+    const cell = document.querySelector(`.byte-cell[data-idx="${idx}"]`);
+    keypadBuf = cell.value === '--' ? '' : cell.value;
+
+    // Highlight active cell
+    document.querySelectorAll('.byte-cell').forEach(c => c.classList.remove('byte-cell-active'));
+    cell.classList.add('byte-cell-active');
+
+    // Update keypad display
+    document.getElementById('hex-keypad-idx').textContent = idx.toString(16).toUpperCase();
+    document.getElementById('hex-keypad-val').textContent = keypadBuf || '--';
+    document.getElementById('hex-keypad').style.display = 'block';
+
+    // Scroll cell into view above keypad
+    cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function hexKey(ch) {
+    if (keypadIdx < 0) return;
+    if (keypadBuf.length >= 2) keypadBuf = '';  // reset if already full
+    keypadBuf += ch;
+
+    const cell = document.querySelector(`.byte-cell[data-idx="${keypadIdx}"]`);
+    cell.value = keypadBuf;
+    document.getElementById('hex-keypad-val').textContent = keypadBuf;
+
+    // Auto-advance after 2 digits
+    if (keypadBuf.length === 2) {
+        commitBytes();
+        // Move to next cell after short delay
+        setTimeout(() => {
+            if (keypadIdx < 15) {
+                openHexKeypad(keypadIdx + 1);
+            }
+        }, 150);
     }
 }
 
-function onByteChange(e) {
-    let val = e.target.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
-    if (val.length === 1) val = '0' + val;
-    if (val.length === 0) val = state.lineData.bytes[parseInt(e.target.dataset.idx)];
-    e.target.value = val;
+function hexKeyBackspace() {
+    if (keypadIdx < 0) return;
+    keypadBuf = keypadBuf.slice(0, -1);
+    const cell = document.querySelector(`.byte-cell[data-idx="${keypadIdx}"]`);
+    cell.value = keypadBuf || state.lineData.bytes[keypadIdx];
+    document.getElementById('hex-keypad-val').textContent = keypadBuf || '--';
+}
+
+function hexKeyNext() {
+    if (keypadIdx < 0) return;
+    // Pad single digit
+    if (keypadBuf.length === 1) keypadBuf = '0' + keypadBuf;
+    if (keypadBuf.length === 2) {
+        const cell = document.querySelector(`.byte-cell[data-idx="${keypadIdx}"]`);
+        cell.value = keypadBuf;
+        commitBytes();
+    }
+    if (keypadIdx < 15) {
+        openHexKeypad(keypadIdx + 1);
+    }
+}
+
+function hexKeyDone() {
+    if (keypadIdx < 0) return;
+    // Pad and commit
+    if (keypadBuf.length === 1) keypadBuf = '0' + keypadBuf;
+    if (keypadBuf.length === 2) {
+        const cell = document.querySelector(`.byte-cell[data-idx="${keypadIdx}"]`);
+        cell.value = keypadBuf;
+    }
     commitBytes();
+    closeHexKeypad();
+}
+
+function hexKeyCancel() {
+    // Restore original value
+    if (keypadIdx >= 0) {
+        const cell = document.querySelector(`.byte-cell[data-idx="${keypadIdx}"]`);
+        cell.value = state.lineData.bytes[keypadIdx];
+    }
+    closeHexKeypad();
+}
+
+function closeHexKeypad() {
+    keypadIdx = -1;
+    keypadBuf = '';
+    document.getElementById('hex-keypad').style.display = 'none';
+    document.querySelectorAll('.byte-cell').forEach(c => c.classList.remove('byte-cell-active'));
 }
 
 async function commitBytes() {
