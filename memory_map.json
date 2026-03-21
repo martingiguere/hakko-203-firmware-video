@@ -1,0 +1,25 @@
+{
+  "device": "R5F21258SNFP",
+  "buffer_start": "0x00000",
+  "buffer_end": "0x13FFF",
+  "buffer_size": 81920,
+  "regions": [
+    {"name": "SFR",           "start": "0x00000", "end": "0x002FF", "type": "ff-forced"},
+    {"name": "Reserved",      "start": "0x00300", "end": "0x003FF", "type": "ff-forced"},
+    {"name": "RAM",           "start": "0x00400", "end": "0x00FFF", "type": "ff-forced"},
+    {"name": "Unmapped",      "start": "0x01000", "end": "0x023FF", "type": "ff-forced"},
+    {"name": "Data Flash A",  "start": "0x02400", "end": "0x027FF", "type": "data"},
+    {"name": "Data Flash B",  "start": "0x02800", "end": "0x02BFF", "type": "ff-forced"},
+    {"name": "Reserved",      "start": "0x02C00", "end": "0x03FFF", "type": "ff-forced"},
+    {"name": "Block 1 ROM",   "start": "0x04000", "end": "0x0BFFF", "type": "rom"},
+    {"name": "Block 0 ROM",   "start": "0x0C000", "end": "0x13FFF", "type": "rom"}
+  ],
+  "ff_forced_overrides": [
+    {
+      "name": "Block 0 tail",
+      "start": "0x13000",
+      "end": "0x13FFF",
+      "reason": "Erased flash confirmed from video frames 18842-19229"
+    }
+  ]
+}

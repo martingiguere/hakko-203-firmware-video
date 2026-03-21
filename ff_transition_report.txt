@@ -1,0 +1,657 @@
+======================================================================
+Section 1: FF_FORCED_REGIONS Comparison
+======================================================================
+
+postprocess_firmware.py (authoritative):
+Source: memory_map.json (unified)
+
+  $00000-$002FF  (48 lines) — SFR
+  $00300-$003FF  (16 lines) — Reserved
+  $00400-$00FFF  (192 lines) — RAM
+  $01000-$023FF  (320 lines) — Unmapped
+  $02800-$02BFF  (64 lines) — Data Flash B
+  $02C00-$03FFF  (320 lines) — Reserved
+  $13000-$13FFF  (256 lines) — Block 0 tail
+
+All scripts use unified memory_map.json — no discrepancies.
+
+======================================================================
+Section 2: Summary Statistics
+======================================================================
+
+  Total lines in dump:   4951 / 5120
+  Missing lines:         169
+  All-FF lines:          1643
+  Non-FF lines:          3308
+  Total transitions:     276
+    forced_boundary      2
+    natural              274
+    unexpected           0
+
+    FF->data             138
+    data->FF             138
+
+======================================================================
+Section 3: Transition Table
+======================================================================
+
+  #   Before    After        Dir  Gap       Src Before        Src After          Category          Region         Crops  Agreement
+----------------------------------------------------------------------------------------------------------------------------------
+  1  $023F0  $02400   FF->data    0       extraction       extraction   forced_boundary    Data Flash A       20f/40f  DISAGREE
+  2  $02750  $02760   data->FF    0       extraction       extraction           natural    Data Flash A       35f/24f  DISAGREE
+  3  $03FF0  $04030   FF->data    3        ff-forced       extraction   forced_boundary     Block 1 ROM           -/-  no_data
+  4  $040A0  $040B0   data->FF    0       extraction       extraction           natural     Block 1 ROM         1f/1f  agrees
+  5  $040D0  $040E0   FF->data    0       extraction       extraction           natural     Block 1 ROM          1f/-  agrees
+  6  $040E0  $040F0   data->FF    0       extraction       extraction           natural     Block 1 ROM          -/1f  agrees
+  7  $040F0  $04100   FF->data    0       extraction       extraction           natural     Block 1 ROM         1f/1f  agrees
+  8  $04100  $04110   data->FF    0       extraction       extraction           natural     Block 1 ROM         1f/1f  agrees
+  9  $04110  $04120   FF->data    0       extraction       extraction           natural     Block 1 ROM         1f/1f  agrees
+ 10  $04140  $04150   data->FF    0       extraction       extraction           natural     Block 1 ROM         1f/1f  agrees
+ 11  $04170  $04180   FF->data    0       extraction       extraction           natural     Block 1 ROM          1f/-  agrees
+ 12  $041C0  $041D0   data->FF    0       extraction       extraction           natural     Block 1 ROM         1f/1f  agrees
+ 13  $041F0  $04200   FF->data    0       extraction       extraction           natural     Block 1 ROM          1f/-  agrees
+ 14  $04200  $04210   data->FF    0       extraction       extraction           natural     Block 1 ROM          -/1f  agrees
+ 15  $04210  $04220   FF->data    0       extraction       extraction           natural     Block 1 ROM         1f/2f  agrees
+ 16  $04220  $04230   data->FF    0       extraction       extraction           natural     Block 1 ROM         2f/1f  agrees
+ 17  $04230  $04240   FF->data    0       extraction       extraction           natural     Block 1 ROM         1f/1f  agrees
+ 18  $04240  $04250   data->FF    0       extraction       extraction           natural     Block 1 ROM         1f/1f  agrees
+ 19  $04250  $04260   FF->data    0       extraction       extraction           natural     Block 1 ROM         1f/1f  agrees
+ 20  $04260  $04270   data->FF    0       extraction       extraction           natural     Block 1 ROM         1f/1f  agrees
+ 21  $04290  $04330   FF->data    9       extraction       extraction           natural     Block 1 ROM         1f/1f  agrees
+ 22  $04680  $04690   data->FF    0       extraction       extraction           natural     Block 1 ROM       11f/10f  DISAGREE
+ 23  $046D0  $046E0   FF->data    0       extraction       extraction           natural     Block 1 ROM       10f/11f  DISAGREE
+ 24  $046E0  $046F0   data->FF    0       extraction       extraction           natural     Block 1 ROM       11f/10f  DISAGREE
+ 25  $046F0  $04700   FF->data    0       extraction       extraction           natural     Block 1 ROM       10f/10f  DISAGREE
+ 26  $04700  $04710   data->FF    0       extraction       extraction           natural     Block 1 ROM       10f/10f  DISAGREE
+ 27  $04710  $04720   FF->data    0       extraction       extraction           natural     Block 1 ROM       10f/10f  DISAGREE
+ 28  $04720  $04730   data->FF    0       extraction       extraction           natural     Block 1 ROM       10f/10f  DISAGREE
+ 29  $04750  $04760   FF->data    0       extraction       extraction           natural     Block 1 ROM         10f/-  DISAGREE
+ 30  $0ED60  $0ED70   data->FF    0       extraction       crop-index           natural     Block 0 ROM         1f/1f  DISAGREE
+ 31  $0ED80  $0ED90   FF->data    0       crop-index       extraction           natural     Block 0 ROM         1f/3f  agrees
+ 32  $0FC40  $0FC50   data->FF    0       extraction       extraction           natural     Block 0 ROM       15f/16f  DISAGREE
+ 33  $0FCB0  $0FCC0   FF->data    0       extraction       extraction           natural     Block 0 ROM       17f/16f  DISAGREE
+ 34  $0FCC0  $0FCD0   data->FF    0       extraction       extraction           natural     Block 0 ROM       16f/11f  DISAGREE
+ 35  $0FCD0  $0FCE0   FF->data    0       extraction       extraction           natural     Block 0 ROM       11f/14f  DISAGREE
+ 36  $0FCE0  $0FCF0   data->FF    0       extraction       extraction           natural     Block 0 ROM        14f/9f  DISAGREE
+ 37  $0FCF0  $0FD00   FF->data    0       extraction       extraction           natural     Block 0 ROM         9f/1f  DISAGREE
+ 38  $0FD00  $0FD10   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/2f  DISAGREE
+ 39  $0FD20  $0FD30   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+ 40  $0FDE0  $0FDF0   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/3f  DISAGREE
+ 41  $0FDF0  $0FE00   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+ 42  $0FE90  $0FEA0   data->FF    0       extraction       extraction           natural     Block 0 ROM        9f/12f  DISAGREE
+ 43  $0FEA0  $0FEB0   FF->data    0       extraction       extraction           natural     Block 0 ROM        12f/6f  DISAGREE
+ 44  $107E0  $107F0   data->FF    0       extraction       extraction           natural     Block 0 ROM       42f/48f  DISAGREE
+ 45  $107F0  $10800   FF->data    0       extraction       extraction           natural     Block 0 ROM       48f/47f  DISAGREE
+ 46  $10810  $10820   data->FF    0       extraction       extraction           natural     Block 0 ROM       48f/50f  DISAGREE
+ 47  $10830  $10840   FF->data    0       extraction       extraction           natural     Block 0 ROM       52f/49f  DISAGREE
+ 48  $10900  $10910   data->FF    0       extraction       extraction           natural     Block 0 ROM         9f/2f  agrees
+ 49  $10930  $10940   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+ 50  $10960  $10970   data->FF    0       extraction       extraction           natural     Block 0 ROM         6f/4f  DISAGREE
+ 51  $109B0  $109C0   FF->data    0       extraction       extraction           natural     Block 0 ROM        10f/7f  DISAGREE
+ 52  $109C0  $109D0   data->FF    0       extraction       extraction           natural     Block 0 ROM         7f/8f  DISAGREE
+ 53  $109D0  $109E0   FF->data    0       extraction       extraction           natural     Block 0 ROM         8f/8f  DISAGREE
+ 54  $109E0  $109F0   data->FF    0       extraction       extraction           natural     Block 0 ROM         8f/7f  DISAGREE
+ 55  $10A70  $10A80   FF->data    0       extraction       extraction           natural     Block 0 ROM         6f/6f  agrees
+ 56  $10A80  $10A90   data->FF    0       extraction       extraction           natural     Block 0 ROM         6f/4f  DISAGREE
+ 57  $10AB0  $10AC0   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+ 58  $10AC0  $10AD0   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/4f  DISAGREE
+ 59  $10B30  $10B40   FF->data    0       extraction       extraction           natural     Block 0 ROM         4f/5f  agrees
+ 60  $10B60  $10B70   data->FF    0       extraction       extraction           natural     Block 0 ROM         6f/6f  DISAGREE
+ 61  $10C40  $10C50   FF->data    0       extraction       extraction           natural     Block 0 ROM        6f/29f  DISAGREE
+ 62  $10C50  $10C60   data->FF    0       extraction       extraction           natural     Block 0 ROM       29f/33f  DISAGREE
+ 63  $10CB0  $10CC0   FF->data    0       extraction       extraction           natural     Block 0 ROM       31f/31f  agrees
+ 64  $10CC0  $10CD0   data->FF    0       extraction       extraction           natural     Block 0 ROM       31f/29f  agrees
+ 65  $10CD0  $10CE0   FF->data    0       extraction       extraction           natural     Block 0 ROM       29f/29f  agrees
+ 66  $10CE0  $10CF0   data->FF    0       extraction       extraction           natural     Block 0 ROM       29f/29f  DISAGREE
+ 67  $10CF0  $10D00   FF->data    0       extraction       extraction           natural     Block 0 ROM       29f/27f  DISAGREE
+ 68  $10D00  $10D10   data->FF    0       extraction       extraction           natural     Block 0 ROM       27f/27f  DISAGREE
+ 69  $10D20  $10D30   FF->data    0       extraction       extraction           natural     Block 0 ROM       27f/27f  DISAGREE
+ 70  $10D30  $10D40   data->FF    0       extraction       extraction           natural     Block 0 ROM        27f/2f  DISAGREE
+ 71  $10DE0  $10E20   FF->data    3       extraction       extraction           natural     Block 0 ROM          -/1f  agrees
+ 72  $10E60  $10E70   data->FF    0       extraction       extraction           natural     Block 0 ROM          1f/-  agrees
+ 73  $10E70  $10E80   FF->data    0       extraction       extraction           natural     Block 0 ROM          -/1f  agrees
+ 74  $10F10  $10F20   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/3f  DISAGREE
+ 75  $10F60  $10F70   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+ 76  $10F70  $10F80   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+ 77  $10F80  $10F90   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/4f  agrees
+ 78  $10F90  $10FA0   data->FF    0       extraction       extraction           natural     Block 0 ROM         4f/4f  DISAGREE
+ 79  $10FA0  $10FB0   FF->data    0       extraction       extraction           natural     Block 0 ROM         4f/4f  DISAGREE
+ 80  $10FB0  $10FC0   data->FF    0       extraction       extraction           natural     Block 0 ROM         4f/4f  agrees
+ 81  $11010  $11020   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/2f  agrees
+ 82  $11020  $11030   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+ 83  $11090  $110A0   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/2f  DISAGREE
+ 84  $110A0  $110B0   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/3f  DISAGREE
+ 85  $110B0  $110C0   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/2f  DISAGREE
+ 86  $110C0  $110D0   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/4f  DISAGREE
+ 87  $110D0  $110E0   FF->data    0       extraction       extraction           natural     Block 0 ROM         4f/4f  DISAGREE
+ 88  $110E0  $110F0   data->FF    0       extraction       extraction           natural     Block 0 ROM         4f/4f  DISAGREE
+ 89  $111A0  $111B0   FF->data    0       extraction       extraction           natural     Block 0 ROM         5f/4f  DISAGREE
+ 90  $111B0  $111C0   data->FF    0       extraction       extraction           natural     Block 0 ROM         4f/4f  DISAGREE
+ 91  $111C0  $111D0   FF->data    0       extraction       extraction           natural     Block 0 ROM         4f/4f  DISAGREE
+ 92  $111D0  $111E0   data->FF    0       extraction       extraction           natural     Block 0 ROM         4f/4f  DISAGREE
+ 93  $11200  $11210   FF->data    0       extraction       extraction           natural     Block 0 ROM         4f/3f  DISAGREE
+ 94  $11210  $11220   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/4f  DISAGREE
+ 95  $11230  $11240   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/4f  DISAGREE
+ 96  $11250  $11260   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+ 97  $112A0  $112B0   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+ 98  $112B0  $112C0   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+ 99  $112C0  $112D0   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+100  $112D0  $112E0   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/2f  agrees
+101  $112E0  $112F0   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+102  $112F0  $11300   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+103  $11310  $11320   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/1f  agrees
+104  $11390  $113A0   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/2f  DISAGREE
+105  $113E0  $113F0   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+106  $113F0  $11400   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+107  $11400  $11410   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+108  $11410  $11420   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+109  $11420  $11430   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+110  $11430  $11440   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/2f  DISAGREE
+111  $11460  $11470   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/2f  DISAGREE
+112  $114B0  $114C0   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/2f  DISAGREE
+113  $11500  $11510   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+114  $11560  $11570   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+115  $11570  $11580   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+116  $115A0  $115B0   data->FF    0       crop-index       crop-index           natural     Block 0 ROM         1f/2f  DISAGREE
+117  $115D0  $115E0   FF->data    0       crop-index       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+118  $115F0  $11600   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+119  $11640  $11650   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/2f  DISAGREE
+120  $11650  $11660   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/4f  DISAGREE
+121  $116E0  $116F0   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/3f  agrees
+122  $116F0  $11700   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/1f  agrees
+123  $11700  $11710   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/2f  agrees
+124  $11710  $11720   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+125  $11720  $11730   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+126  $11740  $11750   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/1f  agrees
+127  $11810  $11820   FF->data    0       extraction       extraction           natural     Block 0 ROM         6f/5f  DISAGREE
+128  $11820  $11830   data->FF    0       extraction       extraction           natural     Block 0 ROM         5f/5f  DISAGREE
+129  $11870  $11880   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/4f  agrees
+130  $11880  $11890   data->FF    0       extraction       extraction           natural     Block 0 ROM         4f/4f  DISAGREE
+131  $118D0  $118E0   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+132  $11900  $11910   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+133  $11980  $11990   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+134  $11990  $119A0   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/4f  DISAGREE
+135  $119A0  $119B0   FF->data    0       extraction       extraction           natural     Block 0 ROM         4f/4f  DISAGREE
+136  $119B0  $119C0   data->FF    0       extraction       extraction           natural     Block 0 ROM         4f/4f  agrees
+137  $11A20  $11A30   FF->data    0       extraction       extraction           natural     Block 0 ROM         4f/3f  DISAGREE
+138  $11A30  $11A40   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+139  $11B10  $11B20   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+140  $11B40  $11B50   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+141  $11B50  $11B60   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/3f  agrees
+142  $11B90  $11BA0   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/4f  DISAGREE
+143  $11C00  $11C10   FF->data    0       extraction       extraction           natural     Block 0 ROM         7f/7f  DISAGREE
+144  $11C10  $11C20   data->FF    0       extraction       extraction           natural     Block 0 ROM         7f/7f  DISAGREE
+145  $11C20  $11C30   FF->data    0       extraction       extraction           natural     Block 0 ROM         7f/7f  DISAGREE
+146  $11C30  $11C40   data->FF    0       extraction       extraction           natural     Block 0 ROM         7f/7f  DISAGREE
+147  $11C40  $11C50   FF->data    0       extraction       extraction           natural     Block 0 ROM         7f/6f  DISAGREE
+148  $11C50  $11C60   data->FF    0       extraction       extraction           natural     Block 0 ROM         6f/5f  DISAGREE
+149  $11CC0  $11CD0   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/1f  DISAGREE
+150  $11D30  $11D40   data->FF    0       extraction       extraction           natural     Block 0 ROM          1f/-  agrees
+151  $11D40  $11D50   FF->data    0       extraction       extraction           natural     Block 0 ROM          -/1f  agrees
+152  $11D60  $11D70   data->FF    0       extraction       extraction           natural     Block 0 ROM          1f/-  agrees
+153  $11DF0  $11F60   FF->data   22       crop-index       extraction           natural     Block 0 ROM         1f/1f  agrees
+154  $11F70  $11F80   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/2f  DISAGREE
+155  $11FE0  $11FF0   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+156  $11FF0  $12000   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+157  $12000  $12010   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+158  $12010  $12020   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+159  $12020  $12030   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+160  $12030  $12040   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+161  $12080  $12090   FF->data    0       extraction       extraction           natural     Block 0 ROM           -/-  no_data
+162  $12090  $120A0   data->FF    0       extraction       extraction           natural     Block 0 ROM           -/-  no_data
+163  $120A0  $120B0   FF->data    0       extraction       extraction           natural     Block 0 ROM           -/-  no_data
+164  $120B0  $120C0   data->FF    0       extraction       extraction           natural     Block 0 ROM           -/-  no_data
+165  $120C0  $120D0   FF->data    0       extraction       extraction           natural     Block 0 ROM          -/1f  agrees
+166  $120E0  $120F0   data->FF    0       extraction       crop-index           natural     Block 0 ROM         2f/2f  DISAGREE
+167  $120F0  $12100   FF->data    0       crop-index       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+168  $12100  $12110   data->FF    0       extraction       crop-index           natural     Block 0 ROM         2f/2f  DISAGREE
+169  $12110  $12120   FF->data    0       crop-index       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+170  $12140  $12150   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+171  $12190  $121A0   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+172  $121A0  $121B0   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+173  $121B0  $121C0   FF->data    0       extraction       extraction           natural     Block 0 ROM        3f/27f  DISAGREE
+174  $121D0  $121E0   data->FF    0       extraction       extraction           natural     Block 0 ROM       26f/26f  agrees
+175  $12220  $12230   FF->data    0       extraction       extraction           natural     Block 0 ROM       26f/26f  DISAGREE
+176  $12230  $12240   data->FF    0       extraction       extraction           natural     Block 0 ROM       26f/27f  DISAGREE
+177  $12240  $12250   FF->data    0       extraction       extraction           natural     Block 0 ROM       27f/27f  DISAGREE
+178  $12250  $12260   data->FF    0       extraction       extraction           natural     Block 0 ROM       27f/27f  agrees
+179  $12260  $12270   FF->data    0       extraction       extraction           natural     Block 0 ROM       27f/27f  agrees
+180  $12270  $12280   data->FF    0       extraction       extraction           natural     Block 0 ROM       27f/26f  agrees
+181  $12280  $12290   FF->data    0       extraction       extraction           natural     Block 0 ROM       26f/26f  DISAGREE
+182  $12290  $122A0   data->FF    0       extraction       extraction           natural     Block 0 ROM       26f/26f  DISAGREE
+183  $122A0  $122B0   FF->data    0       extraction       crop-index           natural     Block 0 ROM        26f/1f  DISAGREE
+184  $122C0  $122D0   data->FF    0       extraction       crop-index           natural     Block 0 ROM          -/1f  agrees
+185  $122E0  $122F0   FF->data    0       crop-index       crop-index           natural     Block 0 ROM         1f/1f  agrees
+186  $122F0  $12300   data->FF    0       crop-index       crop-index           natural     Block 0 ROM         1f/1f  agrees
+187  $12310  $12320   FF->data    0       crop-index       crop-index           natural     Block 0 ROM         1f/1f  agrees
+188  $12450  $12460   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+189  $124A0  $124B0   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/3f  agrees
+190  $124B0  $124C0   data->FF    0       extraction       extraction           natural     Block 0 ROM          3f/-  agrees
+191  $124C0  $124D0   FF->data    0       extraction       extraction           natural     Block 0 ROM          -/3f  agrees
+192  $124D0  $124E0   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+193  $12510  $12520   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+194  $12520  $12530   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/1f  agrees
+195  $12530  $12540   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/1f  agrees
+196  $12540  $12550   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/1f  agrees
+197  $12550  $12560   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/1f  agrees
+198  $12560  $12570   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/1f  agrees
+199  $12580  $12590   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/1f  agrees
+200  $12590  $125D0   data->FF    3       extraction       extraction           natural     Block 0 ROM          1f/-  agrees
+201  $125D0  $125E0   FF->data    0       extraction       extraction           natural     Block 0 ROM          -/1f  agrees
+202  $125F0  $12600   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/1f  agrees
+203  $12630  $12640   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/3f  agrees
+204  $12650  $12660   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+205  $126A0  $126B0   FF->data    0       extraction       extraction           natural     Block 0 ROM         4f/4f  agrees
+206  $126B0  $126C0   data->FF    0       extraction       extraction           natural     Block 0 ROM         4f/4f  DISAGREE
+207  $126C0  $126D0   FF->data    0       extraction       extraction           natural     Block 0 ROM         4f/1f  DISAGREE
+208  $126D0  $126E0   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/3f  DISAGREE
+209  $126E0  $126F0   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+210  $12700  $12710   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+211  $12710  $12720   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+212  $127A0  $127B0   data->FF    0       extraction       extraction           natural     Block 0 ROM           -/-  no_data
+213  $12860  $12870   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/1f  DISAGREE
+214  $12870  $12880   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/1f  DISAGREE
+215  $12880  $12890   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/1f  DISAGREE
+216  $12890  $128A0   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/1f  DISAGREE
+217  $128B0  $128C0   FF->data    0       extraction       extraction           natural     Block 0 ROM          2f/-  DISAGREE
+218  $128C0  $128D0   data->FF    0       extraction       extraction           natural     Block 0 ROM          -/1f  DISAGREE
+219  $12910  $12920   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/1f  agrees
+220  $12920  $12930   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/2f  DISAGREE
+221  $12930  $12940   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+222  $12940  $12950   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+223  $12950  $12960   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+224  $12960  $12970   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+225  $12990  $129A0   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/1f  agrees
+226  $129A0  $129B0   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/1f  agrees
+227  $129B0  $129C0   FF->data    0       extraction       extraction           natural     Block 0 ROM          1f/-  agrees
+228  $129C0  $129D0   data->FF    0       extraction       extraction           natural     Block 0 ROM          -/1f  DISAGREE
+229  $129D0  $129E0   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/1f  DISAGREE
+230  $129E0  $129F0   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/1f  agrees
+231  $12A00  $12A10   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/1f  agrees
+232  $12A10  $12A20   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/1f  DISAGREE
+233  $12A20  $12A30   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/1f  DISAGREE
+234  $12A30  $12A40   data->FF    0       extraction       extraction           natural     Block 0 ROM         1f/1f  agrees
+235  $12A80  $12A90   FF->data    0       extraction       extraction           natural     Block 0 ROM         1f/3f  agrees
+236  $12AA0  $12AB0   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+237  $12AF0  $12B00   FF->data    0       extraction       extraction           natural     Block 0 ROM         4f/4f  DISAGREE
+238  $12B00  $12B10   data->FF    0       extraction       extraction           natural     Block 0 ROM         4f/3f  agrees
+239  $12B10  $12B20   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+240  $12B20  $12B30   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/2f  agrees
+241  $12B30  $12B40   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/3f  agrees
+242  $12B40  $12B50   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+243  $12B50  $12B60   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/3f  agrees
+244  $12B60  $12B70   data->FF    0       extraction       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+245  $12B70  $12B80   FF->data    0       extraction       extraction           natural     Block 0 ROM         3f/1f  DISAGREE
+246  $12B80  $12B90   data->FF    0       extraction       extraction           natural     Block 0 ROM          1f/-  agrees
+247  $12B90  $12BA0   FF->data    0       extraction       extraction           natural     Block 0 ROM          -/1f  agrees
+248  $12BA0  $12BB0   data->FF    0       extraction       crop-index           natural     Block 0 ROM         1f/1f  agrees
+249  $12BB0  $12BC0   FF->data    0       crop-index       crop-index           natural     Block 0 ROM         1f/1f  agrees
+250  $12C10  $12C20   data->FF    0       extraction       extraction           natural     Block 0 ROM       12f/12f  agrees
+251  $12C60  $12C70   FF->data    0       extraction       extraction           natural     Block 0 ROM       11f/11f  agrees
+252  $12C70  $12C80   data->FF    0       extraction       extraction           natural     Block 0 ROM       11f/13f  agrees
+253  $12C80  $12C90   FF->data    0       extraction       extraction           natural     Block 0 ROM       13f/13f  agrees
+254  $12C90  $12CA0   data->FF    0       extraction       extraction           natural     Block 0 ROM        13f/1f  DISAGREE
+255  $12CA0  $12CB0   FF->data    0       extraction       extraction           natural     Block 0 ROM        1f/10f  DISAGREE
+256  $12CB0  $12CC0   data->FF    0       extraction       extraction           natural     Block 0 ROM       10f/10f  agrees
+257  $12CF0  $12D00   FF->data    0       extraction       extraction           natural     Block 0 ROM          -/2f  agrees
+258  $12D20  $12D30   data->FF    0       extraction       crop-index           natural     Block 0 ROM         1f/3f  DISAGREE
+259  $12D40  $12D50   FF->data    0       crop-index       extraction           natural     Block 0 ROM         3f/3f  DISAGREE
+260  $12D50  $12D60   data->FF    0       extraction       crop-index           natural     Block 0 ROM         3f/2f  agrees
+261  $12D60  $12D70   FF->data    0       crop-index       crop-index           natural     Block 0 ROM         2f/3f  agrees
+262  $12D80  $12D90   data->FF    0       crop-index       extraction           natural     Block 0 ROM         1f/2f  agrees
+263  $12DA0  $12DB0   FF->data    0       crop-index       extraction           natural     Block 0 ROM         1f/4f  agrees
+264  $12DB0  $12DC0   data->FF    0       extraction       extraction           natural     Block 0 ROM         4f/2f  DISAGREE
+265  $12DD0  $12DE0   FF->data    0       extraction       extraction           natural     Block 0 ROM         4f/4f  DISAGREE
+266  $12DE0  $12DF0   data->FF    0       extraction       extraction           natural     Block 0 ROM         4f/3f  agrees
+267  $12E20  $12E30   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+268  $12E30  $12E40   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+269  $12E40  $12E50   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+270  $12E50  $12E60   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+271  $12E80  $12E90   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/2f  agrees
+272  $12E90  $12EA0   data->FF    0       extraction       extraction           natural     Block 0 ROM         2f/2f  DISAGREE
+273  $12EA0  $12EB0   FF->data    0       extraction       extraction           natural     Block 0 ROM         2f/1f  DISAGREE
+274  $12ED0  $12EE0   data->FF    0       extraction       extraction           natural     Block 0 ROM          -/1f  agrees
+275  $12EF0  $12F00   FF->data    0       crop-index       crop-index           natural     Block 0 ROM         1f/1f  agrees
+276  $12FA0  $12FB0   data->FF    0       extraction       extraction           natural     Block 0 ROM           -/-  no_data
+
+======================================================================
+Section 4: Noise Analysis
+======================================================================
+
+  Rapid transition clusters (within $30): 51 clusters, 239 transitions
+
+  Cluster 1: $040D0-$04120 (5 transitions, Block 1 ROM)
+  Cluster 2: $041F0-$04270 (8 transitions, Block 1 ROM)
+  Cluster 3: $046D0-$04730 (6 transitions, Block 1 ROM)
+  Cluster 4: $0ED60-$0ED90 (2 transitions, Block 0 ROM)
+  Cluster 5: $0FCB0-$0FD30 (7 transitions, Block 0 ROM)
+  Cluster 6: $0FDE0-$0FE00 (2 transitions, Block 0 ROM)
+  Cluster 7: $0FE90-$0FEB0 (2 transitions, Block 0 ROM)
+  Cluster 8: $107E0-$10840 (4 transitions, Block 0 ROM)
+  Cluster 9: $109B0-$109F0 (4 transitions, Block 0 ROM)
+  Cluster 10: $10A70-$10A90 (2 transitions, Block 0 ROM)
+  Cluster 11: $10AB0-$10AD0 (2 transitions, Block 0 ROM)
+  Cluster 12: $10C40-$10C60 (2 transitions, Block 0 ROM)
+  Cluster 13: $10CB0-$10D40 (8 transitions, Block 0 ROM)
+  Cluster 14: $10E60-$10E80 (2 transitions, Block 0 ROM)
+  Cluster 15: $10F60-$10FC0 (6 transitions, Block 0 ROM)
+  Cluster 16: $11010-$11030 (2 transitions, Block 0 ROM)
+  Cluster 17: $11090-$110F0 (6 transitions, Block 0 ROM)
+  Cluster 18: $111A0-$111E0 (4 transitions, Block 0 ROM)
+  Cluster 19: $11200-$11260 (4 transitions, Block 0 ROM)
+  Cluster 20: $112A0-$11320 (7 transitions, Block 0 ROM)
+  Cluster 21: $113E0-$11440 (6 transitions, Block 0 ROM)
+  Cluster 22: $11560-$11580 (2 transitions, Block 0 ROM)
+  Cluster 23: $115D0-$11600 (2 transitions, Block 0 ROM)
+  Cluster 24: $11640-$11660 (2 transitions, Block 0 ROM)
+  Cluster 25: $116E0-$11750 (6 transitions, Block 0 ROM)
+  Cluster 26: $11810-$11830 (2 transitions, Block 0 ROM)
+  Cluster 27: $11870-$11890 (2 transitions, Block 0 ROM)
+  Cluster 28: $11980-$119C0 (4 transitions, Block 0 ROM)
+  Cluster 29: $11A20-$11A40 (2 transitions, Block 0 ROM)
+  Cluster 30: $11B40-$11B60 (2 transitions, Block 0 ROM)
+  Cluster 31: $11C00-$11C60 (6 transitions, Block 0 ROM)
+  Cluster 32: $11D30-$11D70 (3 transitions, Block 0 ROM)
+  Cluster 33: $11FE0-$12040 (6 transitions, Block 0 ROM)
+  Cluster 34: $12080-$12120 (9 transitions, Block 0 ROM)
+  Cluster 35: $12190-$121E0 (4 transitions, Block 0 ROM)
+  Cluster 36: $12220-$12320 (13 transitions, Block 0 ROM)
+  Cluster 37: $124A0-$124E0 (4 transitions, Block 0 ROM)
+  Cluster 38: $12510-$12590 (7 transitions, Block 0 ROM)
+  Cluster 39: $125D0-$12600 (2 transitions, Block 0 ROM)
+  Cluster 40: $12630-$12660 (2 transitions, Block 0 ROM)
+  Cluster 41: $126A0-$12720 (7 transitions, Block 0 ROM)
+  Cluster 42: $12860-$128D0 (6 transitions, Block 0 ROM)
+  Cluster 43: $12910-$12970 (6 transitions, Block 0 ROM)
+  Cluster 44: $12990-$12A40 (10 transitions, Block 0 ROM)
+  Cluster 45: $12A80-$12AB0 (2 transitions, Block 0 ROM)
+  Cluster 46: $12AF0-$12BC0 (13 transitions, Block 0 ROM)
+  Cluster 47: $12C60-$12CC0 (6 transitions, Block 0 ROM)
+  Cluster 48: $12D20-$12DF0 (9 transitions, Block 0 ROM)
+  Cluster 49: $12E20-$12E60 (4 transitions, Block 0 ROM)
+  Cluster 50: $12E80-$12EB0 (3 transitions, Block 0 ROM)
+  Cluster 51: $12ED0-$12F00 (2 transitions, Block 0 ROM)
+
+======================================================================
+Section 5: Flagged Issues
+======================================================================
+
+  Crop/merged DISAGREEMENTS: 139
+    $023F0 -> $02400  FF->data
+      DISAGREE: $023F0 merged=FF but 5/20 crops non-FF (25%)
+    $02750 -> $02760  data->FF
+      DISAGREE: $02760 merged=FF but 7/24 crops non-FF (29%)
+    $04680 -> $04690  data->FF
+      DISAGREE: $04690 merged=FF but 2/10 crops non-FF (20%)
+    $046D0 -> $046E0  FF->data
+      DISAGREE: $046D0 merged=FF but 1/10 crops non-FF (10%)
+    $046E0 -> $046F0  data->FF
+      DISAGREE: $046F0 merged=FF but 1/10 crops non-FF (10%)
+    $046F0 -> $04700  FF->data
+      DISAGREE: $046F0 merged=FF but 1/10 crops non-FF (10%)
+    $04700 -> $04710  data->FF
+      DISAGREE: $04710 merged=FF but 1/10 crops non-FF (10%)
+    $04710 -> $04720  FF->data
+      DISAGREE: $04710 merged=FF but 1/10 crops non-FF (10%)
+    $04720 -> $04730  data->FF
+      DISAGREE: $04730 merged=FF but 1/10 crops non-FF (10%)
+    $04750 -> $04760  FF->data
+      DISAGREE: $04750 merged=FF but 1/10 crops non-FF (10%)
+    $0ED60 -> $0ED70  data->FF
+      DISAGREE: $0ED60 merged=data but crops all-FF
+    $0FC40 -> $0FC50  data->FF
+      DISAGREE: $0FC50 merged=FF but 9/16 crops non-FF (56%)
+    $0FCB0 -> $0FCC0  FF->data
+      DISAGREE: $0FCB0 merged=FF but 8/17 crops non-FF (47%)
+    $0FCC0 -> $0FCD0  data->FF
+      DISAGREE: $0FCD0 merged=FF but 6/11 crops non-FF (55%)
+    $0FCD0 -> $0FCE0  FF->data
+      DISAGREE: $0FCD0 merged=FF but 6/11 crops non-FF (55%)
+    $0FCE0 -> $0FCF0  data->FF
+      DISAGREE: $0FCF0 merged=FF but 7/9 crops non-FF (78%)
+    $0FCF0 -> $0FD00  FF->data
+      DISAGREE: $0FCF0 merged=FF but 7/9 crops non-FF (78%)
+    $0FD00 -> $0FD10  data->FF
+      DISAGREE: $0FD10 merged=FF but 2/2 crops non-FF (100%)
+    $0FD20 -> $0FD30  FF->data
+      DISAGREE: $0FD20 merged=FF but 2/2 crops non-FF (100%)
+    $0FDE0 -> $0FDF0  data->FF
+      DISAGREE: $0FDF0 merged=FF but 1/3 crops non-FF (33%)
+    $0FDF0 -> $0FE00  FF->data
+      DISAGREE: $0FDF0 merged=FF but 1/3 crops non-FF (33%)
+    $0FE90 -> $0FEA0  data->FF
+      DISAGREE: $0FEA0 merged=FF but 5/12 crops non-FF (42%)
+    $0FEA0 -> $0FEB0  FF->data
+      DISAGREE: $0FEA0 merged=FF but 5/12 crops non-FF (42%)
+    $107E0 -> $107F0  data->FF
+      DISAGREE: $107F0 merged=FF but 32/48 crops non-FF (67%)
+    $107F0 -> $10800  FF->data
+      DISAGREE: $107F0 merged=FF but 32/48 crops non-FF (67%)
+    $10810 -> $10820  data->FF
+      DISAGREE: $10820 merged=FF but 34/50 crops non-FF (68%)
+    $10830 -> $10840  FF->data
+      DISAGREE: $10830 merged=FF but 38/52 crops non-FF (73%)
+    $10930 -> $10940  FF->data
+      DISAGREE: $10930 merged=FF but 1/3 crops non-FF (33%)
+    $10960 -> $10970  data->FF
+      DISAGREE: $10970 merged=FF but 1/4 crops non-FF (25%)
+    $109B0 -> $109C0  FF->data
+      DISAGREE: $109B0 merged=FF but 7/10 crops non-FF (70%)
+    $109C0 -> $109D0  data->FF
+      DISAGREE: $109D0 merged=FF but 2/8 crops non-FF (25%)
+    $109D0 -> $109E0  FF->data
+      DISAGREE: $109D0 merged=FF but 2/8 crops non-FF (25%)
+    $109E0 -> $109F0  data->FF
+      DISAGREE: $109F0 merged=FF but 2/7 crops non-FF (29%)
+    $10A80 -> $10A90  data->FF
+      DISAGREE: $10A90 merged=FF but 2/4 crops non-FF (50%)
+    $10AC0 -> $10AD0  data->FF
+      DISAGREE: $10AD0 merged=FF but 3/4 crops non-FF (75%)
+    $10B60 -> $10B70  data->FF
+      DISAGREE: $10B70 merged=FF but 3/6 crops non-FF (50%)
+    $10C40 -> $10C50  FF->data
+      DISAGREE: $10C40 merged=FF but 2/6 crops non-FF (33%)
+    $10C50 -> $10C60  data->FF
+      DISAGREE: $10C60 merged=FF but 28/33 crops non-FF (85%)
+    $10CE0 -> $10CF0  data->FF
+      DISAGREE: $10CF0 merged=FF but 1/29 crops non-FF (3%)
+    $10CF0 -> $10D00  FF->data
+      DISAGREE: $10CF0 merged=FF but 1/29 crops non-FF (3%)
+    $10D00 -> $10D10  data->FF
+      DISAGREE: $10D10 merged=FF but 1/27 crops non-FF (4%)
+    $10D20 -> $10D30  FF->data
+      DISAGREE: $10D20 merged=FF but 1/27 crops non-FF (4%)
+    $10D30 -> $10D40  data->FF
+      DISAGREE: $10D40 merged=FF but 1/2 crops non-FF (50%)
+    $10F10 -> $10F20  data->FF
+      DISAGREE: $10F20 merged=FF but 1/3 crops non-FF (33%)
+    $10F90 -> $10FA0  data->FF
+      DISAGREE: $10FA0 merged=FF but 1/4 crops non-FF (25%)
+    $10FA0 -> $10FB0  FF->data
+      DISAGREE: $10FA0 merged=FF but 1/4 crops non-FF (25%)
+    $11020 -> $11030  data->FF
+      DISAGREE: $11030 merged=FF but 1/2 crops non-FF (50%)
+    $11090 -> $110A0  FF->data
+      DISAGREE: $11090 merged=FF but 1/1 crops non-FF (100%)
+    $110A0 -> $110B0  data->FF
+      DISAGREE: $110B0 merged=FF but 3/3 crops non-FF (100%)
+    $110B0 -> $110C0  FF->data
+      DISAGREE: $110B0 merged=FF but 3/3 crops non-FF (100%); $110C0 merged=data but crops all-FF
+    $110C0 -> $110D0  data->FF
+      DISAGREE: $110C0 merged=data but crops all-FF; $110D0 merged=FF but 3/4 crops non-FF (75%)
+    $110D0 -> $110E0  FF->data
+      DISAGREE: $110D0 merged=FF but 3/4 crops non-FF (75%); $110E0 merged=data but crops all-FF
+    $110E0 -> $110F0  data->FF
+      DISAGREE: $110E0 merged=data but crops all-FF
+    $111A0 -> $111B0  FF->data
+      DISAGREE: $111A0 merged=FF but 2/5 crops non-FF (40%)
+    $111B0 -> $111C0  data->FF
+      DISAGREE: $111C0 merged=FF but 1/4 crops non-FF (25%)
+    $111C0 -> $111D0  FF->data
+      DISAGREE: $111C0 merged=FF but 1/4 crops non-FF (25%)
+    $111D0 -> $111E0  data->FF
+      DISAGREE: $111E0 merged=FF but 1/4 crops non-FF (25%)
+    $11200 -> $11210  FF->data
+      DISAGREE: $11200 merged=FF but 1/4 crops non-FF (25%)
+    $11210 -> $11220  data->FF
+      DISAGREE: $11220 merged=FF but 2/4 crops non-FF (50%)
+    $11230 -> $11240  FF->data
+      DISAGREE: $11230 merged=FF but 1/3 crops non-FF (33%)
+    $11250 -> $11260  data->FF
+      DISAGREE: $11260 merged=FF but 1/3 crops non-FF (33%)
+    $112A0 -> $112B0  FF->data
+      DISAGREE: $112A0 merged=FF but 1/3 crops non-FF (33%)
+    $112F0 -> $11300  data->FF
+      DISAGREE: $11300 merged=FF but 1/2 crops non-FF (50%)
+    $11390 -> $113A0  data->FF
+      DISAGREE: $113A0 merged=FF but 1/2 crops non-FF (50%)
+    $113E0 -> $113F0  FF->data
+      DISAGREE: $113E0 merged=FF but 1/3 crops non-FF (33%)
+    $113F0 -> $11400  data->FF
+      DISAGREE: $11400 merged=FF but 1/3 crops non-FF (33%)
+    $11400 -> $11410  FF->data
+      DISAGREE: $11400 merged=FF but 1/3 crops non-FF (33%)
+    $11410 -> $11420  data->FF
+      DISAGREE: $11420 merged=FF but 1/3 crops non-FF (33%)
+    $11420 -> $11430  FF->data
+      DISAGREE: $11420 merged=FF but 1/3 crops non-FF (33%)
+    $11430 -> $11440  data->FF
+      DISAGREE: $11440 merged=FF but 1/2 crops non-FF (50%)
+    $11460 -> $11470  FF->data
+      DISAGREE: $11460 merged=FF but 2/3 crops non-FF (67%)
+    $114B0 -> $114C0  data->FF
+      DISAGREE: $114C0 merged=FF but 1/2 crops non-FF (50%)
+    $115A0 -> $115B0  data->FF
+      DISAGREE: $115B0 merged=FF but 1/2 crops non-FF (50%)
+    $115D0 -> $115E0  FF->data
+      DISAGREE: $115D0 merged=FF but 1/2 crops non-FF (50%); $115E0 merged=data but crops all-FF
+    $115F0 -> $11600  data->FF
+      DISAGREE: $115F0 merged=data but crops all-FF; $11600 merged=FF but 1/2 crops non-FF (50%)
+    $11640 -> $11650  FF->data
+      DISAGREE: $11640 merged=FF but 3/3 crops non-FF (100%)
+    $11650 -> $11660  data->FF
+      DISAGREE: $11660 merged=FF but 2/4 crops non-FF (50%)
+    $11810 -> $11820  FF->data
+      DISAGREE: $11810 merged=FF but 4/6 crops non-FF (67%)
+    $11820 -> $11830  data->FF
+      DISAGREE: $11830 merged=FF but 1/5 crops non-FF (20%)
+    $11880 -> $11890  data->FF
+      DISAGREE: $11890 merged=FF but 1/4 crops non-FF (25%)
+    $11900 -> $11910  data->FF
+      DISAGREE: $11910 merged=FF but 1/2 crops non-FF (50%)
+    $11980 -> $11990  FF->data
+      DISAGREE: $11980 merged=FF but 1/3 crops non-FF (33%)
+    $11990 -> $119A0  data->FF
+      DISAGREE: $119A0 merged=FF but 1/4 crops non-FF (25%)
+    $119A0 -> $119B0  FF->data
+      DISAGREE: $119A0 merged=FF but 1/4 crops non-FF (25%)
+    $11A20 -> $11A30  FF->data
+      DISAGREE: $11A20 merged=FF but 2/4 crops non-FF (50%)
+    $11B10 -> $11B20  FF->data
+      DISAGREE: $11B10 merged=FF but 1/2 crops non-FF (50%)
+    $11B90 -> $11BA0  data->FF
+      DISAGREE: $11B90 merged=data but crops all-FF; $11BA0 merged=FF but 2/4 crops non-FF (50%)
+    $11C00 -> $11C10  FF->data
+      DISAGREE: $11C00 merged=FF but 2/7 crops non-FF (29%)
+    $11C10 -> $11C20  data->FF
+      DISAGREE: $11C20 merged=FF but 1/7 crops non-FF (14%)
+    $11C20 -> $11C30  FF->data
+      DISAGREE: $11C20 merged=FF but 1/7 crops non-FF (14%)
+    $11C30 -> $11C40  data->FF
+      DISAGREE: $11C40 merged=FF but 2/7 crops non-FF (29%)
+    $11C40 -> $11C50  FF->data
+      DISAGREE: $11C40 merged=FF but 2/7 crops non-FF (29%)
+    $11C50 -> $11C60  data->FF
+      DISAGREE: $11C60 merged=FF but 1/5 crops non-FF (20%)
+    $11CC0 -> $11CD0  FF->data
+      DISAGREE: $11CC0 merged=FF but 1/2 crops non-FF (50%)
+    $11F70 -> $11F80  data->FF
+      DISAGREE: $11F80 merged=FF but 1/2 crops non-FF (50%)
+    $12030 -> $12040  data->FF
+      DISAGREE: $12040 merged=FF but 1/2 crops non-FF (50%)
+    $120E0 -> $120F0  data->FF
+      DISAGREE: $120F0 merged=FF but 1/2 crops non-FF (50%)
+    $120F0 -> $12100  FF->data
+      DISAGREE: $120F0 merged=FF but 1/2 crops non-FF (50%); $12100 merged=data but crops all-FF
+    $12100 -> $12110  data->FF
+      DISAGREE: $12100 merged=data but crops all-FF
+    $12110 -> $12120  FF->data
+      DISAGREE: $12120 merged=data but crops all-FF
+    $12140 -> $12150  data->FF
+      DISAGREE: $12150 merged=FF but 1/2 crops non-FF (50%)
+    $12190 -> $121A0  FF->data
+      DISAGREE: $12190 merged=FF but 2/3 crops non-FF (67%)
+    $121A0 -> $121B0  data->FF
+      DISAGREE: $121B0 merged=FF but 1/3 crops non-FF (33%)
+    $121B0 -> $121C0  FF->data
+      DISAGREE: $121B0 merged=FF but 1/3 crops non-FF (33%)
+    $12220 -> $12230  FF->data
+      DISAGREE: $12220 merged=FF but 1/26 crops non-FF (4%)
+    $12230 -> $12240  data->FF
+      DISAGREE: $12240 merged=FF but 2/27 crops non-FF (7%)
+    $12240 -> $12250  FF->data
+      DISAGREE: $12240 merged=FF but 2/27 crops non-FF (7%)
+    $12280 -> $12290  FF->data
+      DISAGREE: $12290 merged=data but crops all-FF
+    $12290 -> $122A0  data->FF
+      DISAGREE: $12290 merged=data but crops all-FF; $122A0 merged=FF but 17/26 crops non-FF (65%)
+    $122A0 -> $122B0  FF->data
+      DISAGREE: $122A0 merged=FF but 17/26 crops non-FF (65%)
+    $126B0 -> $126C0  data->FF
+      DISAGREE: $126C0 merged=FF but 2/4 crops non-FF (50%)
+    $126C0 -> $126D0  FF->data
+      DISAGREE: $126C0 merged=FF but 2/4 crops non-FF (50%); $126D0 merged=data but crops all-FF
+    $126D0 -> $126E0  data->FF
+      DISAGREE: $126D0 merged=data but crops all-FF; $126E0 merged=FF but 1/3 crops non-FF (33%)
+    $126E0 -> $126F0  FF->data
+      DISAGREE: $126E0 merged=FF but 1/3 crops non-FF (33%)
+    $12860 -> $12870  FF->data
+      DISAGREE: $12860 merged=FF but 1/1 crops non-FF (100%); $12870 merged=data but crops all-FF
+    $12870 -> $12880  data->FF
+      DISAGREE: $12870 merged=data but crops all-FF; $12880 merged=FF but 1/1 crops non-FF (100%)
+    $12880 -> $12890  FF->data
+      DISAGREE: $12880 merged=FF but 1/1 crops non-FF (100%); $12890 merged=data but crops all-FF
+    $12890 -> $128A0  data->FF
+      DISAGREE: $12890 merged=data but crops all-FF
+    $128B0 -> $128C0  FF->data
+      DISAGREE: $128B0 merged=FF but 2/2 crops non-FF (100%)
+    $128C0 -> $128D0  data->FF
+      DISAGREE: $128D0 merged=FF but 1/1 crops non-FF (100%)
+    $12920 -> $12930  data->FF
+      DISAGREE: $12930 merged=FF but 1/2 crops non-FF (50%)
+    $12930 -> $12940  FF->data
+      DISAGREE: $12930 merged=FF but 1/2 crops non-FF (50%)
+    $129C0 -> $129D0  data->FF
+      DISAGREE: $129D0 merged=FF but 1/1 crops non-FF (100%)
+    $129D0 -> $129E0  FF->data
+      DISAGREE: $129D0 merged=FF but 1/1 crops non-FF (100%)
+    $12A10 -> $12A20  data->FF
+      DISAGREE: $12A20 merged=FF but 1/1 crops non-FF (100%)
+    $12A20 -> $12A30  FF->data
+      DISAGREE: $12A20 merged=FF but 1/1 crops non-FF (100%)
+    $12AA0 -> $12AB0  data->FF
+      DISAGREE: $12AB0 merged=FF but 1/3 crops non-FF (33%)
+    $12AF0 -> $12B00  FF->data
+      DISAGREE: $12AF0 merged=FF but 1/4 crops non-FF (25%)
+    $12B60 -> $12B70  data->FF
+      DISAGREE: $12B70 merged=FF but 2/3 crops non-FF (67%)
+    $12B70 -> $12B80  FF->data
+      DISAGREE: $12B70 merged=FF but 2/3 crops non-FF (67%)
+    $12C90 -> $12CA0  data->FF
+      DISAGREE: $12CA0 merged=FF but 1/1 crops non-FF (100%)
+    $12CA0 -> $12CB0  FF->data
+      DISAGREE: $12CA0 merged=FF but 1/1 crops non-FF (100%)
+    $12D20 -> $12D30  data->FF
+      DISAGREE: $12D30 merged=FF but 1/3 crops non-FF (33%)
+    $12D40 -> $12D50  FF->data
+      DISAGREE: $12D40 merged=FF but 1/3 crops non-FF (33%)
+    $12DB0 -> $12DC0  data->FF
+      DISAGREE: $12DC0 merged=FF but 1/2 crops non-FF (50%)
+    $12DD0 -> $12DE0  FF->data
+      DISAGREE: $12DD0 merged=FF but 1/4 crops non-FF (25%)
+    $12E20 -> $12E30  FF->data
+      DISAGREE: $12E20 merged=FF but 1/2 crops non-FF (50%)
+    $12E90 -> $12EA0  data->FF
+      DISAGREE: $12EA0 merged=FF but 1/2 crops non-FF (50%)
+    $12EA0 -> $12EB0  FF->data
+      DISAGREE: $12EA0 merged=FF but 1/2 crops non-FF (50%)

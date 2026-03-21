@@ -25,6 +25,7 @@ from frame_utils import (
     is_video_frame_key, video_frame_key, extracted_frame_key,
     crop_filename, parse_frame_key, total_frame_count,
 )
+from memory_map_utils import load_memory_map, get_ff_forced_ranges
 
 CROPS_DIR = os.path.join(PROJECT_ROOT, 'crops')
 CROP_INDEX_PATH = os.path.join(CROPS_DIR, 'crop_index.json')
@@ -39,10 +40,9 @@ EXPORT_ROM_PATH = os.path.join(PROJECT_ROOT, 'hakko_fm203_reviewed.bin')
 EXPORT_FULL_PATH = os.path.join(PROJECT_ROOT, 'hakko_fm203_full_reviewed.bin')
 FRAME_MOVES_PATH = os.path.join(PROJECT_ROOT, 'frame_moves.json')
 
-# Confirmed erased flash regions — all-FF, no review needed.
-FF_FORCED_REGIONS = [
-    (0x00000, 0x03FFF),
-]
+# FF-forced regions from unified memory_map.json
+_mmap = load_memory_map(os.path.join(PROJECT_ROOT, 'memory_map.json'))
+FF_FORCED_REGIONS = get_ff_forced_ranges(_mmap)
 
 END_ADDR = 0x13FF0
 ALL_ADDRESSES = [f"{a:05X}" for a in range(0, 0x14000, 0x10)]

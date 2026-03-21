@@ -40,23 +40,8 @@ EXPECTED_CHECKSUM = 0x00D2F2FF
 # Excluded from merge even if present in extraction files.
 BLOCKLIST = set()
 
-# Confirmed erased flash regions — forced to all-FF after merge.
-# Any non-FF data here is OCR noise.
-# Start with SFR/RAM region which has no flash.
-# More regions added after first extraction analysis.
-FF_FORCED_REGIONS = [
-    # SFR ($00000-$002FF) + reserved ($00300-$003FF) + RAM ($00400-$00FFF)
-    # + unmapped ($01000-$023FF) — no ROM here, all reads as FF
-    (0x00000, 0x023FF),
-    # Data flash A ($02400-$027FF) is EXCLUDED — contains calibration data.
-    # Data flash B ($02800-$02BFF) is included — legitimately all-FF.
-    # Reserved region after data flash ($02C00-$03FFF) — no ROM here
-    (0x02800, 0x03FFF),
-    # Tail of Block 0 upper half — erased flash confirmed by FF run from $12FB0.
-    # Last non-FF data at $12FA0. Video didn't scroll past $12FF0.
-    # See SPEC.md §2.1 "Observed FF Regions and Missing Line Analysis".
-    (0x13000, 0x13FFF),
-]
+# FF_FORCED_REGIONS removed — now defined in memory_map.json and
+# applied by ff_fill.py at the end of the pipeline.
 
 
 def load_reference():
@@ -324,137 +309,7 @@ def merge_and_vote(extraction, reference, review=None, crop_fallback=None):
     return final
 
 
-def ff_fill_gaps(final_data):
-    """Fill gaps where both immediate neighbors are all-FF.
-
-    Pass 1: direct neighbor fill.
-    Cascades until no more fills are possible.
-    """
-    expected = set(range(BASE_ADDR, END_ADDR + 1, 0x10))
-    missing = sorted(expected - set(final_data.keys()))
-
-    filled = 0
-    for addr in missing:
-        prev_addr = addr - 0x10
-        next_addr = addr + 0x10
-
-        prev_is_ff = (prev_addr in final_data and
-                      all(b == 'FF' for b in final_data[prev_addr]['bytes']))
-        next_is_ff = (next_addr in final_data and
-                      all(b == 'FF' for b in final_data[next_addr]['bytes']))
-
-        if prev_is_ff and next_is_ff:
-            final_data[addr] = {
-                'bytes': ['FF'] * 16,
-                'source': 'ff-fill',
-                'confidence': 0.95,
-            }
-            filled += 1
-
-    # Cascade until no more fills
-    total_filled = filled
-    while filled > 0:
-        prev_filled = filled
-        filled = 0
-        missing = sorted(expected - set(final_data.keys()))
-        for addr in missing:
-            prev_addr = addr - 0x10
-            next_addr = addr + 0x10
-            prev_is_ff = (prev_addr in final_data and
-                          all(b == 'FF' for b in final_data[prev_addr]['bytes']))
-            next_is_ff = (next_addr in final_data and
-                          all(b == 'FF' for b in final_data[next_addr]['bytes']))
-            if prev_is_ff and next_is_ff:
-                final_data[addr] = {
-                    'bytes': ['FF'] * 16,
-                    'source': 'ff-fill',
-                    'confidence': 0.95,
-                }
-                filled += 1
-        total_filled += filled
-        if filled == prev_filled:
-            break
-
-    print(f"FF-fill (neighbor): added {total_filled} erased flash lines")
-    return total_filled
-
-
-def ff_fill_region(final_data):
-    """Extended FF-fill using region context.
-
-    A gap is filled if the nearest known line on EACH side (within 32 lines)
-    is all-FF. Handles cases where gaps break an immediate-neighbor chain
-    but the surrounding region is clearly erased flash.
-    """
-    expected = set(range(BASE_ADDR, END_ADDR + 1, 0x10))
-    missing = sorted(expected - set(final_data.keys()))
-    filled = 0
-
-    for addr in missing:
-        # Look backward for nearest known line
-        prev_ff = False
-        for offset in range(1, 33):
-            check_addr = addr - offset * 0x10
-            if check_addr < BASE_ADDR:
-                break
-            if check_addr in final_data:
-                prev_ff = all(b == 'FF' for b in final_data[check_addr]['bytes'])
-                break
-
-        # Look forward for nearest known line
-        next_ff = False
-        for offset in range(1, 33):
-            check_addr = addr + offset * 0x10
-            if check_addr > END_ADDR:
-                break
-            if check_addr in final_data:
-                next_ff = all(b == 'FF' for b in final_data[check_addr]['bytes'])
-                break
-
-        if prev_ff and next_ff:
-            final_data[addr] = {
-                'bytes': ['FF'] * 16,
-                'source': 'ff-fill-region',
-                'confidence': 0.85,
-            }
-            filled += 1
-
-    # Cascade
-    total_filled = filled
-    while filled > 0:
-        prev = filled
-        filled = 0
-        missing = sorted(expected - set(final_data.keys()))
-        for addr in missing:
-            prev_ff = False
-            for offset in range(1, 33):
-                check_addr = addr - offset * 0x10
-                if check_addr < BASE_ADDR:
-                    break
-                if check_addr in final_data:
-                    prev_ff = all(b == 'FF' for b in final_data[check_addr]['bytes'])
-                    break
-            next_ff = False
-            for offset in range(1, 33):
-                check_addr = addr + offset * 0x10
-                if check_addr > END_ADDR:
-                    break
-                if check_addr in final_data:
-                    next_ff = all(b == 'FF' for b in final_data[check_addr]['bytes'])
-                    break
-            if prev_ff and next_ff:
-                final_data[addr] = {
-                    'bytes': ['FF'] * 16,
-                    'source': 'ff-fill-region',
-                    'confidence': 0.85,
-                }
-                filled += 1
-        total_filled += filled
-        if filled == prev:
-            break
-
-    print(f"FF-fill (region): added {total_filled} erased flash lines")
-    return total_filled
+# ff_fill_gaps() and ff_fill_region() removed — now in ff_fill.py
 
 
 def write_hex_dump(final_data, output_path):
@@ -788,61 +643,9 @@ def main():
     print("\nMerging data sources...")
     final = merge_and_vote(valid_extraction, reference, review_extraction,
                            crop_fallback)
-    print(f"Merged data (before FF-fill): {len(final)} addresses")
-
-    # Pass 1: FF-fill neighbor gaps
-    print("\nApplying FF-fill (pass 1 — neighbor)...")
-    ff_fill_gaps(final)
-
-    # Post-merge OCR correction: fix mostly-FF lines with artifacts
-    ocr_fixed = 0
-    for addr, data in list(final.items()):
-        if data['source'] == 'reference':
-            continue
-        b = data['bytes']
-        ff_count = sum(1 for x in b if x == 'FF')
-        if ff_count >= 13:
-            changed = False
-            for i in range(16):
-                if b[i] in ('33', '73', '83'):
-                    b[i] = 'FF'
-                    changed = True
-                elif b[i] == 'CF':
-                    b[i] = 'FF'
-                    changed = True
-            if changed:
-                ocr_fixed += 1
-    if ocr_fixed:
-        print(f"\nPost-merge OCR correction: fixed {ocr_fixed} mostly-FF lines")
-        print("Applying FF-fill (pass 2 — cascade)...")
-        ff_fill_gaps(final)
-
-    # Pass 3: Extended FF-fill with region context
-    print("\nApplying FF-fill (pass 3 — region context)...")
-    ff_fill_region(final)
-
-    # Force confirmed erased flash regions to all-FF
-    ff_forced = 0
-    for region_start, region_end in FF_FORCED_REGIONS:
-        for addr in range(region_start, (region_end & ~0xF) + 1, 0x10):
-            if addr in final:
-                if not all(b == 'FF' for b in final[addr]['bytes']):
-                    final[addr]['bytes'] = ['FF'] * 16
-                    final[addr]['source'] = 'ff-forced'
-                    final[addr]['confidence'] = 1.0
-                    ff_forced += 1
-            else:
-                final[addr] = {
-                    'bytes': ['FF'] * 16,
-                    'source': 'ff-forced',
-                    'confidence': 1.0,
-                }
-                ff_forced += 1
-    if ff_forced:
-        regions_str = ', '.join(
-            f'0x{s:05X}-0x{e:05X}' for s, e in FF_FORCED_REGIONS)
-        print(f"\nForced {ff_forced} lines to all-FF in "
-              f"erased regions ({regions_str})")
+    print(f"Merged data: {len(final)} addresses")
+    # NOTE: FF-fill and FF-forced override now handled by ff_fill.py
+    # (runs as a separate pipeline step after this script)
 
     print(f"\nFinal data: {len(final)} addresses")
 

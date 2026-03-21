@@ -40,6 +40,10 @@ from template_matcher import (
 ADDR_MIN = 0x00000
 ADDR_MAX = 0x13FFF
 
+# Load memory map for address validation
+from memory_map_utils import load_memory_map, is_ff_forced, is_rom, is_data
+_MMAP = load_memory_map()
+
 
 class FastKNNClassifier:
     """Optimized kNN classifier for hex digit recognition.
@@ -478,6 +482,13 @@ def validate_address_sequence(addresses_with_rows):
 
         score *= (1 + consistent_count / len(addresses_with_rows))
 
+        # Penalize anchors that place most rows in ff-forced regions
+        # (SFR/RAM/reserved) — real hex data shouldn't be assigned there
+        ff_count = sum(1 for a, _, _ in sequence
+                       if is_ff_forced(_MMAP, a))
+        if ff_count > len(sequence) * 0.5:
+            score *= 0.3
+
         if score > best_score:
             best_score = score
             best_sequence = sequence
@@ -518,8 +529,11 @@ def process_frame(classifier, img):
     validated_addrs = validate_address_sequence(addr_results)
 
     # Step 3: Read hex bytes for each validated row
+    # Skip rows in ff-forced regions (noise), keep rom and data regions
     results = []
     for addr_int, row_y, addr_conf in validated_addrs:
+        if is_ff_forced(_MMAP, addr_int):
+            continue
         hex_bytes, byte_confs, avg_conf = read_hex_bytes_from_row(
             classifier, img, row_y
         )
@@ -953,6 +967,7 @@ def main():
         ('Precompute (crop index)',          os.path.join('firmware_review_tool', 'precompute.py')),
         ('Address trajectory correction',    'fix_address_trajectory.py'),
         ('Post-processing (merge/binary)',   'postprocess_firmware.py'),
+        ('FF-fill & FF-forced override',     'ff_fill.py --heuristic'),
         ('Gap context precompute',           os.path.join('firmware_review_tool', 'precompute_gaps.py')),
     ]
 
@@ -960,7 +975,8 @@ def main():
         print("\n" + "=" * 60)
         print(f"Running: {step_name} ({script})")
         print("=" * 60)
-        result = subprocess.run([sys.executable, script], cwd=cwd)
+        cmd = [sys.executable] + script.split()
+        result = subprocess.run(cmd, cwd=cwd)
         if result.returncode != 0:
             print(f"WARNING: {script} exited with code {result.returncode}")
 

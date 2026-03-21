@@ -23,8 +23,9 @@ extract_pipeline.py          Main extraction: kNN OCR + multi-frame voting
         |                      then auto-runs post-pipeline steps:
         |                      1. precompute.py              rebuild crop_index.json
         |                      2. fix_address_trajectory.py  trajectory plausibility + confusion-pair fix
-        |                      3. postprocess_firmware.py    merge, fill gaps, produce binary
-        |                      4. precompute_gaps.py         rebuild gap_context_index.json
+        |                      3. postprocess_firmware.py    merge, produce binary
+        |                      4. ff_fill.py --heuristic     FF-forced + heuristic FF-fill
+        |                      5. precompute_gaps.py         rebuild gap_context_index.json
         |
 firmware_review_tool/        Flask app for human-assisted review
 ```
@@ -34,7 +35,8 @@ firmware_review_tool/        Flask app for human-assisted review
 1. **Training** -- Tesseract reads addresses on frames showing the known reference region. Matching rows provide labeled digit samples for a kNN classifier (67-dim structural features, including 8↔6 discriminative features).
 2. **Extraction** -- Every frame is OCR'd: read 10-digit address, read 16 hex bytes. Duplicate/transitional frames are skipped.
 3. **Voting** -- Each address+byte gets multiple observations across frames. Weighted majority vote picks the best reading.
-4. **Post-processing** -- Reference data overlay, two-phase trajectory-based address correction (manual trajectory plausibility check + confusion-pair refinement for C/D, 4/9, 8/6), gap filling, binary output.
+4. **Post-processing** -- Reference data overlay, two-phase trajectory-based address correction (manual trajectory plausibility check + confusion-pair refinement for C/D, 4/9, 8/6), binary output.
+5. **FF-fill** -- Memory-map-driven FF-forced override (`memory_map.json`) and optional heuristic gap filling for erased ROM regions.
 
 ## Scripts
 
@@ -43,8 +45,12 @@ firmware_review_tool/        Flask app for human-assisted review
 | `download_video.py` | Download video and extract PNG frames |
 | `calibrate_grid.py` | Calibrate character grid geometry -> `grid_calibration.json` |
 | `template_matcher.py` | Cell extraction, feature extraction, reference data loading |
-| `extract_pipeline.py` | Full extraction pipeline with FastKNNClassifier (auto-runs precompute + gap context at end) |
-| `postprocess_firmware.py` | Merge extractions, produce firmware binary |
+| `extract_pipeline.py` | Full extraction pipeline with FastKNNClassifier; uses `memory_map.json` for address validation (auto-runs post-pipeline steps) |
+| `postprocess_firmware.py` | Merge extractions, produce firmware binary (no FF-fill/forcing — that's in `ff_fill.py`) |
+| `ff_fill.py` | FF-forced override + heuristic FF-fill, reads `memory_map.json`; `--heuristic` flag enables neighbor/region gap filling |
+| `memory_map.json` | Unified memory layout descriptor (regions, types, FF-forced overrides) |
+| `memory_map_utils.py` | Loader/query helpers for `memory_map.json` |
+| `verify_ff_transitions.py` | Audit FF↔non-FF transitions against memory map, generate report |
 | `analyze_reference.py` | Verify reference transcription against screenshot |
 | `measure_reference_geometry.py` | Measure reference screenshot geometry (row/byte positions) |
 | `fix_address_trajectory.py` | Strategy 8: two-phase address correction — Phase 1 uses manual trajectory to detect/fix gross misassignments, Phase 2 refines confusion pairs (C/D, 4/9, 8/6) |
