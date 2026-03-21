@@ -216,13 +216,26 @@ def apply_single_move(frame, from_addr, to_addr):
 
 
 def recompute_consensus_for_addr(addr):
-    """Recompute weighted majority vote for an address and update review_state."""
+    """Recompute weighted majority vote for an address and update review_state.
+
+    If no frames remain at this address, clears the data to missing.
+    """
     entry = crop_index.get(addr)
-    if not entry or not entry.get("readings"):
+    line = review_state.get("lines", {}).get(addr)
+    if not line:
         return
+
+    if not entry or not entry.get("readings"):
+        # No frames left — clear to missing
+        if line.get("source") != "user":
+            line["bytes"] = ["--"] * 16
+            line["source"] = "missing"
+            line["status"] = "unreviewed"
+            line["edited_positions"] = []
+        return
+
     consensus = weighted_majority_vote(entry["readings"], entry.get("confidences", {}))
-    if consensus and addr in review_state.get("lines", {}):
-        line = review_state["lines"][addr]
+    if consensus:
         # Only overwrite if user hasn't manually edited
         if line.get("source") != "user":
             line["bytes"] = consensus

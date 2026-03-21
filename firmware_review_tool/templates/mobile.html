@@ -96,7 +96,7 @@
         }
         #byte-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(8, 1fr);
             gap: 4px;
             margin-bottom: 8px;
         }
@@ -845,37 +845,6 @@ function showToast(msg, ms) {
     clearTimeout(el._timer);
     el._timer = setTimeout(() => { el.style.display = 'none'; }, ms || 1500);
 }
-
-// ── Swipe gestures ─────────────────────────────────────────────────────────
-let touchStartX = 0;
-let touchStartY = 0;
-let touchStartTime = 0;
-
-document.addEventListener('touchstart', (e) => {
-    // Don't capture touches on inputs or buttons
-    if (e.target.closest('input, button, a')) return;
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchStartTime = Date.now();
-}, { passive: true });
-
-document.addEventListener('touchend', (e) => {
-    if (e.target.closest('input, button, a')) return;
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    const dy = e.changedTouches[0].clientY - touchStartY;
-    const dt = Date.now() - touchStartTime;
-
-    // Must be horizontal, fast, and long enough
-    if (dt > 400) return;
-    if (Math.abs(dx) < 60) return;
-    if (Math.abs(dy) > Math.abs(dx) * 0.7) return; // too vertical
-
-    if (dx > 0) {
-        navigate(-1); // swipe right = previous
-    } else {
-        navigate(1);  // swipe left = next
-    }
-}, { passive: true });
 
 // ── Staleness ──────────────────────────────────────────────────────────────
 async function checkStaleness() {
