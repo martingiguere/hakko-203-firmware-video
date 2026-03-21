@@ -309,10 +309,17 @@
             margin-bottom: 4px;
         }
         .crop-img {
-            width: 100%;
-            height: auto;
-            image-rendering: pixelated;
+            display: none;  /* hidden — used as source for split rows */
+        }
+        .crop-split {
+            overflow: hidden;
+            margin-bottom: 2px;
+            border-radius: 3px;
+            background: #f0f0f0;
+        }
+        .crop-split img {
             display: block;
+            image-rendering: pixelated;
         }
 
         /* --- Bottom nav bar --- */
@@ -803,11 +810,42 @@ function addCropImage(container, frameNum, isVideo, fd) {
 
     wrap.appendChild(label);
 
+    // Load image, then split into two rows of 8 bytes
     const img = document.createElement('img');
     img.className = 'crop-img';
     img.src = `/api/crop/${state.currentAddr}/${frameKey}`;
     img.alt = `Frame ${frameKey}`;
     wrap.appendChild(img);
+
+    img.onload = function() {
+        // Crop coordinates (in source image pixels)
+        // Bytes 0-7: x=168..492, Bytes 8-15: x=502..826, height=28
+        const srcW = img.naturalWidth;   // 836
+        const srcH = img.naturalHeight;  // 28
+        const row1_x = 168, row2_x = 502, rowW = 324;
+        const containerW = wrap.clientWidth - 12; // available width minus padding
+
+        // Scale to fill container width
+        const scale = containerW / rowW;
+        const displayH = Math.round(srcH * scale);
+
+        for (const [rx, rowLabel] of [[row1_x, 'bytes 0-7'], [row2_x, 'bytes 8-15']]) {
+            const div = document.createElement('div');
+            div.className = 'crop-split';
+            div.style.width = containerW + 'px';
+            div.style.height = displayH + 'px';
+
+            const rowImg = document.createElement('img');
+            rowImg.src = img.src;
+            rowImg.style.width = Math.round(srcW * scale) + 'px';
+            rowImg.style.height = displayH + 'px';
+            rowImg.style.marginLeft = -Math.round(rx * scale) + 'px';
+            rowImg.style.imageRendering = 'pixelated';
+
+            div.appendChild(rowImg);
+            wrap.appendChild(div);
+        }
+    };
 
     container.appendChild(wrap);
 }
