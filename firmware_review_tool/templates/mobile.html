@@ -731,9 +731,90 @@ function hexKeyCancel() {
 function closeHexKeypad() {
     keypadIdx = -1;
     keypadBuf = '';
+    addrKeypadInput = null;
+    addrKeypadFrameKey = null;
     document.getElementById('hex-keypad').style.display = 'none';
     document.querySelectorAll('.byte-cell').forEach(c => c.classList.remove('byte-cell-active'));
 }
+
+// ── Address keypad mode (reuses hex keypad for move-frame address input) ───
+let addrKeypadInput = null;
+let addrKeypadFrameKey = null;
+
+function openAddrKeypad(inputEl, frameKey) {
+    // Switch keypad to address mode
+    closeHexKeypad();
+    addrKeypadInput = inputEl;
+    addrKeypadFrameKey = frameKey;
+    keypadIdx = -1;  // not in byte-edit mode
+
+    inputEl.style.borderColor = '#1e88e5';
+    document.getElementById('hex-keypad-info').textContent = 'Move to address: ' + (inputEl.value || '-----');
+    document.getElementById('hex-keypad').style.display = 'block';
+    inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function closeAddrKeypad() {
+    if (addrKeypadInput) {
+        addrKeypadInput.style.borderColor = '#aaa';
+    }
+    addrKeypadInput = null;
+    addrKeypadFrameKey = null;
+    document.getElementById('hex-keypad').style.display = 'none';
+}
+
+// Override hex key functions to handle address mode
+const _origHexKey = hexKey;
+hexKey = function(ch) {
+    if (addrKeypadInput) {
+        if (addrKeypadInput.value.length >= 5) addrKeypadInput.value = '';
+        addrKeypadInput.value += ch;
+        document.getElementById('hex-keypad-info').textContent = 'Move to address: ' + addrKeypadInput.value;
+        return;
+    }
+    _origHexKey(ch);
+};
+
+const _origHexKeyBackspace = hexKeyBackspace;
+hexKeyBackspace = function() {
+    if (addrKeypadInput) {
+        addrKeypadInput.value = addrKeypadInput.value.slice(0, -1);
+        document.getElementById('hex-keypad-info').textContent = 'Move to address: ' + (addrKeypadInput.value || '-----');
+        return;
+    }
+    _origHexKeyBackspace();
+};
+
+const _origHexKeyDone = hexKeyDone;
+hexKeyDone = function() {
+    if (addrKeypadInput && addrKeypadFrameKey) {
+        const addr = addrKeypadInput.value;
+        const frameKey = addrKeypadFrameKey;
+        closeAddrKeypad();
+        doSingleMove(frameKey, addr);
+        return;
+    }
+    _origHexKeyDone();
+};
+
+const _origHexKeyCancel = hexKeyCancel;
+hexKeyCancel = function() {
+    if (addrKeypadInput) {
+        closeAddrKeypad();
+        return;
+    }
+    _origHexKeyCancel();
+};
+
+const _origHexKeyNext = hexKeyNext;
+hexKeyNext = function() {
+    if (addrKeypadInput) {
+        // Next acts same as Done in address mode
+        hexKeyDone();
+        return;
+    }
+    _origHexKeyNext();
+};
 
 async function commitBytes() {
     const cells = document.querySelectorAll('.byte-cell');
@@ -884,9 +965,8 @@ async function showMoveInput(wrapper, frameKey) {
     addrInput.type = 'text';
     addrInput.placeholder = 'Dest addr';
     addrInput.maxLength = 5;
-    addrInput.autocapitalize = 'characters';
-    addrInput.autocomplete = 'off';
-    addrInput.spellcheck = false;
+    addrInput.readOnly = true;  // use hex keypad instead of system keyboard
+    addrInput.className = 'move-addr-input';
 
     // Fetch suggested address
     try {
@@ -899,16 +979,15 @@ async function showMoveInput(wrapper, frameKey) {
     const goBtn = document.createElement('button');
     goBtn.className = 'move-btn move-go';
     goBtn.textContent = 'Go';
-    goBtn.onclick = () => doSingleMove(frameKey, addrInput.value);
+    goBtn.onclick = () => { closeAddrKeypad(); doSingleMove(frameKey, addrInput.value); };
 
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'move-btn move-cancel';
     cancelBtn.textContent = 'X';
-    cancelBtn.onclick = () => row.remove();
+    cancelBtn.onclick = () => { closeAddrKeypad(); row.remove(); };
 
-    addrInput.onkeydown = (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); doSingleMove(frameKey, addrInput.value); }
-    };
+    // Open hex keypad for address on tap
+    addrInput.addEventListener('click', () => openAddrKeypad(addrInput, frameKey));
 
     row.appendChild(addrInput);
     row.appendChild(goBtn);
@@ -917,6 +996,9 @@ async function showMoveInput(wrapper, frameKey) {
     // Insert after the label
     const label = wrapper.querySelector('.crop-label');
     label.after(row);
+
+    // Auto-open hex keypad for the address input
+    openAddrKeypad(addrInput, frameKey);
     addrInput.focus();
 }
 
@@ -970,6 +1052,10 @@ function jumpToAddr(raw) {
 
 // ── Status actions ─────────────────────────────────────────────────────────
 async function acceptLine() {
+    // Find next unreviewed/flagged address BEFORE rebuilding the list
+    // (after accept, current addr moves to tier 5 and navigate would skip ahead)
+    const nextAddr = findNextPriorityAddr();
+
     await api('POST', `/api/line/${state.currentAddr}`, {
         bytes: state.lineData.bytes,
         status: 'accepted'
@@ -977,10 +1063,33 @@ async function acceptLine() {
     state.dirty = true;
     showToast('Accepted');
     await refreshStats();
-    navigate(1);
+
+    if (nextAddr) {
+        loadLine(nextAddr);
+    } else {
+        navigate(1);
+    }
+}
+
+function findNextPriorityAddr() {
+    // Find the next address in the current list that isn't accepted/edited
+    const list = state.addressList;
+    const idx = list.indexOf(state.currentAddr);
+    for (let i = 1; i < list.length; i++) {
+        const next = (idx + i) % list.length;
+        const addr = list[next];
+        if (addr === state.currentAddr) continue;
+        // Check if this address is still in a priority tier (not accepted)
+        const entry = state.minimapData.find(e => e.address === addr);
+        if (entry && entry.tier !== 'accepted' && entry.tier !== 'edited') {
+            return addr;
+        }
+    }
+    return null;
 }
 
 async function flagLine() {
+    const nextAddr = findNextPriorityAddr();
     await api('POST', `/api/line/${state.currentAddr}`, {
         bytes: state.lineData.bytes,
         status: 'flagged'
@@ -988,7 +1097,11 @@ async function flagLine() {
     state.dirty = true;
     showToast('Flagged');
     await refreshStats();
-    navigate(1);
+    if (nextAddr) {
+        loadLine(nextAddr);
+    } else {
+        navigate(1);
+    }
 }
 
 async function resetLine() {
