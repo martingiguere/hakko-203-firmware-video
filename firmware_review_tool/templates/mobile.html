@@ -221,6 +221,28 @@
         }
         .crop-move-btn:active { background: #bbdefb; }
 
+        /* --- Staleness banner --- */
+        #stale-banner {
+            display: none;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #856404;
+        }
+        #stale-banner button {
+            margin-left: 8px;
+            padding: 4px 12px;
+            font-size: 13px;
+            font-family: inherit;
+            border: 1px solid #856404;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+        }
+
         /* --- Crops --- */
         #crops-section {
             margin-top: 8px;
@@ -330,6 +352,13 @@
 
 <!-- Main scrollable content -->
 <div id="main">
+
+    <!-- Staleness banner -->
+    <div id="stale-banner">
+        Pipeline was re-run. Some data may have changed.
+        <button onclick="refreshFromMerged()">Refresh</button>
+        <button onclick="this.parentElement.style.display='none'">Dismiss</button>
+    </div>
 
     <!-- Stats row -->
     <div id="stats-row">Loading...</div>
@@ -848,8 +877,27 @@ document.addEventListener('touchend', (e) => {
     }
 }, { passive: true });
 
+// ── Staleness ──────────────────────────────────────────────────────────────
+async function checkStaleness() {
+    try {
+        const data = await api('GET', '/api/staleness');
+        if (data.stale) {
+            document.getElementById('stale-banner').style.display = 'block';
+        }
+    } catch(e) {}
+}
+
+async function refreshFromMerged() {
+    const result = await api('POST', '/api/refresh_from_merged');
+    document.getElementById('stale-banner').style.display = 'none';
+    showToast(`Refreshed ${result.updated} lines`);
+    loadLine(state.currentAddr);
+    refreshStats();
+}
+
 // ── Start ──────────────────────────────────────────────────────────────────
 init();
+checkStaleness();
 </script>
 </body>
 </html>

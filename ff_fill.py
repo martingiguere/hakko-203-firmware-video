@@ -269,6 +269,7 @@ def fix_mostly_ff_artifacts(final_data):
                     b[i] = 'FF'
                     changed = True
             if changed:
+                data['source'] = 'ff-corrected'
                 fixed += 1
     if fixed:
         print(f"OCR artifact cleanup: fixed {fixed} mostly-FF lines")

@@ -235,14 +235,14 @@ Manually confirmed video scroll structure, now stored in `manual_trajectory.py` 
      - **(c) 5↔8 discriminative features**: Add features like top-right openness (`5` is open, `8` is closed) and bottom-left curvature, similar to Strategy 2's 8↔6 features. Requires retrain.
      - **(d) Claude vision audit**: Use Claude Code's built-in vision (no API cost) to read crops at all 408 positions where `08` won over `05`. Quantifies exact error count before fixing.
      - **(e) Audit classes `3` and `D`**: Spot-check addresses with `03`/`0D` bytes via vision to check for similar imbalance-driven confusions.
-7. **TODO**: Fix pipeline data flow and consistency issues — multiple scripts process the same data independently and can silently disagree. Discovered 2026-03-21 via code audit.
-   - **(a) Independent address assignment**: `extract_pipeline.py` and `precompute.py` both run `validate_address_sequence()` independently on the same frames and can produce different address assignments. Example: $040E0 has 6 observations in `extracted_firmware.txt` but no entry in `crop_index.json`. Fix: have `extract_pipeline.py` record its per-frame address assignments and have `precompute.py` reuse them.
-   - **(b) Early-exit drift in `fix_address_trajectory.py`**: Phase 1 saves modified `crop_index.json` immediately, but `extracted_firmware.txt` isn't updated until `rebuild_downstream()` runs after both phases complete. If the script exits early (error, `--phase1-only`), the two files disagree.
-   - **(c) `fullvideo_gap_recovery.py` doesn't log to `frame_moves.json`**: Updates both `crop_index.json` and `extracted_firmware.txt`, but never writes to `frame_moves.json`. On a pipeline re-run, `precompute.py` rebuilds crop_index fresh and replays frame_moves — but gap recovery additions aren't in frame_moves, so they're lost.
-   - **(d) Stale review_state reset in `fix_address_trajectory.py`**: Reads the OLD `firmware_merged.txt` (from before trajectory correction) to reset affected addresses in `review_state.json`. Then `postprocess_firmware.py` runs afterward and generates a NEW `firmware_merged.txt`. Review state and merged file disagree.
-   - **(e) Silent frame_moves replay failure in `precompute.py`**: `apply_frame_moves()` skips moves where the source address doesn't exist in the fresh crop_index (the frame was re-indexed elsewhere). Manual corrections are silently lost with no warning.
-   - **(f) `fix_mostly_ff_artifacts()` in `ff_fill.py` doesn't update source metadata**: Changes bytes (CF→FF, 33→FF) but leaves source as `extraction` instead of marking as corrected. Minor — source attribution is inaccurate but data is correct.
-   - **(g) `review_state.json` not re-initialized on pipeline re-run**: User edits persist across pipeline re-runs. The app loads the old review_state (with user edits) but `firmware_merged.txt` has been regenerated. The tool shows stale edited values while binary exports use the new merged data.
+7. ~~Fix pipeline data flow and consistency issues~~ — DONE (2026-03-21). Introduced `frame_assignments.json` as single source of truth for frame-to-address assignments, plus 6 related fixes.
+   - **(a)** ~~Independent address assignment~~ — DONE. `extract_pipeline.py` saves `frame_assignments.json`; `precompute.py` loads it instead of re-running `validate_address_sequence()` (falls back to independent validation if file missing).
+   - **(b)** ~~Early-exit drift~~ — DONE. `fix_address_trajectory.py` defers all file saves until both phases complete (atomic writes). Also updates `frame_assignments.json`.
+   - **(c)** ~~Gap recovery not logged~~ — DONE. `fullvideo_gap_recovery.py` now logs to `frame_moves.json` (strategy: `gap_recovery`) and appends to `frame_assignments.json`.
+   - **(d)** ~~Stale review_state reset~~ — DONE. `reset_review_state()` simplified to only clear status to `unreviewed` without touching byte data. Byte updates happen via staleness detection (fix g).
+   - **(e)** ~~Silent frame_moves failure~~ — DONE. `apply_frame_moves()` prints warnings for skipped moves instead of failing silently.
+   - **(f)** ~~Source metadata~~ — DONE. `fix_mostly_ff_artifacts()` now sets `source: 'ff-corrected'`.
+   - **(g)** ~~Stale review_state~~ — DONE. Flask app compares mtimes on startup, shows yellow banner in desktop and mobile UI. `/api/refresh_from_merged` reloads non-edited lines.
 
 ### Fixed Interrupt Vector Table (`$0FFDC`–`$0FFFF`)
 

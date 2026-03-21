@@ -499,7 +499,7 @@ def validate_address_sequence(addresses_with_rows):
 def process_frame(classifier, img):
     """Process a single frame: read all addresses and hex data.
 
-    Returns list of (addr_int, hex_bytes, byte_confidences, addr_conf).
+    Returns list of (addr_int, row_y, hex_bytes, byte_confidences, addr_conf).
     """
     y_first = CAL['first_row_center_y']
     row_h = CAL['row_height']
@@ -540,7 +540,7 @@ def process_frame(classifier, img):
         # Must be 16-byte aligned and in valid range
         if (ADDR_MIN <= addr_int <= ADDR_MAX - 0x0F and
                 addr_int % 0x10 == 0):
-            results.append((addr_int, hex_bytes, byte_confs, addr_conf))
+            results.append((addr_int, row_y, hex_bytes, byte_confs, addr_conf))
 
     return results
 
@@ -683,6 +683,8 @@ def run_extraction(classifier, frame_dir='frames',
 
     # Storage: addr_int -> list of observations
     all_observations = defaultdict(list)
+    # Per-frame address assignments (shared with precompute.py)
+    frame_assignments = {}
 
     prev_img = None
     processed = 0
@@ -722,13 +724,19 @@ def run_extraction(classifier, frame_dir='frames',
         # Process this frame
         results = process_frame(classifier, img)
 
-        for addr_int, hex_bytes, byte_confs, addr_conf in results:
+        assignments = []
+        for addr_int, row_y, hex_bytes, byte_confs, addr_conf in results:
             all_observations[addr_int].append({
                 'bytes': hex_bytes,
                 'byte_confs': byte_confs,
                 'addr_conf': addr_conf,
                 'frame': frame_name,
             })
+            assignments.append({
+                'addr': addr_int, 'row_y': float(row_y), 'conf': float(addr_conf)
+            })
+        if assignments:
+            frame_assignments[frame_name] = assignments
 
         frame_idx += 1
 
@@ -813,6 +821,13 @@ def run_extraction(classifier, frame_dir='frames',
                 f.write(f"{addr_str}: {hex_str}  [{obs_count} obs]\n")
 
     print(f"\nOutput written to {output_path}")
+
+    # Save frame assignments for precompute.py consistency
+    assignments_path = 'frame_assignments.json'
+    with open(assignments_path, 'w') as f:
+        json.dump(frame_assignments, f)
+    print(f"Frame assignments saved to {assignments_path} "
+          f"({len(frame_assignments)} frames)")
 
     # Coverage stats
     expected_addrs = set(range(ADDR_MIN, ADDR_MAX + 1, 0x10))
@@ -930,6 +945,31 @@ def main():
         else:
             print("  No additional samples from Pass 2")
 
+        # === Pass 3: Augment with review-tool-confirmed samples ===
+        review_samples_path = 'review_training_samples.npz'
+        if os.path.exists(review_samples_path):
+            print(f"\n=== Pass 3: Loading review-confirmed training samples ===")
+            review_data = np.load(review_samples_path, allow_pickle=True)
+            review_added = 0
+            for char in review_data.files:
+                cells = list(review_data[char])
+                samples[char].extend(cells)
+                review_added += len(cells)
+                print(f"  '{char}': +{len(cells)} cells")
+            print(f"  Total review cells added: {review_added}")
+
+            if review_added > 0:
+                print(f"\nFinal combined training samples:")
+                total_final = 0
+                for c in sorted(samples):
+                    print(f"  '{c}': {len(samples[c])}")
+                    total_final += len(samples[c])
+                print(f"  Total: {total_final}")
+
+                # Rebuild classifier with all data
+                classifier = FastKNNClassifier()
+                classifier.build_from_samples(samples, max_per_class=800)
+
         classifier.save(classifier_path)
 
     # Quick validation on a reference frame
@@ -942,7 +982,7 @@ def main():
             results = process_frame(classifier, test_img)
             correct_bytes = 0
             total_bytes = 0
-            for addr_int, hex_bytes, byte_confs, addr_conf in results:
+            for addr_int, row_y, hex_bytes, byte_confs, addr_conf in results:
                 if addr_int in ref_data:
                     expected = ref_data[addr_int]
                     for i in range(min(16, len(hex_bytes))):

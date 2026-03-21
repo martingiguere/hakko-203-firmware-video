@@ -417,9 +417,39 @@
             pointer-events: none;
         }
         #toast.show { opacity: 1; }
+        #stale-banner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #fff3cd;
+            border-bottom: 2px solid #ffc107;
+            padding: 8px 16px;
+            font-size: 13px;
+            color: #856404;
+            z-index: 200;
+            text-align: center;
+        }
+        #stale-banner button {
+            margin-left: 8px;
+            padding: 2px 10px;
+            font-size: 12px;
+            border: 1px solid #856404;
+            border-radius: 3px;
+            background: #fff;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+
+<!-- Staleness banner -->
+<div id="stale-banner">
+    Pipeline was re-run since last review. Some data may have changed.
+    <button onclick="refreshFromMerged()">Refresh from merged</button>
+    <button onclick="this.parentElement.style.display='none'">Dismiss</button>
+</div>
 
 <!-- Stats Bar -->
 <div id="stats-bar">
@@ -1708,9 +1738,33 @@ function scrollToCrop(n) {
 }
 
 // =========================================================================
+// Staleness Detection
+// =========================================================================
+async function checkStaleness() {
+    try {
+        const data = await api("GET", "/api/staleness");
+        if (data.stale) {
+            document.getElementById("stale-banner").style.display = "block";
+            document.body.style.paddingTop = "36px";
+        }
+    } catch(e) {}
+}
+
+async function refreshFromMerged() {
+    const result = await api("POST", "/api/refresh_from_merged");
+    document.getElementById("stale-banner").style.display = "none";
+    document.body.style.paddingTop = "0";
+    showToast(`Refreshed ${result.updated} lines from merged data`);
+    loadLine(state.currentAddr);
+    refreshStats();
+    renderMinimap();
+}
+
+// =========================================================================
 // Start
 // =========================================================================
 init();
+checkStaleness();
 </script>
 
 </body>

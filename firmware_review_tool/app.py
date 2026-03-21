@@ -303,8 +303,17 @@ def load_review_state():
                     "source": "missing",
                     "edited_positions": [],
                 }
+        # Detect staleness: firmware_merged.txt newer than review_state.json
+        merged_mtime = os.path.getmtime(MERGED_PATH) if os.path.exists(MERGED_PATH) else 0
+        review_mtime = os.path.getmtime(REVIEW_STATE_PATH)
+        if merged_mtime > review_mtime:
+            app.config['STALE_WARNING'] = True
+            print("WARNING: firmware_merged.txt is newer than review_state.json — data may be stale")
+        else:
+            app.config['STALE_WARNING'] = False
     else:
         init_state_from_merged()
+        app.config['STALE_WARNING'] = False
 
 
 def normalize_addr(addr):
@@ -626,6 +635,29 @@ def get_stats():
     stats["checksum_match"] = checksum == CHECKSUM_TARGET
     stats["dirty"] = dirty
     return jsonify(stats)
+
+
+@app.route('/api/staleness')
+def get_staleness():
+    return jsonify({"stale": app.config.get('STALE_WARNING', False)})
+
+
+@app.route('/api/refresh_from_merged', methods=['POST'])
+def refresh_from_merged():
+    """Reload non-edited lines from current firmware_merged.txt."""
+    global minimap_cache
+    merged = parse_merged_file()
+    updated = 0
+    lines = review_state.get('lines', {})
+    for addr, bytes_list in merged.items():
+        line = lines.get(addr)
+        if line and line['status'] not in ('edited', 'accepted'):
+            line['bytes'] = bytes_list
+            line['source'] = 'merged'
+            updated += 1
+    app.config['STALE_WARNING'] = False
+    minimap_cache = None
+    return jsonify({"ok": True, "updated": updated})
 
 
 @app.route('/api/line/<addr>', methods=['POST'])

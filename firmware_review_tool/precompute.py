@@ -40,6 +40,7 @@ CROPS_DIR = os.path.join(PROJECT_ROOT, 'crops')
 CROP_INDEX_PATH = os.path.join(CROPS_DIR, 'crop_index.json')
 KNN_MODEL_PATH = os.path.join(PROJECT_ROOT, 'fast_knn_classifier.npz')
 FRAME_MOVES_PATH = os.path.join(PROJECT_ROOT, 'frame_moves.json')
+FRAME_ASSIGNMENTS_PATH = os.path.join(PROJECT_ROOT, 'frame_assignments.json')
 
 TOTAL_FRAMES = len([f for f in os.listdir(os.path.join(PROJECT_ROOT, 'frames'))
                      if f.endswith('.png')]) if os.path.isdir(os.path.join(PROJECT_ROOT, 'frames')) else 0
@@ -65,6 +66,16 @@ REF_CROP_X2 = 760
 REF_CROP_HALF_H = 12
 
 
+def load_frame_assignments():
+    """Load shared frame assignments from extract_pipeline, if available."""
+    if os.path.exists(FRAME_ASSIGNMENTS_PATH):
+        with open(FRAME_ASSIGNMENTS_PATH) as f:
+            data = json.load(f)
+        print(f"Loaded frame assignments: {len(data)} frames")
+        return data
+    return None
+
+
 def precompute():
     print("=== Firmware Review Tool: Precompute ===")
     print()
@@ -80,6 +91,14 @@ def precompute():
     num_rows = CAL['visible_rows']
     addr_x = ADDR_X_START
 
+    # Load shared frame assignments (from extract_pipeline.py)
+    shared_assignments = load_frame_assignments()
+    use_shared = shared_assignments is not None
+    if use_shared:
+        print("Using shared frame assignments (consistent with extraction)")
+    else:
+        print("WARNING: No frame_assignments.json — falling back to independent address validation")
+
     # Prepare output directory
     os.makedirs(CROPS_DIR, exist_ok=True)
 
@@ -92,7 +111,8 @@ def precompute():
     start_time = time.time()
 
     for frame_num in range(TOTAL_FRAMES):
-        frame_path = os.path.join(FRAMES_DIR, f'frame_{frame_num:05d}.png')
+        frame_name = f'frame_{frame_num:05d}.png'
+        frame_path = os.path.join(FRAMES_DIR, frame_name)
         if not os.path.exists(frame_path):
             continue
 
@@ -109,30 +129,41 @@ def precompute():
         prev_img = img
         processed += 1
 
-        # Read addresses from all visible rows (+ extra above)
-        addr_results = []
-        for row_idx in range(-EXTRA_ROWS_ABOVE, num_rows):
-            row_y = y_first + row_idx * row_h
-            if row_y < 0 or row_y >= img.shape[0]:
-                continue
-            addr_str, addr_conf = read_address_from_row(classifier, img, row_y, addr_x)
-            try:
-                addr_int = int(addr_str, 16)
-                addr_results.append((addr_int, row_y, addr_conf))
-            except ValueError:
-                continue
+        # Get validated address assignments
+        if use_shared and frame_name in shared_assignments:
+            # Use pre-computed assignments from extract_pipeline
+            validated_rows = []
+            for a in shared_assignments[frame_name]:
+                addr_int = a['addr']
+                row_y = a['row_y']
+                conf = a['conf']
+                if BASE_ADDR <= addr_int <= END_ADDR and addr_int % 0x10 == 0:
+                    validated_rows.append((addr_int, row_y, conf))
+        else:
+            # Fallback: independent address validation (legacy behavior)
+            addr_results = []
+            for row_idx in range(-EXTRA_ROWS_ABOVE, num_rows):
+                row_y = y_first + row_idx * row_h
+                if row_y < 0 or row_y >= img.shape[0]:
+                    continue
+                addr_str, addr_conf = read_address_from_row(classifier, img, row_y, addr_x)
+                try:
+                    addr_int = int(addr_str, 16)
+                    addr_results.append((addr_int, row_y, addr_conf))
+                except ValueError:
+                    continue
+            validated_full = validate_address_sequence(addr_results)
+            validated_rows = []
+            for (raw_addr, _, _), (addr_int, row_y, conf) in zip(addr_results, validated_full):
+                if abs(raw_addr - addr_int) > MAX_ADDR_DIFF:
+                    continue
+                if addr_int < BASE_ADDR or addr_int > END_ADDR:
+                    continue
+                if addr_int % 0x10 != 0:
+                    continue
+                validated_rows.append((addr_int, row_y, conf))
 
-        # Validate and correct address sequence
-        validated = validate_address_sequence(addr_results)
-
-        for (raw_addr, _, _), (addr_int, row_y, conf) in zip(addr_results, validated):
-            # Skip rows where raw OCR read is wildly different from validated address
-            if abs(raw_addr - addr_int) > MAX_ADDR_DIFF:
-                continue
-            if addr_int < BASE_ADDR or addr_int > END_ADDR:
-                continue
-            if addr_int % 0x10 != 0:
-                continue
+        for addr_int, row_y, conf in validated_rows:
 
             addr_upper = f"{addr_int:05X}"
             addr_lower = addr_upper.lower()
@@ -221,6 +252,7 @@ def apply_frame_moves(crop_index):
         data = json.load(f)
     moves = data.get("moves", [])
     applied = 0
+    skipped = 0
     for move in moves:
         frame = move["frame"]
         from_addr = move["from_addr"]
@@ -239,9 +271,13 @@ def apply_frame_moves(crop_index):
             arr_key = 'frames'
 
         if from_addr not in crop_index:
+            print(f"  WARNING: frame_move skipped — {from_addr} not in crop_index (frame {frame})")
+            skipped += 1
             continue
         src = crop_index[from_addr]
         if frame_int not in src.get(arr_key, []):
+            print(f"  WARNING: frame_move skipped — frame {frame} not at {from_addr}")
+            skipped += 1
             continue
         # Move readings + confidences
         dst = crop_index.setdefault(to_addr, {"frames": [], "video_frames": [], "readings": {}, "confidences": {}})
@@ -269,6 +305,8 @@ def apply_frame_moves(crop_index):
             if os.path.isdir(src_dir_path) and not os.listdir(src_dir_path):
                 os.rmdir(src_dir_path)
         applied += 1
+    if skipped:
+        print(f"  Frame moves: applied {applied}, skipped {skipped}")
     return applied
 
 

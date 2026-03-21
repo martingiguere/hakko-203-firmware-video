@@ -634,7 +634,12 @@ def rebuild_downstream():
 # ── Step 8: Reset review state ───────────────────────────────────────────────
 
 def reset_review_state(affected_src, affected_dst):
-    """Reset review status for all affected addresses."""
+    """Reset review status for affected addresses.
+
+    Only clears the status to 'unreviewed' — does NOT update byte data.
+    Byte data gets updated when postprocess regenerates firmware_merged.txt
+    and the app detects staleness on next startup.
+    """
     if not os.path.exists(REVIEW_STATE_PATH):
         print("  review_state.json not found -- skipping")
         return
@@ -646,40 +651,13 @@ def reset_review_state(affected_src, affected_dst):
         print("  review_state.json has no 'lines' -- skipping")
         return
 
-    merged_bytes = {}
-    if os.path.exists(MERGED_FW_PATH):
-        with open(MERGED_FW_PATH) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith('#') or not line:
-                    continue
-                parts = line.split(':')
-                if len(parts) >= 2:
-                    addr_str = parts[0].strip().upper()
-                    rest = parts[1].strip()
-                    rest = re.sub(r'\[.*?\]', '', rest).strip()
-                    hex_bytes = rest.split()
-                    if len(hex_bytes) == 16:
-                        merged_bytes[addr_str] = hex_bytes
-
     all_affected = affected_src | affected_dst
     reset_count = 0
 
     for addr_key in sorted(all_affected):
         if addr_key in state['lines']:
-            if addr_key in merged_bytes:
-                state['lines'][addr_key]['bytes'] = merged_bytes[addr_key]
-                state['lines'][addr_key]['source'] = 'merged'
             state['lines'][addr_key]['status'] = 'unreviewed'
             state['lines'][addr_key]['edited_positions'] = []
-            reset_count += 1
-        elif addr_key in merged_bytes:
-            state['lines'][addr_key] = {
-                'status': 'unreviewed',
-                'bytes': merged_bytes[addr_key],
-                'source': 'merged',
-                'edited_positions': [],
-            }
             reset_count += 1
 
     with open(REVIEW_STATE_PATH, 'w', encoding='utf-8') as f:
@@ -993,13 +971,11 @@ def main():
                 summarize_moves(phase1_moves)
 
                 if not args.dry_run:
-                    print("\nStep 1.3: Execute Phase 1 moves")
+                    print("\nStep 1.3: Execute Phase 1 moves (in memory)")
                     src, dst = execute_moves(crop_index, phase1_moves)
-                    log_frame_moves(phase1_moves,
-                                     strategy="manual_trajectory")
                     all_affected_src |= src
                     all_affected_dst |= dst
-                    save_crop_index(crop_index)
+                    # Defer save_crop_index and log_frame_moves until both phases complete
 
                 all_moves.extend(phase1_moves)
         else:
@@ -1011,9 +987,8 @@ def main():
         print("Phase 2: Confusion-Pair Refinement")
         print("─" * 60)
 
-        # Reload crop_index if Phase 1 modified it
-        if all_moves and not args.dry_run:
-            crop_index = load_crop_index()
+        # Phase 1 may have modified crop_index in memory — use it directly
+        # (no reload from disk needed since we deferred saves)
 
         print("\nStep 2.1: Build anchor trajectories")
         anchors_extracted = build_anchor_trajectory(crop_index,
@@ -1065,12 +1040,11 @@ def main():
             summarize_moves(phase2_moves)
 
             if not args.dry_run:
-                print("\nStep 2.4: Execute Phase 2 moves")
+                print("\nStep 2.4: Execute Phase 2 moves (in memory)")
                 src, dst = execute_moves(crop_index, phase2_moves)
-                log_frame_moves(phase2_moves)
                 all_affected_src |= src
                 all_affected_dst |= dst
-                save_crop_index(crop_index)
+                # Defer save_crop_index and log_frame_moves until finalize
 
             all_moves.extend(phase2_moves)
 
@@ -1085,6 +1059,32 @@ def main():
     if args.dry_run:
         print("\n  [DRY RUN] No files modified.")
         return
+
+    # Atomic save: all file writes happen together after both phases complete
+    print("\nStep 4: Save all changes")
+    save_crop_index(crop_index)
+    log_frame_moves(all_moves, strategy="trajectory_correction")
+
+    # Update frame_assignments.json if it exists
+    assignments_path = os.path.join(PROJECT_ROOT, 'frame_assignments.json')
+    if os.path.exists(assignments_path):
+        import json as _json
+        with open(assignments_path) as f:
+            frame_assignments = _json.load(f)
+        # Update assignments for moved frames
+        for src_addr, frame_key, dst_addr in all_moves:
+            # Find frame_name from frame_key
+            frame_int, is_video = parse_frame_key(str(frame_key))
+            if is_video:
+                continue  # video frames not in frame_assignments
+            frame_name = f"frame_{frame_int:05d}.png"
+            if frame_name in frame_assignments:
+                for a in frame_assignments[frame_name]:
+                    if f"{a['addr']:05X}" == src_addr:
+                        a['addr'] = int(dst_addr, 16)
+        with open(assignments_path, 'w') as f:
+            _json.dump(frame_assignments, f)
+        print(f"  Updated {assignments_path}")
 
     # Recompute consensus
     print("\nStep 5: Recompute byte consensus")

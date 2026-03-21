@@ -40,6 +40,8 @@ CROPS_DIR = os.path.join(PROJECT_ROOT, 'crops')
 VIDEO_PATH = os.path.join(PROJECT_ROOT, 'full_video.mp4')
 CLASSIFIER_PATH = os.path.join(PROJECT_ROOT, 'fast_knn_classifier.npz')
 VENV_PYTHON = os.path.join(PROJECT_ROOT, 'venv', 'bin', 'python3')
+FRAME_MOVES_PATH = os.path.join(PROJECT_ROOT, 'frame_moves.json')
+FRAME_ASSIGNMENTS_PATH = os.path.join(PROJECT_ROOT, 'frame_assignments.json')
 
 # Frame mapping: video_frame = extracted_frame + 24629
 EXTRACTED_TO_VIDEO_OFFSET = 24629
@@ -60,6 +62,60 @@ def save_crop_index(crop_index):
         json.dump(crop_index, f, indent=2)
     os.replace(tmp_path, CROP_INDEX_PATH)
     print(f"  Saved {CROP_INDEX_PATH}")
+
+
+def log_gap_recovery(recovered_addrs):
+    """Log recovered addresses to frame_moves.json for precompute replay."""
+    import datetime
+    data = {"moves": []}
+    if os.path.exists(FRAME_MOVES_PATH):
+        with open(FRAME_MOVES_PATH) as f:
+            data = json.load(f)
+
+    timestamp = datetime.datetime.now().isoformat()
+    for addr_hex, video_frames in recovered_addrs.items():
+        for vf in video_frames:
+            data["moves"].append({
+                "frame": f"v{vf}",
+                "from_addr": "__gap__",
+                "to_addr": addr_hex,
+                "strategy": "gap_recovery",
+                "timestamp": timestamp,
+            })
+
+    with open(FRAME_MOVES_PATH, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2)
+    total_new = sum(len(vfs) for vfs in recovered_addrs.values())
+    print(f"  Logged {total_new} gap recovery entries to {FRAME_MOVES_PATH}")
+
+
+def update_frame_assignments(recovered_addrs, crop_index):
+    """Append video frame assignments to frame_assignments.json."""
+    if not os.path.exists(FRAME_ASSIGNMENTS_PATH):
+        return
+    with open(FRAME_ASSIGNMENTS_PATH) as f:
+        assignments = json.load(f)
+
+    added = 0
+    for addr_hex, video_frames in recovered_addrs.items():
+        addr_int = int(addr_hex, 16)
+        entry = crop_index.get(addr_hex, {})
+        for vf in video_frames:
+            vf_key = f"v{vf}"
+            # Video frames use 'v'-prefixed keys in assignments
+            if vf_key not in assignments:
+                assignments[vf_key] = []
+            # Get row_y from crop_index if available
+            conf_list = entry.get('confidences', {}).get(vf_key, [])
+            avg_conf = sum(conf_list) / len(conf_list) if conf_list else 0.5
+            assignments[vf_key].append({
+                'addr': addr_int, 'row_y': 0, 'conf': avg_conf
+            })
+            added += 1
+
+    with open(FRAME_ASSIGNMENTS_PATH, 'w') as f:
+        json.dump(assignments, f)
+    print(f"  Appended {added} video frame assignments to {FRAME_ASSIGNMENTS_PATH}")
 
 
 def find_missing_addresses():
@@ -247,17 +303,14 @@ def scan_video_windows(windows, missing_set, classifier):
             # Process frame
             results = process_frame(classifier, gray)
 
-            for addr_int, hex_bytes, byte_confs, addr_conf in results:
+            for addr_int, row_y, hex_bytes, byte_confs, addr_conf in results:
                 if addr_int in missing_set:
-                    # Find row_y for this address (need it for crop)
-                    # Re-derive from results - process_frame returns addr_int from validated rows
-                    # We need row_y; get it by re-scanning addresses
-                    # Actually, we need to save the gray image for cropping
                     observations[addr_int].append({
                         'video_frame': vf,
                         'hex_bytes': hex_bytes,
                         'byte_confs': byte_confs,
                         'addr_conf': addr_conf,
+                        'row_y': row_y,
                         'gray': gray,
                     })
                     hits += 1
@@ -268,7 +321,7 @@ def scan_video_windows(windows, missing_set, classifier):
                     from fix_d_c_misread import swap_candidates
                     for cand in swap_candidates(addr_hex):
                         cand_int = int(cand, 16)
-                        if cand_int in missing_set and cand_int not in {r[0] for r in results}:
+                        if cand_int in missing_set and cand_int not in {r[0] for r in results}:  # r[0] = addr_int
                             # OCR read this as addr_int but it might really be cand_int
                             # Check if cand_int is closer to expected scroll position
                             observations[cand_int].append({
@@ -614,6 +667,14 @@ def main():
     if not affected_addrs:
         print("  No addresses recovered")
         return
+
+    # Log to frame_moves.json and frame_assignments.json
+    recovered_map = {}
+    for addr_hex in affected_addrs:
+        entry = crop_index.get(addr_hex, {})
+        recovered_map[addr_hex] = entry.get('video_frames', [])
+    log_gap_recovery(recovered_map)
+    update_frame_assignments(recovered_map, crop_index)
 
     # Step 5: Update extracted_firmware.txt
     print("\nStep 5: Update extracted_firmware.txt")

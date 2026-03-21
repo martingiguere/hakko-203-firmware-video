@@ -45,7 +45,7 @@ firmware_review_tool/        Flask app for human-assisted review
 | `download_video.py` | Download video and extract PNG frames |
 | `calibrate_grid.py` | Calibrate character grid geometry -> `grid_calibration.json` |
 | `template_matcher.py` | Cell extraction, feature extraction, reference data loading |
-| `extract_pipeline.py` | Full extraction pipeline with FastKNNClassifier; uses `memory_map.json` for address validation (auto-runs post-pipeline steps) |
+| `extract_pipeline.py` | Full extraction pipeline with FastKNNClassifier; uses `memory_map.json` for address validation; saves `frame_assignments.json` for pipeline consistency (auto-runs post-pipeline steps) |
 | `postprocess_firmware.py` | Merge extractions, produce firmware binary (no FF-fill/forcing — that's in `ff_fill.py`) |
 | `ff_fill.py` | FF-forced override + heuristic FF-fill, reads `memory_map.json`; `--heuristic` flag enables neighbor/region gap filling |
 | `memory_map.json` | Unified memory layout descriptor (regions, types, FF-forced overrides) |
@@ -57,13 +57,18 @@ firmware_review_tool/        Flask app for human-assisted review
 | `manual_trajectory.py` | Manually confirmed scroll trajectory waypoints + `interpolate_trajectory()` helper |
 | `fix_49_misread.py` | Post-hoc fix for 4/9 OCR address confusion (superseded by `fix_address_trajectory.py`) |
 | `fix_d_c_misread.py` | Post-hoc fix for C/D OCR address confusion (superseded by `fix_address_trajectory.py`) |
-| `fullvideo_gap_recovery.py` | Strategy 7: scan full video for gap addresses |
+| `fullvideo_gap_recovery.py` | Strategy 7: scan full video for gap addresses; logs to `frame_moves.json` and `frame_assignments.json` |
 | `frame_utils.py` | Frame numbering helpers (extracted vs full-video frames) |
 | `diagnose.py` | Project status diagnostic |
+| `run_review.sh` | Start the review tool (kills existing instance, activates venv) |
 
 ## Review Tool
 
-`firmware_review_tool/` contains a Flask web app for human-assisted byte verification. Shows frame crops alongside kNN readings, allows manual correction, and tracks review progress.
+`firmware_review_tool/` contains a Flask web app for human-assisted byte verification. Shows frame crops alongside kNN readings, allows manual correction, and tracks review progress. Start with `./run_review.sh`.
+
+- **Desktop** (`/`) — full hex editor with minimap, keyboard shortcuts, batch frame moves
+- **Mobile** (`/mobile`) — touch-friendly 4×4 byte grid, swipe navigation, frame move support. Auto-redirects from `/` on iPhone/Android (`?desktop=1` to override).
+- **Staleness detection** — if the pipeline is re-run, a yellow banner warns that data may have changed, with a one-click refresh option.
 
 ### Frame Viewer
 
