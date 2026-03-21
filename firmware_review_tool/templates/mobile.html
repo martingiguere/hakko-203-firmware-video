@@ -819,17 +819,38 @@ function addCropImage(container, frameNum, isVideo, fd) {
 
     img.onload = function() {
         // Crop coordinates (in source image pixels)
-        // Bytes 0-7: x=168..492, Bytes 8-15: x=502..826, height=28
+        // Address: x=0..160, Bytes 0-7: x=168..492, Bytes 8-15: x=502..826, height=28
         const srcW = img.naturalWidth;   // 836
         const srcH = img.naturalHeight;  // 28
+        const addrW = 160;
         const row1_x = 168, row2_x = 502, rowW = 324;
         const containerW = wrap.clientWidth - 12; // available width minus padding
 
-        // Scale to fill container width
+        // Scale for byte rows (fill container width)
         const scale = containerW / rowW;
         const displayH = Math.round(srcH * scale);
 
-        for (const [rx, rowLabel] of [[row1_x, 'bytes 0-7'], [row2_x, 'bytes 8-15']]) {
+        // Address strip (inline with the label/move button row)
+        const addrDiv = document.createElement('div');
+        addrDiv.className = 'crop-split';
+        addrDiv.style.display = 'inline-block';
+        addrDiv.style.verticalAlign = 'middle';
+        addrDiv.style.marginLeft = '8px';
+        addrDiv.style.width = Math.round(addrW * scale) + 'px';
+        addrDiv.style.height = displayH + 'px';
+        const addrImg = document.createElement('img');
+        addrImg.src = img.src;
+        addrImg.style.width = Math.round(srcW * scale) + 'px';
+        addrImg.style.height = displayH + 'px';
+        addrImg.style.marginLeft = '0px';
+        addrImg.style.imageRendering = 'pixelated';
+        addrDiv.appendChild(addrImg);
+        // Insert into the label row (after Move button)
+        const labelEl = wrap.querySelector('.crop-label');
+        labelEl.appendChild(addrDiv);
+
+        // Two byte rows
+        for (const rx of [row1_x, row2_x]) {
             const div = document.createElement('div');
             div.className = 'crop-split';
             div.style.width = containerW + 'px';
