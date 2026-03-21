@@ -751,7 +751,16 @@ function openAddrKeypad(inputEl, frameKey) {
     inputEl.style.borderColor = '#1e88e5';
     document.getElementById('hex-keypad-info').textContent = 'Move to address: ' + (inputEl.value || '-----');
     document.getElementById('hex-keypad').style.display = 'block';
-    inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Scroll so the move row is visible above the keypad (~310px from bottom)
+    setTimeout(() => {
+        const rect = inputEl.getBoundingClientRect();
+        const keypadHeight = document.getElementById('hex-keypad').offsetHeight + 60;
+        const visibleBottom = window.innerHeight - keypadHeight;
+        if (rect.bottom > visibleBottom) {
+            window.scrollBy({ top: rect.bottom - visibleBottom + 20, behavior: 'smooth' });
+        }
+    }, 100);
 }
 
 function closeAddrKeypad() {
