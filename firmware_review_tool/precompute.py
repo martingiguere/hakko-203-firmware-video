@@ -45,10 +45,11 @@ FRAME_ASSIGNMENTS_PATH = os.path.join(PROJECT_ROOT, 'frame_assignments.json')
 TOTAL_FRAMES = len([f for f in os.listdir(os.path.join(PROJECT_ROOT, 'frames'))
                      if f.endswith('.png')]) if os.path.isdir(os.path.join(PROJECT_ROOT, 'frames')) else 0
 
-# Row crop geometry
-ROW_HALF_HEIGHT = 14  # 28px tall crop centered on row center
-CROP_X_START = 270
-CROP_X_END = 1100  # 830px wide crop
+# Row crop geometry — asymmetric to center on ink (characters sit above row_y center)
+CROP_Y_ABOVE = 17   # pixels above row_y (ink starts at ~row_y-15)
+CROP_Y_BELOW = 11   # pixels below row_y (ink ends at ~row_y+2)
+CROP_X_START = 284   # 5px margin before first address digit (ADDR_X_START=289)
+CROP_X_END = 1120    # 10px margin after last byte digit (ends at ~1108)
 
 BASE_ADDR = 0x00000
 END_ADDR = 0x13FF0
@@ -168,10 +169,10 @@ def precompute():
             addr_upper = f"{addr_int:05X}"
             addr_lower = addr_upper.lower()
 
-            # Crop the full row
+            # Crop the full row (asymmetric — shifted up to center on ink)
             y_center = int(round(row_y))
-            y1 = max(0, y_center - ROW_HALF_HEIGHT)
-            y2 = min(img.shape[0], y_center + ROW_HALF_HEIGHT)
+            y1 = max(0, y_center - CROP_Y_ABOVE)
+            y2 = min(img.shape[0], y_center + CROP_Y_BELOW)
             x1 = CROP_X_START
             x2 = min(img.shape[1], CROP_X_END)
             crop = img[y1:y2, x1:x2]
@@ -323,8 +324,8 @@ def precompute_ref_crops():
 
     os.makedirs(REF_CROPS_DIR, exist_ok=True)
 
-    target_w = CROP_X_END - CROP_X_START  # 830
-    target_h = ROW_HALF_HEIGHT * 2         # 28
+    target_w = CROP_X_END - CROP_X_START  # 836
+    target_h = CROP_Y_ABOVE + CROP_Y_BELOW  # 28
 
     ref_addresses = []
     for row_idx in range(REF_NUM_ROWS):

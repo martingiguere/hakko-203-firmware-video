@@ -436,11 +436,11 @@ def save_crops_and_update_index(observations, crop_index, classifier):
                 if row_y is None:
                     continue
 
-            # Save crop: img[row_y-14:row_y+14, 270:1100]
+            # Save crop (asymmetric — shifted up to center on ink)
             row_y = int(row_y)
-            y_top = max(0, row_y - 14)
-            y_bot = min(gray.shape[0], row_y + 14)
-            crop = gray[y_top:y_bot, 270:1100]
+            y_top = max(0, row_y - 17)
+            y_bot = min(gray.shape[0], row_y + 11)
+            crop = gray[y_top:y_bot, 284:1120]
 
             crop_name = crop_filename(vf, is_video=True)
             crop_path = os.path.join(crop_dir, crop_name)

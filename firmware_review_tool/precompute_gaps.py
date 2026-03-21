@@ -53,9 +53,11 @@ CONTEXT_ROWS = 9  # +/-4 rows around target
 EXTRA_ROWS_ABOVE = 2
 
 # Crop geometry (matches precompute.py)
-CROP_X_START = 270
-CROP_X_END = 1100
-ROW_HEIGHT = 28
+CROP_X_START = 284
+CROP_X_END = 1120
+CROP_Y_ABOVE = 17
+CROP_Y_BELOW = 11
+ROW_HEIGHT = CROP_Y_ABOVE + CROP_Y_BELOW  # 28
 
 
 def load_merged_addresses():
