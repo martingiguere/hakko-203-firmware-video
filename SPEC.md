@@ -235,6 +235,7 @@ Manually confirmed video scroll structure, now stored in `manual_trajectory.py` 
      - **(c) 5↔8 discriminative features**: Add features like top-right openness (`5` is open, `8` is closed) and bottom-left curvature, similar to Strategy 2's 8↔6 features. Requires retrain.
      - **(d) Claude vision audit**: Use Claude Code's built-in vision (no API cost) to read crops at all 408 positions where `08` won over `05`. Quantifies exact error count before fixing.
      - **(e) Audit classes `3` and `D`**: Spot-check addresses with `03`/`0D` bytes via vision to check for similar imbalance-driven confusions.
+7. **TODO**: Unify address assignment between `extract_pipeline.py` and `precompute.py` — the two scripts independently run `validate_address_sequence()` on the same frames and can produce **different address assignments**. Example: $040E0 has 6 observations in `extracted_firmware.txt` but no entry in `crop_index.json` — the extraction pipeline assigned those frames to $040E0 but precompute assigned them elsewhere. This means the review tool shows unverifiable data (no crops to inspect) and the two data sources can silently disagree, especially in low-OCR-accuracy regions like $04000-$04250. Fix: have `extract_pipeline.py` record its per-frame address assignments, and have `precompute.py` reuse them instead of re-running `validate_address_sequence()` independently.
 
 ### Fixed Interrupt Vector Table (`$0FFDC`–`$0FFFF`)
 

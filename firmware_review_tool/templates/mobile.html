@@ -169,6 +169,58 @@
             text-align: center;
         }
 
+        /* --- Frame move --- */
+        .move-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin: 6px 0;
+            padding: 8px;
+            background: #e3f2fd;
+            border-radius: 6px;
+        }
+        .move-row input {
+            flex: 1;
+            height: 44px;
+            font-family: "SF Mono", "Menlo", monospace;
+            font-size: 18px;
+            text-align: center;
+            text-transform: uppercase;
+            border: 2px solid #aaa;
+            border-radius: 6px;
+            padding: 0 8px;
+        }
+        .move-row input:focus { border-color: #1e88e5; outline: none; }
+        .move-btn {
+            height: 44px;
+            padding: 0 16px;
+            font-size: 15px;
+            font-weight: bold;
+            font-family: inherit;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+        }
+        .move-go { background: #43a047; }
+        .move-go:active { background: #388e3c; }
+        .move-cancel { background: #888; }
+        .move-cancel:active { background: #666; }
+        .crop-move-btn {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 4px 12px;
+            font-size: 13px;
+            font-weight: bold;
+            font-family: inherit;
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 4px;
+            color: #1565c0;
+            cursor: pointer;
+        }
+        .crop-move-btn:active { background: #bbdefb; }
+
         /* --- Crops --- */
         #crops-section {
             margin-top: 8px;
@@ -573,13 +625,23 @@ function addCropImage(container, frameNum, isVideo, fd) {
     label.className = 'crop-label';
     label.textContent = isVideo ? `Video frame ${frameNum}` : `Frame ${frameNum}`;
 
-    // Show reading alongside label
-    const reading = (fd.readings || {})[frameKey];
-    if (reading) {
-        label.textContent += '  ' + reading.join(' ');
-    }
+    // Move button
+    const moveBtn = document.createElement('button');
+    moveBtn.className = 'crop-move-btn';
+    moveBtn.textContent = 'Move';
+    moveBtn.onclick = (e) => { e.stopPropagation(); showMoveInput(wrap, frameKey); };
+    label.appendChild(moveBtn);
 
     wrap.appendChild(label);
+
+    // Show reading
+    const reading = (fd.readings || {})[frameKey];
+    if (reading) {
+        const readingDiv = document.createElement('div');
+        readingDiv.className = 'crop-label';
+        readingDiv.textContent = reading.join(' ');
+        wrap.appendChild(readingDiv);
+    }
 
     const img = document.createElement('img');
     img.className = 'crop-img';
@@ -588,6 +650,80 @@ function addCropImage(container, frameNum, isVideo, fd) {
     wrap.appendChild(img);
 
     container.appendChild(wrap);
+}
+
+// ── Frame move ─────────────────────────────────────────────────────────────
+async function showMoveInput(wrapper, frameKey) {
+    // Remove existing move row in this wrapper
+    const existing = wrapper.querySelector('.move-row');
+    if (existing) { existing.remove(); return; }
+
+    const row = document.createElement('div');
+    row.className = 'move-row';
+
+    const addrInput = document.createElement('input');
+    addrInput.type = 'text';
+    addrInput.placeholder = 'Dest addr';
+    addrInput.maxLength = 5;
+    addrInput.autocapitalize = 'characters';
+    addrInput.autocomplete = 'off';
+    addrInput.spellcheck = false;
+
+    // Fetch suggested address
+    try {
+        const suggest = await api('GET', `/api/suggest_address/${frameKey}`);
+        if (suggest.suggested_addr && suggest.suggested_addr !== state.currentAddr) {
+            addrInput.value = suggest.suggested_addr;
+        }
+    } catch(e) {}
+
+    const goBtn = document.createElement('button');
+    goBtn.className = 'move-btn move-go';
+    goBtn.textContent = 'Go';
+    goBtn.onclick = () => doSingleMove(frameKey, addrInput.value);
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'move-btn move-cancel';
+    cancelBtn.textContent = 'X';
+    cancelBtn.onclick = () => row.remove();
+
+    addrInput.onkeydown = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); doSingleMove(frameKey, addrInput.value); }
+    };
+
+    row.appendChild(addrInput);
+    row.appendChild(goBtn);
+    row.appendChild(cancelBtn);
+
+    // Insert after the label
+    const label = wrapper.querySelector('.crop-label');
+    label.after(row);
+    addrInput.focus();
+}
+
+async function doSingleMove(frameKey, rawAddr) {
+    const toAddr = rawAddr.trim().toUpperCase().replace(/^0X/, '').padStart(5, '0');
+    if (!toAddr || toAddr === state.currentAddr) {
+        showToast('Enter a different address');
+        return;
+    }
+    try {
+        const result = await api('POST', '/api/move_frame', {
+            frame: frameKey,
+            from_addr: state.currentAddr,
+            to_addr: toAddr,
+        });
+        if (result.error) {
+            showToast('Error: ' + result.error, 3000);
+            return;
+        }
+        showToast(`Moved to $${toAddr}`);
+        state.dirty = true;
+        loadLine(state.currentAddr);
+        refreshStats();
+    } catch(e) {
+        showToast('Move failed', 3000);
+    }
 }
 
 // ── Navigation ─────────────────────────────────────────────────────────────
