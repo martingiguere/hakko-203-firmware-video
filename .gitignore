@@ -27,9 +27,6 @@ calibration_debug.png
 ffmpeg
 ffprobe
 
-# Review state (per-session)
-review_state.json
-
 # IDE / Editor Settings
 .claude/
 .vscode/
