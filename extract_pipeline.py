@@ -876,10 +876,13 @@ def main():
     # Parse command-line args
     classifier_path = 'fast_knn_classifier.npz'
     rebuild = '--rebuild' in sys.argv
+    post_only = '--post-only' in sys.argv
 
     classifier = None
 
-    if os.path.exists(classifier_path) and not rebuild:
+    if post_only:
+        pass  # skip classifier loading — not needed for post-pipeline steps
+    elif os.path.exists(classifier_path) and not rebuild:
         print(f"\nLoading existing kNN classifier from {classifier_path}...")
         classifier = FastKNNClassifier()
         classifier.load(classifier_path)
@@ -972,32 +975,17 @@ def main():
 
         classifier.save(classifier_path)
 
-    # Quick validation on a reference frame
-    print("\nQuick validation on a reference frame...")
-    ref_frame_paths = find_reference_frames(ref_data)
-    if ref_frame_paths:
-        test_path = ref_frame_paths[len(ref_frame_paths) // 2]
-        test_img = cv2.imread(test_path, cv2.IMREAD_GRAYSCALE)
-        if test_img is not None:
-            results = process_frame(classifier, test_img)
-            correct_bytes = 0
-            total_bytes = 0
-            for addr_int, row_y, hex_bytes, byte_confs, addr_conf in results:
-                if addr_int in ref_data:
-                    expected = ref_data[addr_int]
-                    for i in range(min(16, len(hex_bytes))):
-                        total_bytes += 1
-                        if hex_bytes[i].upper() == expected[i].upper():
-                            correct_bytes += 1
-            if total_bytes > 0:
-                print(f"  Reference accuracy: {correct_bytes}/{total_bytes} bytes "
-                      f"({correct_bytes / total_bytes * 100:.1f}%)")
-
-    # Run full extraction
-    print("\n" + "=" * 60)
-    print("Starting full extraction...")
-    print("=" * 60)
-    final_dump = run_extraction(classifier)
+    if not post_only:
+        # Run full extraction
+        print("\n" + "=" * 60)
+        print("Starting full extraction...")
+        print("=" * 60)
+        final_dump = run_extraction(classifier)
+    else:
+        print("\n--post-only: Skipping OCR extraction, running post-pipeline steps only")
+        if not os.path.exists('extracted_firmware.txt'):
+            print("ERROR: extracted_firmware.txt not found. Run full extraction first.")
+            return
 
     # === Post-pipeline steps (order matters) ===
     import subprocess
