@@ -13,7 +13,7 @@ import datetime
 import argparse
 import shutil
 
-from flask import Flask, jsonify, request, send_file, render_template
+from flask import Flask, jsonify, request, send_file, render_template, redirect
 
 from crc import compute_byte_sum_32, build_firmware_binary, build_rom_binary, \
     BASE_ADDR, BUFFER_SIZE, EXPECTED_CHECKSUM
@@ -499,7 +499,16 @@ def build_minimap():
 
 @app.route('/')
 def index():
+    if request.args.get('desktop') != '1':
+        ua = request.headers.get('User-Agent', '')
+        if 'iPhone' in ua or ('Android' in ua and 'Mobile' in ua):
+            return redirect('/mobile')
     return render_template('index.html')
+
+
+@app.route('/mobile')
+def mobile_view():
+    return render_template('mobile.html')
 
 
 @app.route('/viewer')

@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>FM-203 Review — Mobile</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, "SF Mono", "Menlo", monospace;
+            background: #f5f5f5;
+            color: #222;
+            font-size: 16px;
+            -webkit-text-size-adjust: 100%;
+            padding-top: 54px;
+            padding-bottom: 64px;
+            overflow-x: hidden;
+        }
+
+        /* --- Header --- */
+        #header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: #e8eaf0;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 8px;
+            z-index: 100;
+        }
+        #line-addr {
+            font-size: 22px;
+            font-weight: bold;
+            font-family: "SF Mono", "Menlo", monospace;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #fff;
+        }
+        .badge-unreviewed { background: #888; }
+        .badge-accepted { background: #43a047; }
+        .badge-edited { background: #1e88e5; }
+        .badge-flagged { background: #e53935; }
+        .badge-missing { background: #555; }
+        .region-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .region-rom { background: #c8e6c9; color: #2e7d32; }
+        .region-sfr { background: #e0e0e0; color: #666; }
+        #header-spacer { flex: 1; }
+        #frame-count {
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* --- Progress bar --- */
+        #progress-bar {
+            position: fixed;
+            top: 50px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #ddd;
+            z-index: 99;
+        }
+        #progress-fill {
+            height: 100%;
+            background: #43a047;
+            transition: width 0.3s;
+        }
+
+        /* --- Main content --- */
+        #main {
+            padding: 12px;
+        }
+
+        /* --- Byte grid 4x4 --- */
+        #byte-section {
+            margin-bottom: 12px;
+        }
+        #byte-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+        .byte-cell-wrap {
+            position: relative;
+        }
+        .byte-idx {
+            position: absolute;
+            top: 1px;
+            left: 4px;
+            font-size: 9px;
+            color: #999;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .byte-cell {
+            width: 100%;
+            height: 52px;
+            text-align: center;
+            font-family: "SF Mono", "Menlo", monospace;
+            font-size: 22px;
+            font-weight: bold;
+            border: 2px solid #aaa;
+            border-radius: 6px;
+            text-transform: uppercase;
+            padding-top: 6px;
+        }
+        .byte-cell:focus {
+            outline: none;
+            border-color: #1e88e5;
+            border-width: 3px;
+        }
+        .conf-high { background: #c8f7c5; }
+        .conf-medium { background: #fff3cd; }
+        .conf-low { background: #f5c6cb; }
+        .conf-none { background: #e2e2e2; }
+        .conf-edited { background: #fff; }
+
+        /* --- Action buttons --- */
+        #actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .action-btn {
+            flex: 1;
+            height: 48px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn-accept { background: #43a047; }
+        .btn-accept:active { background: #388e3c; }
+        .btn-flag { background: #e53935; }
+        .btn-flag:active { background: #c62828; }
+        .btn-reset { background: #888; flex: 0.5; }
+        .btn-reset:active { background: #666; }
+        .btn-save { background: #1e88e5; flex: 0.5; }
+        .btn-save:active { background: #1565c0; }
+
+        /* --- Stats row --- */
+        #stats-row {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        /* --- Crops --- */
+        #crops-section {
+            margin-top: 8px;
+        }
+        .crop-wrapper {
+            margin-bottom: 12px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 6px;
+        }
+        .crop-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        .crop-img {
+            width: 100%;
+            height: auto;
+            image-rendering: pixelated;
+            display: block;
+        }
+
+        /* --- Bottom nav bar --- */
+        #nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #e8eaf0;
+            border-top: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            gap: 6px;
+            z-index: 100;
+        }
+        .nav-btn {
+            height: 44px;
+            font-size: 14px;
+            font-family: inherit;
+            font-weight: bold;
+            border: 1px solid #999;
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+            flex: 1;
+            min-width: 0;
+        }
+        .nav-btn:active { background: #d0d0d0; }
+        #addr-jump {
+            width: 70px;
+            height: 44px;
+            padding: 4px 6px;
+            font-family: "SF Mono", "Menlo", monospace;
+            font-size: 16px;
+            text-align: center;
+            border: 2px solid #aaa;
+            border-radius: 6px;
+            text-transform: uppercase;
+            flex: 0 0 70px;
+        }
+        #addr-jump:focus {
+            border-color: #1e88e5;
+            outline: none;
+        }
+
+        /* --- Toast --- */
+        #toast {
+            position: fixed;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 200;
+            display: none;
+            white-space: nowrap;
+        }
+
+        /* --- Desktop link --- */
+        #desktop-link {
+            text-align: center;
+            margin: 24px 0;
+            font-size: 13px;
+        }
+        #desktop-link a { color: #1e88e5; }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+    <span id="line-addr">$-----</span>
+    <span id="status-badge" class="status-badge badge-unreviewed">...</span>
+    <span id="region-badge" class="region-badge"></span>
+    <span id="header-spacer"></span>
+    <span id="frame-count"></span>
+</div>
+
+<!-- Progress bar -->
+<div id="progress-bar"><div id="progress-fill" style="width:0%"></div></div>
+
+<!-- Main scrollable content -->
+<div id="main">
+
+    <!-- Stats row -->
+    <div id="stats-row">Loading...</div>
+
+    <!-- Byte grid -->
+    <div id="byte-section">
+        <div id="byte-grid"></div>
+    </div>
+
+    <!-- Action buttons -->
+    <div id="actions">
+        <button class="action-btn btn-accept" onclick="acceptLine()">Accept</button>
+        <button class="action-btn btn-flag" onclick="flagLine()">Flag</button>
+        <button class="action-btn btn-reset" onclick="resetLine()">Reset</button>
+        <button class="action-btn btn-save" onclick="doSave()">Save</button>
+    </div>
+
+    <!-- Crop images -->
+    <div id="crops-section"></div>
+
+    <!-- Desktop link -->
+    <div id="desktop-link">
+        <a href="/?desktop=1">Switch to desktop version</a>
+    </div>
+</div>
+
+<!-- Bottom nav bar -->
+<div id="nav-bar">
+    <button class="nav-btn" onclick="navigateSeq(-1)">&laquo;</button>
+    <button class="nav-btn" onclick="navigate(-1)">&lsaquo; Prev</button>
+    <input type="text" id="addr-jump" placeholder="ADDR" maxlength="5"
+           onkeydown="if(event.key==='Enter'){jumpToAddr(this.value);this.blur()}">
+    <button class="nav-btn" onclick="navigate(1)">Next &rsaquo;</button>
+    <button class="nav-btn" onclick="navigateSeq(1)">&raquo;</button>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const state = {
+    currentAddr: null,
+    lineData: null,
+    frameData: null,
+    addressList: [],
+    minimapData: [],
+    dirty: false,
+};
+
+const TIER_PRIORITY = {
+    missing: 0, low_confidence: 1, flagged: 2,
+    high_confidence: 3, edited: 4, accepted: 5
+};
+
+// ── API helper ─────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const resp = await fetch(path, opts);
+    if (!resp.ok) throw new Error(`${method} ${path}: ${resp.status}`);
+    const ct = resp.headers.get('content-type') || '';
+    if (ct.includes('json')) return resp.json();
+    return resp;
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+    buildByteGrid();
+    await buildAddressList();
+    await refreshStats();
+
+    // Load saved position or start at first priority address
+    try {
+        const settings = await api('GET', '/api/settings');
+        if (settings.current_address) {
+            await loadLine(settings.current_address);
+            return;
+        }
+    } catch(e) {}
+
+    if (state.addressList.length > 0) {
+        await loadLine(state.addressList[0]);
+    } else {
+        await loadLine('00000');
+    }
+}
+
+function buildByteGrid() {
+    const grid = document.getElementById('byte-grid');
+    grid.innerHTML = '';
+    for (let i = 0; i < 16; i++) {
+        const wrap = document.createElement('div');
+        wrap.className = 'byte-cell-wrap';
+
+        const idx = document.createElement('span');
+        idx.className = 'byte-idx';
+        idx.textContent = i.toString(16).toUpperCase();
+        wrap.appendChild(idx);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'byte-cell';
+        input.maxLength = 2;
+        input.dataset.idx = i;
+        input.inputMode = 'none'; // prevent autocorrect
+        input.autocomplete = 'off';
+        input.autocapitalize = 'characters';
+        input.spellcheck = false;
+        input.addEventListener('input', onByteInput);
+        input.addEventListener('change', onByteChange);
+        input.addEventListener('blur', onByteChange);
+        wrap.appendChild(input);
+
+        grid.appendChild(wrap);
+    }
+}
+
+// ── Address list (priority sorted) ─────────────────────────────────────────
+async function buildAddressList() {
+    const data = await api('GET', '/api/minimap');
+    state.minimapData = data;
+
+    const list = data.map(e => ({
+        addr: e.address,
+        tier: TIER_PRIORITY[e.tier] !== undefined ? TIER_PRIORITY[e.tier] : 3
+    }));
+
+    list.sort((a, b) => a.tier - b.tier || a.addr.localeCompare(b.addr));
+    state.addressList = list.map(e => e.addr);
+}
+
+// ── Load line ──────────────────────────────────────────────────────────────
+async function loadLine(addr) {
+    addr = normalizeAddr(addr);
+    state.currentAddr = addr;
+
+    const [lineData, frameData] = await Promise.all([
+        api('GET', `/api/line/${addr}`),
+        api('GET', `/api/frames/${addr}`),
+    ]);
+
+    state.lineData = lineData;
+    state.frameData = frameData;
+
+    renderHeader();
+    renderBytes();
+    renderCrops();
+
+    // Save position
+    api('POST', '/api/settings', { current_address: addr }).catch(() => {});
+}
+
+function normalizeAddr(raw) {
+    raw = raw.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+    while (raw.length < 5) raw = '0' + raw;
+    // Align to 0x10
+    let val = parseInt(raw, 16);
+    val = (val & ~0xF);
+    return val.toString(16).toUpperCase().padStart(5, '0');
+}
+
+// ── Render header ──────────────────────────────────────────────────────────
+function renderHeader() {
+    const d = state.lineData;
+    document.getElementById('line-addr').textContent = '$' + state.currentAddr;
+
+    const badge = document.getElementById('status-badge');
+    badge.textContent = d.status;
+    badge.className = 'status-badge badge-' + d.status;
+
+    const region = document.getElementById('region-badge');
+    const addrVal = parseInt(state.currentAddr, 16);
+    if (addrVal >= 0x04000 && addrVal <= 0x13FFF) {
+        region.textContent = 'ROM';
+        region.className = 'region-badge region-rom';
+    } else {
+        region.textContent = 'SFR';
+        region.className = 'region-badge region-sfr';
+    }
+
+    const fc = document.getElementById('frame-count');
+    const nFrames = (d.frames || []).length + (d.video_frames || []).length;
+    fc.textContent = nFrames + 'f';
+}
+
+// ── Render bytes ───────────────────────────────────────────────────────────
+function renderBytes() {
+    const d = state.lineData;
+    const cells = document.querySelectorAll('.byte-cell');
+    const edited = new Set(d.edited_positions || []);
+
+    for (let i = 0; i < 16; i++) {
+        const cell = cells[i];
+        cell.value = d.bytes[i];
+
+        if (edited.has(i)) {
+            cell.className = 'byte-cell conf-edited';
+        } else {
+            const conf = (d.confidence && d.confidence[i]) || 'none';
+            cell.className = 'byte-cell conf-' + conf;
+        }
+    }
+}
+
+// ── Byte editing ───────────────────────────────────────────────────────────
+function onByteInput(e) {
+    let val = e.target.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+    if (val.length > 2) val = val.slice(0, 2);
+    e.target.value = val;
+
+    // Auto-advance after 2 chars
+    if (val.length === 2) {
+        const idx = parseInt(e.target.dataset.idx);
+        if (idx < 15) {
+            const next = document.querySelector(`.byte-cell[data-idx="${idx + 1}"]`);
+            if (next) next.focus();
+        }
+    }
+}
+
+function onByteChange(e) {
+    let val = e.target.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+    if (val.length === 1) val = '0' + val;
+    if (val.length === 0) val = state.lineData.bytes[parseInt(e.target.dataset.idx)];
+    e.target.value = val;
+    commitBytes();
+}
+
+async function commitBytes() {
+    const cells = document.querySelectorAll('.byte-cell');
+    const bytes = Array.from(cells).map(c => c.value.toUpperCase());
+
+    const original = state.lineData.bytes;
+    let changed = false;
+    for (let i = 0; i < 16; i++) {
+        if (bytes[i] !== original[i]) { changed = true; break; }
+    }
+    if (!changed) return;
+
+    await api('POST', `/api/line/${state.currentAddr}`, {
+        bytes: bytes,
+        status: state.lineData.status === 'unreviewed' ? 'edited' : state.lineData.status
+    });
+
+    state.dirty = true;
+    const lineData = await api('GET', `/api/line/${state.currentAddr}`);
+    state.lineData = lineData;
+    renderHeader();
+    renderBytes();
+    showToast('Bytes updated');
+}
+
+// ── Render crops ───────────────────────────────────────────────────────────
+function renderCrops() {
+    const section = document.getElementById('crops-section');
+    section.innerHTML = '';
+
+    const fd = state.frameData;
+    if (!fd) return;
+
+    // Reference crop
+    if (fd.has_ref) {
+        const wrap = document.createElement('div');
+        wrap.className = 'crop-wrapper';
+        wrap.innerHTML = '<div class="crop-label">Reference</div>';
+        const img = document.createElement('img');
+        img.className = 'crop-img';
+        img.src = `/api/ref_crop/${state.currentAddr}`;
+        img.alt = 'Reference crop';
+        wrap.appendChild(img);
+        section.appendChild(wrap);
+    }
+
+    // Extracted frames
+    const frames = fd.frames || [];
+    const videoFrames = fd.video_frames || [];
+
+    for (const f of frames) {
+        addCropImage(section, f, false, fd);
+    }
+    for (const vf of videoFrames) {
+        addCropImage(section, vf, true, fd);
+    }
+}
+
+function addCropImage(container, frameNum, isVideo, fd) {
+    const frameKey = isVideo ? 'v' + frameNum : String(frameNum);
+    const wrap = document.createElement('div');
+    wrap.className = 'crop-wrapper';
+
+    const label = document.createElement('div');
+    label.className = 'crop-label';
+    label.textContent = isVideo ? `Video frame ${frameNum}` : `Frame ${frameNum}`;
+
+    // Show reading alongside label
+    const reading = (fd.readings || {})[frameKey];
+    if (reading) {
+        label.textContent += '  ' + reading.join(' ');
+    }
+
+    wrap.appendChild(label);
+
+    const img = document.createElement('img');
+    img.className = 'crop-img';
+    img.src = `/api/crop/${state.currentAddr}/${frameKey}`;
+    img.alt = `Frame ${frameKey}`;
+    wrap.appendChild(img);
+
+    container.appendChild(wrap);
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function navigate(delta) {
+    const list = state.addressList;
+    if (list.length === 0) return;
+    const idx = list.indexOf(state.currentAddr);
+    let next = idx + delta;
+    if (next < 0) next = list.length - 1;
+    if (next >= list.length) next = 0;
+    loadLine(list[next]);
+}
+
+function navigateSeq(delta) {
+    const val = parseInt(state.currentAddr, 16);
+    const next = val + delta * 0x10;
+    if (next < 0 || next > 0x13FF0) return;
+    loadLine(next.toString(16).toUpperCase().padStart(5, '0'));
+}
+
+function jumpToAddr(raw) {
+    if (!raw || raw.trim() === '') return;
+    loadLine(raw);
+}
+
+// ── Status actions ─────────────────────────────────────────────────────────
+async function acceptLine() {
+    await api('POST', `/api/line/${state.currentAddr}`, {
+        bytes: state.lineData.bytes,
+        status: 'accepted'
+    });
+    state.dirty = true;
+    showToast('Accepted');
+    await refreshStats();
+    navigate(1);
+}
+
+async function flagLine() {
+    await api('POST', `/api/line/${state.currentAddr}`, {
+        bytes: state.lineData.bytes,
+        status: 'flagged'
+    });
+    state.dirty = true;
+    showToast('Flagged');
+    await refreshStats();
+    navigate(1);
+}
+
+async function resetLine() {
+    await api('POST', `/api/line/${state.currentAddr}`, {
+        bytes: state.lineData.bytes,
+        status: 'unreviewed'
+    });
+    state.dirty = true;
+    const lineData = await api('GET', `/api/line/${state.currentAddr}`);
+    state.lineData = lineData;
+    renderHeader();
+    renderBytes();
+    await refreshStats();
+    showToast('Reset');
+}
+
+async function doSave() {
+    await api('POST', '/api/save');
+    state.dirty = false;
+    showToast('Saved');
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────
+async function refreshStats() {
+    const s = await api('GET', '/api/stats');
+    const reviewed = (s.accepted || 0) + (s.edited || 0) + (s.flagged || 0);
+    const total = s.total_lines || 5120;
+    document.getElementById('stats-row').textContent =
+        `${reviewed}/${total} reviewed | ${s.missing || 0} missing | ${s.has_data || 0} data`;
+
+    // Progress bar
+    const pct = total > 0 ? (reviewed / total * 100) : 0;
+    document.getElementById('progress-fill').style.width = pct + '%';
+
+    // Rebuild address list for priority nav
+    await buildAddressList();
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function showToast(msg, ms) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.display = 'block';
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.style.display = 'none'; }, ms || 1500);
+}
+
+// ── Swipe gestures ─────────────────────────────────────────────────────────
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+
+document.addEventListener('touchstart', (e) => {
+    // Don't capture touches on inputs or buttons
+    if (e.target.closest('input, button, a')) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = Date.now();
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+    if (e.target.closest('input, button, a')) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    const dt = Date.now() - touchStartTime;
+
+    // Must be horizontal, fast, and long enough
+    if (dt > 400) return;
+    if (Math.abs(dx) < 60) return;
+    if (Math.abs(dy) > Math.abs(dx) * 0.7) return; // too vertical
+
+    if (dx > 0) {
+        navigate(-1); // swipe right = previous
+    } else {
+        navigate(1);  // swipe left = next
+    }
+}, { passive: true });
+
+// ── Start ──────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
