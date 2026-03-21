@@ -243,6 +243,7 @@ Manually confirmed video scroll structure, now stored in `manual_trajectory.py` 
    - **(e)** ~~Silent frame_moves failure~~ — DONE. `apply_frame_moves()` prints warnings for skipped moves instead of failing silently.
    - **(f)** ~~Source metadata~~ — DONE. `fix_mostly_ff_artifacts()` now sets `source: 'ff-corrected'`.
    - **(g)** ~~Stale review_state~~ — DONE. Flask app compares mtimes on startup, shows yellow banner in desktop and mobile UI. `/api/refresh_from_merged` reloads non-edited lines.
+   - **(h) TODO**: Frame moves ledger creates duplicates and loses readings on chained moves. `frame_moves.json` is append-only and accumulates conflicting moves across runs (e.g., frame 8154 moved 5 times: $08000→$08010, $07FF0→$08000, $08020→$08030, $07FD0→$07FE0, $07FE0→$07FF0). When `apply_frame_moves()` replays sequentially, readings get popped from intermediate addresses and lost. The frame ends up in the `frames` array (twice) but with no `readings` entry — shows blank in the review tool despite having valid video data. Fix: collapse chained moves (A→B→C) into a single net move (A→C) before replay, deduplicate frames arrays, and skip moves where the frame no longer has readings at the source.
 
 ### Fixed Interrupt Vector Table (`$0FFDC`–`$0FFFF`)
 
