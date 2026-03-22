@@ -566,18 +566,27 @@ def process_frame(classifier, img):
     validated_addrs = validate_address_sequence(addr_results)
 
     # Step 3: Read hex bytes for each validated row
-    # Skip rows in ff-forced regions (noise), keep rom and data regions
+    # For FF-forced regions: read bytes but only keep if non-FF
+    # (protects against misassigned frames with real data landing in FF zone)
     results = []
     for addr_int, row_y, addr_conf in validated_addrs:
-        if is_ff_forced(_MMAP, addr_int):
+        # Must be 16-byte aligned and in valid range
+        if not (ADDR_MIN <= addr_int <= ADDR_MAX - 0x0F and
+                addr_int % 0x10 == 0):
             continue
+
         hex_bytes, byte_confs, avg_conf = read_hex_bytes_from_row(
             classifier, img, row_y
         )
-        # Must be 16-byte aligned and in valid range
-        if (ADDR_MIN <= addr_int <= ADDR_MAX - 0x0F and
-                addr_int % 0x10 == 0):
-            results.append((addr_int, row_y, hex_bytes, byte_confs, addr_conf))
+
+        if is_ff_forced(_MMAP, addr_int):
+            # Only keep if the row has substantial non-FF content
+            # (indicates real data misassigned to FF zone)
+            ff_count = sum(1 for b in hex_bytes if b == 'FF')
+            if ff_count >= 14:
+                continue  # genuinely FF — skip
+
+        results.append((addr_int, row_y, hex_bytes, byte_confs, addr_conf))
 
     return results
 

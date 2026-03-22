@@ -16,6 +16,18 @@
   ],
   "ff_forced_overrides": [
     {
+      "name": "Block 1 erased head",
+      "start": "0x04000",
+      "end": "0x04980",
+      "reason": "Erased flash: $04670-$04750 confirmed all-FF visually, $04760-$04980 never shown in video (oscillation zone jumps from $04750 to $04990), $04990 confirmed has data. Region unobservable — inferred FF from surrounding context."
+    },
+    {
+      "name": "Block 0 erased ROM",
+      "start": "0x107F0",
+      "end": "0x12FFF",
+      "reason": "Erased flash confirmed: $107E0 last data bytes are 64 00 70 17, all FF from byte 4 onward through $12FFF"
+    },
+    {
       "name": "Block 0 tail",
       "start": "0x13000",
       "end": "0x13FFF",
