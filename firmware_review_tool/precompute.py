@@ -311,6 +311,30 @@ def apply_frame_moves(crop_index):
         applied += 1
     if skipped:
         print(f"  Frame moves: applied {applied}, skipped {skipped}")
+
+    # Clean up ghost frames: frames in the array but with no readings
+    # (caused by chained moves where a later move re-adds the frame number
+    # but the readings were already moved elsewhere)
+    ghosts_removed = 0
+    for addr, entry in list(crop_index.items()):
+        if addr == 'ref_addresses':
+            continue
+        readings = entry.get("readings", {})
+        for arr_key in ("frames", "video_frames"):
+            clean = []
+            for frame_int in entry.get(arr_key, []):
+                if arr_key == "video_frames":
+                    frame_str = f"v{frame_int}"
+                else:
+                    frame_str = str(frame_int)
+                if frame_str in readings:
+                    clean.append(frame_int)
+                else:
+                    ghosts_removed += 1
+            entry[arr_key] = clean
+    if ghosts_removed:
+        print(f"  Ghost frames removed: {ghosts_removed}")
+
     return applied
 
 

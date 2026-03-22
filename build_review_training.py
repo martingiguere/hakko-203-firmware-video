@@ -31,6 +31,7 @@ os.chdir(PROJECT_ROOT)
 
 from template_matcher import (
     extract_cell, is_blank_cell, BYTE_POSITIONS, BYTE_DIGIT_SPACING,
+    ADDR_X_START, CAL,
 )
 
 REVIEW_STATE_PATH = 'review_state.json'
@@ -77,10 +78,13 @@ def main():
         print("WARNING: frame_assignments.json not found — will skip row_y lookup")
 
     # Extract labeled cells
+    addr_spacing = CAL['address_char_spacing']
+
     samples = defaultdict(list)
     addrs_used = 0
     frames_loaded = 0
     cells_extracted = 0
+    addr_cells_extracted = 0
 
     for addr, line in sorted(confirmed.items()):
         confirmed_bytes = line['bytes']
@@ -150,9 +154,23 @@ def main():
                     samples[lo_char].append(lo_cell)
                     cells_extracted += 1
 
+            # Extract address digit cells
+            # On-screen format: 10 hex digits, e.g., "000000C400"
+            # First 5 digits are always '0' — extract all 10 for training
+            addr_screen = f"{addr_int:010X}"
+            for digit_idx in range(10):
+                char_x = ADDR_X_START + digit_idx * addr_spacing
+                cell = extract_cell(img, row_y, char_x)
+                if not is_blank_cell(cell):
+                    digit_char = addr_screen[digit_idx]
+                    samples[digit_char].append(cell)
+                    addr_cells_extracted += 1
+
     print(f"\nAddresses used: {addrs_used}")
     print(f"Frames loaded: {frames_loaded}")
-    print(f"Cells extracted: {cells_extracted}")
+    print(f"Byte cells extracted: {cells_extracted}")
+    print(f"Address cells extracted: {addr_cells_extracted}")
+    print(f"Total cells: {cells_extracted + addr_cells_extracted}")
 
     if not samples:
         print("No cells extracted. Check that frame_assignments.json exists.")
