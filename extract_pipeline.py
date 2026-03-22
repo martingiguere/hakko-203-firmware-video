@@ -562,8 +562,11 @@ def process_frame(classifier, img):
         except ValueError:
             pass
 
-    # Step 2: Validate address sequence
-    validated_addrs = validate_address_sequence(addr_results)
+    # Step 2: Detect split-scroll frames and validate each group independently
+    groups = detect_and_split_groups(addr_results)
+    validated_addrs = []
+    for group in groups:
+        validated_addrs.extend(validate_address_sequence(group))
 
     # Step 3: Read hex bytes for each validated row
     # For FF-forced regions: read bytes but only keep if non-FF
