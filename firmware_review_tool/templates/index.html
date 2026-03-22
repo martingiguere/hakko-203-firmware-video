@@ -1115,9 +1115,15 @@ function renderCrops() {
         label.appendChild(cb);
 
         const labelText = document.createElement("span");
-        const frameLabel = isVideo
+        let frameLabel = isVideo
             ? `Video v${String(frameNum).padStart(5, "0")}`
             : `Frame ${String(frameNum).padStart(5, "0")}`;
+        // Show row position if available
+        const rowY = fd.row_ys && fd.row_ys[frameKey];
+        if (rowY !== undefined) {
+            const rowNum = Math.round((rowY - 272.0) / 28.0) + 1;
+            frameLabel += ` (row ${rowNum})`;
+        }
         labelText.textContent = frameLabel;
 
         // Reading for this frame
@@ -1139,16 +1145,46 @@ function renderCrops() {
         }
         label.appendChild(labelText);
 
-        // Move button (always shown — useful even without visible diffs)
+        // Row context info button
+        const infoBtn = document.createElement("button");
+        infoBtn.className = "frame-move-btn";
+        infoBtn.textContent = "i";
+        infoBtn.title = "Show all rows in this frame";
+        infoBtn.style.minWidth = "24px";
+        infoBtn.style.padding = "0 4px";
+        infoBtn.onclick = async (e) => {
+            e.stopPropagation();
+            try {
+                const ctx = await api("GET", `/api/frame_row_context/${frameKey}`);
+                const lines = ctx.rows.map(r =>
+                    `$${r.addr}` + (r.row_y !== null ? ` (y=${r.row_y})` : "")
+                );
+                showToast(`${ctx.total_rows} rows:\n${lines.join("\n")}`, 5000);
+            } catch(e) { showToast("Error loading row context"); }
+        };
+        label.appendChild(infoBtn);
+
+        // Move button (single row)
         const moveBtn = document.createElement("button");
         moveBtn.className = "frame-move-btn";
         moveBtn.textContent = "Move";
-        moveBtn.title = "Move this frame to a different address";
+        moveBtn.title = "Move this frame's row to a different address";
         moveBtn.onclick = (e) => {
             e.stopPropagation();
             showMoveInput(wrapper, frameKey);
         };
         label.appendChild(moveBtn);
+
+        // Move All Rows button
+        const moveAllBtn = document.createElement("button");
+        moveAllBtn.className = "frame-move-btn";
+        moveAllBtn.textContent = "Move All";
+        moveAllBtn.title = "Move all rows of this frame by the same offset";
+        moveAllBtn.onclick = (e) => {
+            e.stopPropagation();
+            showMoveAllInput(wrapper, frameKey);
+        };
+        label.appendChild(moveAllBtn);
 
         const cropContainer = document.createElement("div");
         cropContainer.className = "crop-container";
@@ -1242,6 +1278,62 @@ async function doSingleMove(frameKey, rawAddr) {
         return;
     }
     showToast(`Frame ${frameKey} moved to 0x${toAddr}`);
+    loadLine(state.currentAddr);
+    refreshStats();
+}
+
+async function showMoveAllInput(wrapper, frame) {
+    // Remove any existing move input in this wrapper
+    const existing = wrapper.querySelector(".frame-move-input");
+    if (existing) { existing.remove(); return; }
+
+    const row = document.createElement("div");
+    row.className = "frame-move-input";
+
+    const addrInput = document.createElement("input");
+    addrInput.type = "text";
+    addrInput.placeholder = "Dest addr (all rows)";
+
+    const goBtn = document.createElement("button");
+    goBtn.className = "move-go-btn";
+    goBtn.textContent = "Go All";
+    goBtn.onclick = () => doMoveAllRows(frame, addrInput.value);
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.onclick = () => row.remove();
+
+    addrInput.onkeydown = (e) => {
+        if (e.key === "Enter") { e.preventDefault(); doMoveAllRows(frame, addrInput.value); }
+        if (e.key === "Escape") { e.preventDefault(); row.remove(); }
+    };
+
+    row.appendChild(document.createTextNode("Move all rows to: "));
+    row.appendChild(addrInput);
+    row.appendChild(goBtn);
+    row.appendChild(cancelBtn);
+
+    const label = wrapper.querySelector(".crop-label");
+    label.after(row);
+    addrInput.focus();
+}
+
+async function doMoveAllRows(frameKey, rawAddr) {
+    const toAddr = rawAddr.trim().toUpperCase().replace(/^0X/, "").padStart(5, "0");
+    if (!toAddr || toAddr === state.currentAddr) {
+        showToast("Enter a different destination address");
+        return;
+    }
+    const result = await api("POST", "/api/move_frame_all_rows", {
+        frame: frameKey,
+        from_addr: state.currentAddr,
+        to_addr: toAddr,
+    });
+    if (result.error) {
+        showToast("Error: " + result.error, 4000);
+        return;
+    }
+    showToast(`Moved ${result.moves_applied} rows of frame ${frameKey}`);
     loadLine(state.currentAddr);
     refreshStats();
 }

@@ -96,24 +96,22 @@ def load_extraction(filepath):
     return data
 
 
-def load_crop_index_fallback(extraction_addrs):
-    """Load addresses from crop_index.json not present in extraction.
+def load_from_crop_index(crop_index_path='crops/crop_index.json'):
+    """Load firmware data from crop_index.json using weighted majority voting.
 
-    For addresses seen by precompute.py but missed by extract_pipeline.py
-    (e.g., due to adaptive frame-skipping), perform weighted majority voting
-    on the per-frame readings and return as fallback data.
+    This is the primary data source. crop_index.json reflects all upstream
+    fixes (trajectory correction, outlier fixes, manual moves from review app).
 
-    Returns dict of addr_int -> (hex_bytes_list, obs_count) for addresses
-    not already in extraction_addrs.
+    Returns dict of addr_int -> (hex_bytes_list, obs_count).
     """
-    crop_index_path = 'crops/crop_index.json'
     if not os.path.exists(crop_index_path):
+        print(f"WARNING: {crop_index_path} not found")
         return {}
 
     with open(crop_index_path) as f:
         ci = json.load(f)
 
-    fallback = {}
+    data = {}
     for addr_str, entry in ci.items():
         if addr_str == 'ref_addresses':
             continue
@@ -122,23 +120,21 @@ def load_crop_index_fallback(extraction_addrs):
         except ValueError:
             continue
 
-        if addr in extraction_addrs:
-            continue
-
         readings = entry.get('readings', {})
         confidences = entry.get('confidences', {})
         if not readings:
             continue
 
         # Weighted majority vote per byte position
-        num_bytes = 16
         voted_bytes = []
-        for byte_idx in range(num_bytes):
+        for byte_idx in range(16):
             vote_counts = defaultdict(float)
             for frame_key, reading in readings.items():
-                if len(reading) != num_bytes:
+                if len(reading) != 16:
                     continue
                 byte_val = reading[byte_idx].upper()
+                if byte_val == '--':
+                    continue
                 conf = 1.0
                 if frame_key in confidences and len(confidences[frame_key]) > byte_idx:
                     conf = confidences[frame_key][byte_idx]
@@ -150,10 +146,24 @@ def load_crop_index_fallback(extraction_addrs):
             else:
                 voted_bytes.append('FF')
 
-        if len(voted_bytes) == num_bytes:
-            fallback[addr] = (voted_bytes, len(readings))
+        if len(voted_bytes) == 16:
+            data[addr] = (voted_bytes, len(readings))
 
-    return fallback
+    return data
+
+
+def load_crop_index_fallback(extraction_addrs):
+    """Load addresses from crop_index.json not present in extraction.
+
+    Legacy fallback — kept for backward compatibility when running without
+    crop_index.json as primary source.
+
+    Returns dict of addr_int -> (hex_bytes_list, obs_count) for addresses
+    not already in extraction_addrs.
+    """
+    all_data = load_from_crop_index()
+    return {addr: val for addr, val in all_data.items()
+            if addr not in extraction_addrs}
 
 
 def is_valid_line(addr, hex_bytes, obs):
@@ -607,19 +617,19 @@ def main():
     reference = load_reference()
     print(f"Reference data: {len(reference)} lines")
 
-    # Load extraction
-    extraction_path = 'extracted_firmware.txt'
-    if not os.path.exists(extraction_path):
-        print(f"ERROR: {extraction_path} not found. "
-              f"Run extract_pipeline.py first.")
-        return
-
-    raw_data = load_extraction(extraction_path)
-    print(f"Extraction data: {len(raw_data)} lines")
-
-    # Load crop-index fallback
-    crop_fallback = load_crop_index_fallback(set(raw_data.keys()))
-    print(f"Crop index fallback: {len(crop_fallback)} additional lines")
+    # Primary source: crop_index.json (has all upstream fixes applied)
+    raw_data = load_from_crop_index()
+    if raw_data:
+        print(f"Primary data source: crop_index.json ({len(raw_data)} lines)")
+    else:
+        # Fallback to extracted_firmware.txt if crop_index.json unavailable
+        extraction_path = 'extracted_firmware.txt'
+        if not os.path.exists(extraction_path):
+            print(f"ERROR: No crop_index.json or {extraction_path} found. "
+                  f"Run extract_pipeline.py first.")
+            return
+        raw_data = load_extraction(extraction_path)
+        print(f"Fallback data source: {extraction_path} ({len(raw_data)} lines)")
 
     # Filter extraction
     valid_extraction = {}
@@ -641,8 +651,7 @@ def main():
 
     # Merge with reference
     print("\nMerging data sources...")
-    final = merge_and_vote(valid_extraction, reference, review_extraction,
-                           crop_fallback)
+    final = merge_and_vote(valid_extraction, reference, review_extraction)
     print(f"Merged data: {len(final)} addresses")
     # NOTE: FF-fill and FF-forced override now handled by ff_fill.py
     # (runs as a separate pipeline step after this script)

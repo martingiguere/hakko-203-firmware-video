@@ -496,6 +496,43 @@ def validate_address_sequence(addresses_with_rows):
     return best_sequence
 
 
+def detect_and_split_groups(addr_results):
+    """Detect split-scroll frames and partition rows into consistent groups.
+
+    During Xeltek UI scrolling, frames can show two disconnected address
+    ranges (top = new position, bottom = old position). Detect by finding
+    gaps > 0x30 or address reversals between consecutive rows (sorted by
+    row_y). Each group is then validated independently.
+
+    Args:
+        addr_results: list of (addr_int, row_y, confidence) from raw OCR
+
+    Returns:
+        List of groups, each a list of (addr_int, row_y, confidence).
+    """
+    if len(addr_results) <= 2:
+        return [addr_results]
+
+    sorted_rows = sorted(addr_results, key=lambda x: x[1])  # sort by row_y
+
+    groups = [[sorted_rows[0]]]
+    for i in range(1, len(sorted_rows)):
+        prev_addr = sorted_rows[i - 1][0]
+        curr_addr = sorted_rows[i][0]
+        delta = curr_addr - prev_addr
+
+        # Expected delta for one row: +0x10 (scrolling down)
+        # Raw OCR addresses are noisy (~35% accuracy), so threshold must be
+        # high enough to ignore OCR errors but catch genuine split-scroll
+        # artifacts (which have deltas of 0x200+ between address regions).
+        # Use 0x100 (16 rows of address space) as the split threshold.
+        if delta < -0x100 or delta > 0x100:
+            groups.append([])
+        groups[-1].append(sorted_rows[i])
+
+    return groups
+
+
 def process_frame(classifier, img):
     """Process a single frame: read all addresses and hex data.
 

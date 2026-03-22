@@ -103,7 +103,7 @@ def precompute():
     # Prepare output directory
     os.makedirs(CROPS_DIR, exist_ok=True)
 
-    # Index: addr_upper -> {frames: [int], readings: {frame_str: [bytes]}, confidences: {frame_str: [floats]}}
+    # Index: addr_upper -> {frames: [int], readings: {frame_str: [bytes]}, confidences: {frame_str: [floats]}, row_ys: {frame_str: float}}
     crop_index = {}
     prev_img = None
     skipped = 0
@@ -190,7 +190,7 @@ def precompute():
 
             # Update index
             if addr_upper not in crop_index:
-                crop_index[addr_upper] = {"frames": [], "readings": {}, "confidences": {}}
+                crop_index[addr_upper] = {"frames": [], "readings": {}, "confidences": {}, "row_ys": {}}
             crop_index[addr_upper]["frames"].append(frame_num)
             crop_index[addr_upper]["readings"][str(frame_num)] = [
                 b.upper() if b != "--" else "--" for b in hex_bytes
@@ -198,6 +198,7 @@ def precompute():
             crop_index[addr_upper]["confidences"][str(frame_num)] = [
                 round(float(c), 3) for c in confidences
             ]
+            crop_index[addr_upper].setdefault("row_ys", {})[str(frame_num)] = round(float(row_y), 1)
 
             total_crops += 1
 
@@ -280,13 +281,15 @@ def apply_frame_moves(crop_index):
             print(f"  WARNING: frame_move skipped — frame {frame} not at {from_addr}")
             skipped += 1
             continue
-        # Move readings + confidences
-        dst = crop_index.setdefault(to_addr, {"frames": [], "video_frames": [], "readings": {}, "confidences": {}})
+        # Move readings + confidences + row_ys
+        dst = crop_index.setdefault(to_addr, {"frames": [], "video_frames": [], "readings": {}, "confidences": {}, "row_ys": {}})
         dst.setdefault(arr_key, [])
         if frame_str in src.get("readings", {}):
             dst["readings"][frame_str] = src["readings"].pop(frame_str)
         if frame_str in src.get("confidences", {}):
             dst["confidences"][frame_str] = src["confidences"].pop(frame_str)
+        if frame_str in src.get("row_ys", {}):
+            dst.setdefault("row_ys", {})[frame_str] = src["row_ys"].pop(frame_str)
         src[arr_key].remove(frame_int)
         if frame_int not in dst[arr_key]:
             dst[arr_key].append(frame_int)

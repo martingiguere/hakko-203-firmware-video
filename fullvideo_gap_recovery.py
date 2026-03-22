@@ -415,6 +415,7 @@ def save_crops_and_update_index(observations, crop_index, classifier):
                 'video_frames': [],
                 'readings': {},
                 'confidences': {},
+                'row_ys': {},
             }
             new_addrs.add(addr_hex)
         else:
@@ -457,6 +458,7 @@ def save_crops_and_update_index(observations, crop_index, classifier):
             entry.setdefault('confidences', {})[vf_key] = [
                 round(float(c), 3) for c in obs['byte_confs']
             ]
+            entry.setdefault('row_ys', {})[vf_key] = round(float(row_y), 1)
 
         # Sort frames
         entry['frames'] = sorted(entry['frames'])

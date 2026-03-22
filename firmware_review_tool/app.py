@@ -183,6 +183,8 @@ def apply_single_move(frame, from_addr, to_addr):
         dst.setdefault("readings", {})[frame_str] = src["readings"].pop(frame_str)
     if frame_str in src.get("confidences", {}):
         dst.setdefault("confidences", {})[frame_str] = src["confidences"].pop(frame_str)
+    if frame_str in src.get("row_ys", {}):
+        dst.setdefault("row_ys", {})[frame_str] = src["row_ys"].pop(frame_str)
 
     # Move frame number from correct array
     if is_video:
@@ -574,12 +576,14 @@ def get_frames(addr):
     video_frames = entry.get("video_frames", [])
     readings = entry.get("readings", {})
     knn_confidences = entry.get("confidences", {})
+    row_ys = entry.get("row_ys", {})
     return jsonify({
         "address": addr,
         "frames": frames,
         "video_frames": video_frames,
         "readings": readings,
         "knn_confidences": knn_confidences,
+        "row_ys": row_ys,
         "has_ref": addr in ref_addresses,
     })
 
@@ -962,6 +966,105 @@ def move_frames_batch():
         minimap_cache = None
 
     return jsonify({"ok": True, "applied": applied, "total": len(moves)})
+
+
+@app.route('/api/frame_row_context/<frame>')
+def frame_row_context(frame):
+    """List all addresses that contain a given frame, with row_y for each."""
+    frame_str = frame if frame.startswith('v') else str(frame)
+    rows = []
+    for addr, entry in crop_index.items():
+        if addr == 'ref_addresses':
+            continue
+        if frame_str in entry.get("readings", {}):
+            row_y = entry.get("row_ys", {}).get(frame_str)
+            rows.append({"addr": addr, "row_y": row_y})
+    rows.sort(key=lambda r: r.get("row_y") or 0)
+    return jsonify({"frame": frame_str, "rows": rows, "total_rows": len(rows)})
+
+
+@app.route('/api/move_frame_all_rows', methods=['POST'])
+def move_frame_all_rows():
+    """Move all rows of a frame by the same address offset.
+
+    Given a frame that appears at multiple addresses (one per visible row),
+    compute the offset from one known (from_addr, to_addr) pair and apply
+    the same offset to all other rows of that frame.
+    """
+    global dirty, minimap_cache
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "No JSON body"}), 400
+
+    frame = data.get("frame")
+    from_addr = normalize_addr(str(data.get("from_addr", "")))
+    to_addr = normalize_addr(str(data.get("to_addr", "")))
+
+    if frame is None:
+        return jsonify({"error": "Missing 'frame'"}), 400
+
+    frame_str = str(frame) if not str(frame).startswith('v') else str(frame)
+
+    # Validate addresses
+    try:
+        from_int = int(from_addr, 16)
+        to_int = int(to_addr, 16)
+    except ValueError:
+        return jsonify({"error": "Invalid address"}), 400
+
+    if from_addr == to_addr:
+        return jsonify({"error": "Source and destination are the same"}), 400
+
+    offset = to_int - from_int
+
+    # Find all addresses containing this frame
+    all_addrs = []
+    for addr, entry in crop_index.items():
+        if addr == 'ref_addresses':
+            continue
+        if frame_str in entry.get("readings", {}):
+            all_addrs.append(addr)
+
+    if not all_addrs:
+        return jsonify({"error": f"Frame {frame} not found in any address"}), 404
+
+    # Apply offset to each, creating individual moves
+    moves_applied = 0
+    affected = set()
+    for addr in all_addrs:
+        addr_int = int(addr, 16)
+        new_addr_int = addr_int + offset
+        if new_addr_int < 0 or new_addr_int > END_ADDR or new_addr_int % 0x10 != 0:
+            continue
+        new_addr = f"{new_addr_int:05X}"
+        if addr == new_addr:
+            continue
+
+        apply_single_move(frame, addr, new_addr)
+        frame_moves.append({
+            "frame": frame,
+            "from_addr": addr,
+            "to_addr": new_addr,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        })
+        affected.add(addr)
+        affected.add(new_addr)
+        moves_applied += 1
+
+    if moves_applied:
+        save_frame_moves()
+        save_crop_index()
+        for addr in affected:
+            recompute_consensus_for_addr(addr)
+        dirty = True
+        minimap_cache = None
+
+    return jsonify({
+        "ok": True,
+        "moves_applied": moves_applied,
+        "offset": f"{offset:+d}",
+        "affected_addresses": sorted(affected),
+    })
 
 
 @app.route('/api/suggest_address/<frame>')

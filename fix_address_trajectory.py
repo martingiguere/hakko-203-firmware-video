@@ -424,6 +424,7 @@ def execute_moves(crop_index, moves):
                 'video_frames': [],
                 'readings': {},
                 'confidences': {},
+                'row_ys': {},
             }
         dst_entry = crop_index[dst_key]
         dst_entry.setdefault('video_frames', [])
@@ -445,13 +446,16 @@ def execute_moves(crop_index, moves):
             if frame_int not in src_entry.get(arr_key, []):
                 continue  # already moved or not present
 
-            # Move readings and confidences
+            # Move readings, confidences, and row_ys
             if frame_str in src_entry.get('readings', {}):
                 dst_entry.setdefault('readings', {})[frame_str] = \
                     src_entry['readings'].pop(frame_str)
             if frame_str in src_entry.get('confidences', {}):
                 dst_entry.setdefault('confidences', {})[frame_str] = \
                     src_entry['confidences'].pop(frame_str)
+            if frame_str in src_entry.get('row_ys', {}):
+                dst_entry.setdefault('row_ys', {})[frame_str] = \
+                    src_entry['row_ys'].pop(frame_str)
 
             # Add frame to destination
             if frame_int not in dst_entry[arr_key]:

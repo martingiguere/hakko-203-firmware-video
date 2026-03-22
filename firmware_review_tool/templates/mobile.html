@@ -889,14 +889,46 @@ function addCropImage(container, frameNum, isVideo, fd) {
 
     const label = document.createElement('div');
     label.className = 'crop-label';
-    label.textContent = isVideo ? `Video frame ${frameNum}` : `Frame ${frameNum}`;
+    let labelText = isVideo ? `Video frame ${frameNum}` : `Frame ${frameNum}`;
+    // Show row_y if available
+    const rowY = fd.row_ys && fd.row_ys[frameKey];
+    if (rowY !== undefined) {
+        const rowNum = Math.round((rowY - 272.0) / 28.0) + 1;
+        labelText += ` (row ${rowNum})`;
+    }
+    label.textContent = labelText;
 
-    // Move button
+    // Row context info button
+    const infoBtn = document.createElement('button');
+    infoBtn.className = 'crop-move-btn';
+    infoBtn.textContent = 'i';
+    infoBtn.style.minWidth = '24px';
+    infoBtn.style.padding = '0 4px';
+    infoBtn.onclick = async (e) => {
+        e.stopPropagation();
+        try {
+            const ctx = await api('GET', `/api/frame_row_context/${frameKey}`);
+            const lines = ctx.rows.map(r =>
+                `$${r.addr}` + (r.row_y !== null ? ` (y=${r.row_y})` : '')
+            );
+            showToast(`${ctx.total_rows} rows:\n${lines.join('\n')}`, 5000);
+        } catch(e) { showToast('Error loading row context'); }
+    };
+    label.appendChild(infoBtn);
+
+    // Move button (single row)
     const moveBtn = document.createElement('button');
     moveBtn.className = 'crop-move-btn';
     moveBtn.textContent = 'Move';
     moveBtn.onclick = (e) => { e.stopPropagation(); showMoveInput(wrap, frameKey); };
     label.appendChild(moveBtn);
+
+    // Move All Rows button
+    const moveAllBtn = document.createElement('button');
+    moveAllBtn.className = 'crop-move-btn';
+    moveAllBtn.textContent = 'Move All';
+    moveAllBtn.onclick = (e) => { e.stopPropagation(); showMoveAllInput(wrap, frameKey); };
+    label.appendChild(moveAllBtn);
 
     wrap.appendChild(label);
 
@@ -1033,6 +1065,69 @@ async function doSingleMove(frameKey, rawAddr) {
         refreshStats();
     } catch(e) {
         showToast('Move failed', 3000);
+    }
+}
+
+async function showMoveAllInput(wrapper, frameKey) {
+    // Remove existing move row in this wrapper
+    const existing = wrapper.querySelector('.move-row');
+    if (existing) { existing.remove(); return; }
+
+    const row = document.createElement('div');
+    row.className = 'move-row';
+
+    const addrInput = document.createElement('input');
+    addrInput.type = 'text';
+    addrInput.placeholder = 'Dest addr (all rows)';
+    addrInput.maxLength = 5;
+    addrInput.readOnly = true;
+    addrInput.className = 'move-addr-input';
+
+    const goBtn = document.createElement('button');
+    goBtn.className = 'move-btn move-go';
+    goBtn.textContent = 'Go All';
+    goBtn.onclick = () => { closeAddrKeypad(); doMoveAllRows(frameKey, addrInput.value); };
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'move-btn move-cancel';
+    cancelBtn.textContent = 'X';
+    cancelBtn.onclick = () => { closeAddrKeypad(); row.remove(); };
+
+    addrInput.addEventListener('click', () => openAddrKeypad(addrInput, frameKey));
+
+    row.appendChild(addrInput);
+    row.appendChild(goBtn);
+    row.appendChild(cancelBtn);
+
+    const label = wrapper.querySelector('.crop-label');
+    label.after(row);
+
+    openAddrKeypad(addrInput, frameKey);
+    addrInput.focus();
+}
+
+async function doMoveAllRows(frameKey, rawAddr) {
+    const toAddr = rawAddr.trim().toUpperCase().replace(/^0X/, '').padStart(5, '0');
+    if (!toAddr || toAddr === state.currentAddr) {
+        showToast('Enter a different address');
+        return;
+    }
+    try {
+        const result = await api('POST', '/api/move_frame_all_rows', {
+            frame: frameKey,
+            from_addr: state.currentAddr,
+            to_addr: toAddr,
+        });
+        if (result.error) {
+            showToast('Error: ' + result.error, 3000);
+            return;
+        }
+        showToast(`Moved ${result.moves_applied} rows`);
+        state.dirty = true;
+        loadLine(state.currentAddr);
+        refreshStats();
+    } catch(e) {
+        showToast('Move all failed', 3000);
     }
 }
 
