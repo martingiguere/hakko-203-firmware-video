@@ -726,11 +726,8 @@ def run_extraction(classifier, frame_dir='frames',
     prev_img = None
     processed = 0
     skipped_dup = 0
-    skipped_jump = 0
     t0 = time.time()
 
-    # Adaptive frame-skipping: when many consecutive dups, jump ahead
-    consecutive_dups = 0
     frame_idx = 0
 
     while frame_idx < len(frames):
@@ -744,17 +741,8 @@ def run_extraction(classifier, frame_dir='frames',
         # Skip if frame is same as previous (no scroll happened)
         if not is_frame_different(img, prev_img):
             skipped_dup += 1
-            consecutive_dups += 1
-            # Adaptive skip: if many dups in a row, jump ahead
-            if consecutive_dups >= 5:
-                jump = min(consecutive_dups, 20)
-                frame_idx += jump
-                skipped_jump += jump - 1
-            else:
-                frame_idx += 1
+            frame_idx += 1
             continue
-
-        consecutive_dups = 0
         prev_img = img
         processed += 1
 
@@ -782,15 +770,13 @@ def run_extraction(classifier, frame_dir='frames',
             elapsed = time.time() - t0
             fps = processed / elapsed if elapsed > 0 else 0
             addrs = len(all_observations)
-            print(f"  Processed {processed} frames ({skipped_dup} dup, "
-                  f"{skipped_jump} jump-skipped), "
+            print(f"  Processed {processed} frames ({skipped_dup} dup-skipped), "
                   f"{addrs} unique addresses, {fps:.1f} fps "
                   f"[frame {frame_idx}/{len(frames)}]")
 
     elapsed = time.time() - t0
     print(f"\nExtraction complete: {processed} frames processed, "
-          f"{skipped_dup} dup-skipped, {skipped_jump} jump-skipped, "
-          f"{elapsed:.1f}s")
+          f"{skipped_dup} dup-skipped, {elapsed:.1f}s")
     print(f"Unique addresses found: {len(all_observations)}")
 
     # Multi-frame voting
