@@ -1071,7 +1071,9 @@ async function doSingleMove(frameKey, rawAddr) {
         state.dirty = true;
         const scrollY = window.scrollY;
         await loadLine(state.currentAddr);
-        window.scrollTo(0, scrollY);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => { window.scrollTo(0, scrollY); });
+        });
         refreshStats();
     } catch(e) {
         showToast('Move failed', 3000);
@@ -1136,7 +1138,9 @@ async function doMoveAllRows(frameKey, rawAddr) {
         state.dirty = true;
         const scrollY = window.scrollY;
         await loadLine(state.currentAddr);
-        window.scrollTo(0, scrollY);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => { window.scrollTo(0, scrollY); });
+        });
         refreshStats();
     } catch(e) {
         showToast('Move all failed', 3000);
