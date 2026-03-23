@@ -240,10 +240,13 @@ def recompute_consensus_for_addr(addr):
     if consensus:
         # Only overwrite if user hasn't manually edited
         if line.get("source") != "user":
-            line["bytes"] = consensus
-            line["source"] = "merged"
-            line["status"] = "unreviewed"
-            line["edited_positions"] = []
+            if consensus != line["bytes"]:
+                # Consensus changed — reset status for re-review
+                line["bytes"] = consensus
+                line["source"] = "merged"
+                line["status"] = "unreviewed"
+                line["edited_positions"] = []
+            # else: bytes unchanged — keep current status (including "accepted")
 
 
 def parse_merged_file():
