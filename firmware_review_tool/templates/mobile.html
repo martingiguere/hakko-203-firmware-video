@@ -734,6 +734,7 @@ function closeHexKeypad() {
     addrKeypadInput = null;
     addrKeypadFrameKey = null;
     document.getElementById('hex-keypad').style.display = 'none';
+    document.body.style.paddingBottom = '64px';
     document.querySelectorAll('.byte-cell').forEach(c => c.classList.remove('byte-cell-active'));
 }
 
@@ -752,13 +753,19 @@ function openAddrKeypad(inputEl, frameKey) {
     document.getElementById('hex-keypad-info').textContent = 'Move to address: ' + (inputEl.value || '-----');
     document.getElementById('hex-keypad').style.display = 'block';
 
-    // Scroll so the move row is visible above the keypad (~310px from bottom)
+    // Add bottom padding so the last items can scroll above the keypad
+    const keypadHeight = document.getElementById('hex-keypad').offsetHeight + 60;
+    document.body.style.paddingBottom = keypadHeight + 'px';
+
+    // Scroll so the crop wrapper (image + move input) is visible above the keypad
     setTimeout(() => {
-        const rect = inputEl.getBoundingClientRect();
-        const keypadHeight = document.getElementById('hex-keypad').offsetHeight + 60;
+        const wrapper = inputEl.closest('.crop-wrapper');
+        const target = wrapper || inputEl;
+        const rect = target.getBoundingClientRect();
         const visibleBottom = window.innerHeight - keypadHeight;
         if (rect.bottom > visibleBottom) {
-            window.scrollBy({ top: rect.bottom - visibleBottom + 20, behavior: 'smooth' });
+            const desiredTop = Math.max(60, visibleBottom - rect.height - 10);
+            window.scrollBy({ top: rect.top - desiredTop, behavior: 'smooth' });
         }
     }, 100);
 }
@@ -770,6 +777,7 @@ function closeAddrKeypad() {
     addrKeypadInput = null;
     addrKeypadFrameKey = null;
     document.getElementById('hex-keypad').style.display = 'none';
+    document.body.style.paddingBottom = '64px';
 }
 
 // Override hex key functions to handle address mode
@@ -1061,7 +1069,9 @@ async function doSingleMove(frameKey, rawAddr) {
         }
         showToast(`Moved to $${toAddr}`);
         state.dirty = true;
-        loadLine(state.currentAddr);
+        const scrollY = window.scrollY;
+        await loadLine(state.currentAddr);
+        window.scrollTo(0, scrollY);
         refreshStats();
     } catch(e) {
         showToast('Move failed', 3000);
@@ -1124,7 +1134,9 @@ async function doMoveAllRows(frameKey, rawAddr) {
         }
         showToast(`Moved ${result.moves_applied} rows`);
         state.dirty = true;
-        loadLine(state.currentAddr);
+        const scrollY = window.scrollY;
+        await loadLine(state.currentAddr);
+        window.scrollTo(0, scrollY);
         refreshStats();
     } catch(e) {
         showToast('Move all failed', 3000);
