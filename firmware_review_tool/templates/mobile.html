@@ -574,6 +574,9 @@ async function loadLine(addr) {
     addr = normalizeAddr(addr);
     state.currentAddr = addr;
 
+    // Reset keypad state when navigating to a new address
+    closeHexKeypad();
+
     const [lineData, frameData] = await Promise.all([
         api('GET', `/api/line/${addr}`),
         api('GET', `/api/frames/${addr}`),
