@@ -895,14 +895,20 @@ def move_frame():
     if from_addr == to_addr:
         return jsonify({"error": "Source and destination are the same"}), 400
 
+    # Capture row_y before moving (for durable move records)
+    row_y = src.get("row_ys", {}).get(frame_str)
+
     apply_single_move(frame, from_addr, to_addr)
 
-    frame_moves.append({
+    move_record = {
         "frame": frame,
         "from_addr": from_addr,
         "to_addr": to_addr,
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-    })
+    }
+    if row_y is not None:
+        move_record["row_y"] = row_y
+    frame_moves.append(move_record)
     save_frame_moves()
     save_crop_index()
 
@@ -946,13 +952,19 @@ def move_frames_batch():
         if to_int % 0x10 != 0 or to_int < 0 or to_int > END_ADDR:
             continue
 
+        # Capture row_y before moving
+        row_y = src.get("row_ys", {}).get(frame_str) if src else None
+
         apply_single_move(frame, from_addr, to_addr)
-        frame_moves.append({
+        move_record = {
             "frame": frame,
             "from_addr": from_addr,
             "to_addr": to_addr,
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        })
+        }
+        if row_y is not None:
+            move_record["row_y"] = row_y
+        frame_moves.append(move_record)
         affected_addrs.add(from_addr)
         affected_addrs.add(to_addr)
         applied += 1
@@ -1040,13 +1052,20 @@ def move_frame_all_rows():
         if addr == new_addr:
             continue
 
+        # Capture row_y before moving
+        entry = crop_index.get(addr, {})
+        row_y = entry.get("row_ys", {}).get(frame_str)
+
         apply_single_move(frame, addr, new_addr)
-        frame_moves.append({
+        move_record = {
             "frame": frame,
             "from_addr": addr,
             "to_addr": new_addr,
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        })
+        }
+        if row_y is not None:
+            move_record["row_y"] = row_y
+        frame_moves.append(move_record)
         affected.add(addr)
         affected.add(new_addr)
         moves_applied += 1

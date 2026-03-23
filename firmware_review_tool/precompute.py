@@ -243,10 +243,93 @@ def precompute():
     print(f"  Index size: {os.path.getsize(CROP_INDEX_PATH) / 1024:.0f} KB")
 
 
+def _find_frame_source(crop_index, frame_str, frame_int, arr_key, to_addr):
+    """Find the best source address for a frame when from_addr doesn't match.
+
+    For manual moves (ground truth destinations), the from_addr may not match
+    after re-extraction. Find the frame wherever it currently is and pick the
+    source closest to to_addr. Uses row_y to break ties.
+
+    Returns source address string or None.
+    """
+    to_int = int(to_addr, 16)
+    candidates = []
+    for addr, entry in crop_index.items():
+        if addr == 'ref_addresses':
+            continue
+        if frame_int in entry.get(arr_key, []) and frame_str in entry.get("readings", {}):
+            dist = abs(int(addr, 16) - to_int)
+            row_y = entry.get("row_ys", {}).get(frame_str)
+            candidates.append((dist, addr, row_y))
+
+    if not candidates:
+        return None
+
+    candidates.sort()
+    min_dist = candidates[0][0]
+    tied = [c for c in candidates if c[0] == min_dist]
+
+    if len(tied) == 1:
+        return tied[0][1]
+
+    # Tie-break by row_y: prefer the row_y that produces correct 0x10 spacing
+    # relative to to_addr (the row at to_addr should have the same row_y as source)
+    # Pick the candidate whose address is just below to_addr (addr < to_addr)
+    below = [c for c in tied if int(c[1], 16) < to_int]
+    if below:
+        return below[-1][1]  # closest from below
+    return tied[0][1]
+
+
+def _move_frame(crop_index, frame_str, frame_int, is_video, arr_key, from_addr, to_addr):
+    """Move a single frame's data from one address to another in crop_index."""
+    src = crop_index.get(from_addr)
+    if not src:
+        return False
+
+    dst = crop_index.setdefault(to_addr, {"frames": [], "video_frames": [], "readings": {}, "confidences": {}, "row_ys": {}})
+    dst.setdefault(arr_key, [])
+
+    if frame_str in src.get("readings", {}):
+        dst["readings"][frame_str] = src["readings"].pop(frame_str)
+    if frame_str in src.get("confidences", {}):
+        dst["confidences"][frame_str] = src["confidences"].pop(frame_str)
+    if frame_str in src.get("row_ys", {}):
+        dst.setdefault("row_ys", {})[frame_str] = src["row_ys"].pop(frame_str)
+    if frame_int in src.get(arr_key, []):
+        src[arr_key].remove(frame_int)
+    if frame_int not in dst[arr_key]:
+        dst[arr_key].append(frame_int)
+        dst[arr_key].sort()
+
+    # Move crop PNG
+    png_name = crop_filename(frame_int, is_video=is_video)
+    src_png = os.path.join(CROPS_DIR, from_addr.lower(), png_name)
+    dst_dir = os.path.join(CROPS_DIR, to_addr.lower())
+    dst_png = os.path.join(dst_dir, png_name)
+    if os.path.exists(src_png):
+        os.makedirs(dst_dir, exist_ok=True)
+        shutil.move(src_png, dst_png)
+
+    # Clean up empty source
+    if not src.get("frames") and not src.get("video_frames") and not src.get("readings"):
+        del crop_index[from_addr]
+        src_dir_path = os.path.join(CROPS_DIR, from_addr.lower())
+        if os.path.isdir(src_dir_path) and not os.listdir(src_dir_path):
+            os.rmdir(src_dir_path)
+
+    return True
+
+
 def apply_frame_moves(crop_index):
     """Replay frame_moves.json onto the freshly-generated crop_index.
 
-    Handles both extracted frames (integer) and video frames ("vNNNNN" string).
+    For manual moves (no strategy field), from_addr is treated as a hint —
+    the frame is found wherever it currently is and moved to to_addr.
+    This ensures user-confirmed destinations survive pipeline re-runs.
+
+    For automated moves (with strategy field), exact from_addr match is
+    required (these are regenerated each pipeline run anyway).
     """
     if not os.path.exists(FRAME_MOVES_PATH):
         return 0
@@ -255,10 +338,12 @@ def apply_frame_moves(crop_index):
     moves = data.get("moves", [])
     applied = 0
     skipped = 0
+    relocated = 0
     for move in moves:
         frame = move["frame"]
         from_addr = move["from_addr"]
         to_addr = move["to_addr"]
+        is_manual = "strategy" not in move
 
         # Determine frame type
         if isinstance(frame, str) and frame.startswith('v'):
@@ -272,45 +357,39 @@ def apply_frame_moves(crop_index):
             frame_str = str(frame_int)
             arr_key = 'frames'
 
-        if from_addr not in crop_index:
-            print(f"  WARNING: frame_move skipped — {from_addr} not in crop_index (frame {frame})")
-            skipped += 1
+        # Already at destination?
+        dst_entry = crop_index.get(to_addr)
+        if dst_entry and frame_str in dst_entry.get("readings", {}):
+            applied += 1
             continue
-        src = crop_index[from_addr]
-        if frame_int not in src.get(arr_key, []):
-            print(f"  WARNING: frame_move skipped — frame {frame} not at {from_addr}")
+
+        # Try exact from_addr match first
+        src = crop_index.get(from_addr)
+        actual_from = from_addr
+        if not src or frame_int not in src.get(arr_key, []):
+            if is_manual:
+                # Manual move: find frame wherever it is (from_addr is disposable)
+                actual_from = _find_frame_source(crop_index, frame_str, frame_int,
+                                                  arr_key, to_addr)
+                if actual_from is None:
+                    skipped += 1
+                    continue
+                if actual_from == to_addr:
+                    applied += 1
+                    continue
+                relocated += 1
+            else:
+                skipped += 1
+                continue
+
+        if _move_frame(crop_index, frame_str, frame_int, is_video,
+                       arr_key, actual_from, to_addr):
+            applied += 1
+        else:
             skipped += 1
-            continue
-        # Move readings + confidences + row_ys
-        dst = crop_index.setdefault(to_addr, {"frames": [], "video_frames": [], "readings": {}, "confidences": {}, "row_ys": {}})
-        dst.setdefault(arr_key, [])
-        if frame_str in src.get("readings", {}):
-            dst["readings"][frame_str] = src["readings"].pop(frame_str)
-        if frame_str in src.get("confidences", {}):
-            dst["confidences"][frame_str] = src["confidences"].pop(frame_str)
-        if frame_str in src.get("row_ys", {}):
-            dst.setdefault("row_ys", {})[frame_str] = src["row_ys"].pop(frame_str)
-        src[arr_key].remove(frame_int)
-        if frame_int not in dst[arr_key]:
-            dst[arr_key].append(frame_int)
-            dst[arr_key].sort()
-        # Move crop PNG
-        png_name = crop_filename(frame_int, is_video=is_video)
-        src_png = os.path.join(CROPS_DIR, from_addr.lower(), png_name)
-        dst_dir = os.path.join(CROPS_DIR, to_addr.lower())
-        dst_png = os.path.join(dst_dir, png_name)
-        if os.path.exists(src_png):
-            os.makedirs(dst_dir, exist_ok=True)
-            shutil.move(src_png, dst_png)
-        # Clean up empty source
-        if not src.get("frames") and not src.get("video_frames") and not src.get("readings"):
-            del crop_index[from_addr]
-            src_dir_path = os.path.join(CROPS_DIR, from_addr.lower())
-            if os.path.isdir(src_dir_path) and not os.listdir(src_dir_path):
-                os.rmdir(src_dir_path)
-        applied += 1
-    if skipped:
-        print(f"  Frame moves: applied {applied}, skipped {skipped}")
+
+    if skipped or relocated:
+        print(f"  Frame moves: applied {applied}, skipped {skipped}, relocated {relocated}")
 
     # Clean up ghost frames: frames in the array but with no readings
     # (caused by chained moves where a later move re-adds the frame number
