@@ -29,9 +29,11 @@ SB_X_MIN = _SB.get('x_min', 1375)
 SB_X_MAX = _SB.get('x_max', 1395)
 SB_TRACK_Y_MIN = _SB.get('track_y_min', 187)
 SB_TRACK_Y_MAX = _SB.get('track_y_max', 563)
-SB_SLOPE = _SB.get('slope', 217.9)
-SB_INTERCEPT = _SB.get('intercept', -40780)
 SB_MIN_THUMB_HEIGHT = _SB.get('min_thumb_height', 8)
+# Quadratic fit: addr = a * y^2 + b * y + c (fitted against 49 trajectory waypoints)
+SB_QUAD_A = _SB.get('quad_a', -0.017117)
+SB_QUAD_B = _SB.get('quad_b', 232.8594)
+SB_QUAD_C = _SB.get('quad_c', -43721.9)
 
 
 def detect_scrollbar_address(img):
@@ -87,8 +89,8 @@ def detect_scrollbar_address(img):
     # Compute thumb center in absolute frame coordinates
     center_y = SB_TRACK_Y_MIN + (best_start + best_end) / 2.0
 
-    # Map to address
-    estimated_addr = int(SB_SLOPE * center_y + SB_INTERCEPT)
+    # Map to address (quadratic fit)
+    estimated_addr = int(SB_QUAD_A * center_y * center_y + SB_QUAD_B * center_y + SB_QUAD_C)
     estimated_addr = max(0, min(estimated_addr, 0x13FF0))
     # Align to 0x10
     estimated_addr = (estimated_addr // 0x10) * 0x10

@@ -29,10 +29,11 @@
     "x_max": 1395,
     "track_y_min": 187,
     "track_y_max": 563,
-    "slope": 217.9,
-    "intercept": -40780,
+    "quad_a": -0.017117,
+    "quad_b": 232.8594,
+    "quad_c": -43721.9,
     "min_thumb_height": 8,
-    "notes": "Linear fit from 41 manual trajectory waypoints. Mean error $01F4, max $04C0."
+    "notes": "Quadratic fit from 49 trajectory waypoints. Mean error $0161, max $0480. Reduces bias in $00000-$03FFF and $0C000-$0FFFF regions vs linear fit."
   },
   "notes": "Calibrated from Xeltek SuperPro 6100N Edit Buffer dialog",
   "layout": {
