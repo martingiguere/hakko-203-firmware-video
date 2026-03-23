@@ -160,6 +160,8 @@
         .btn-reset:active { background: #666; }
         .btn-save { background: #1e88e5; flex: 0.5; }
         .btn-save:active { background: #1565c0; }
+        .btn-save.dirty { background: #e53935; animation: pulse-save 1s infinite; }
+        @keyframes pulse-save { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
 
         /* --- Stats row --- */
         #stats-row {
@@ -852,7 +854,7 @@ async function commitBytes() {
         status: state.lineData.status === 'unreviewed' ? 'edited' : state.lineData.status
     });
 
-    state.dirty = true;
+    state.dirty = true; updateSaveButton();
     const lineData = await api('GET', `/api/line/${state.currentAddr}`);
     state.lineData = lineData;
     renderHeader();
@@ -1071,7 +1073,7 @@ async function doSingleMove(frameKey, rawAddr) {
             return;
         }
         showToast(`Moved to $${toAddr}`);
-        state.dirty = true;
+        state.dirty = true; updateSaveButton();
         const scrollY = window.scrollY;
         await loadLine(state.currentAddr);
         requestAnimationFrame(() => {
@@ -1138,7 +1140,7 @@ async function doMoveAllRows(frameKey, rawAddr) {
             return;
         }
         showToast(`Moved ${result.moves_applied} rows`);
-        state.dirty = true;
+        state.dirty = true; updateSaveButton();
         const scrollY = window.scrollY;
         await loadLine(state.currentAddr);
         requestAnimationFrame(() => {
@@ -1183,7 +1185,7 @@ async function acceptLine() {
         bytes: state.lineData.bytes,
         status: 'accepted'
     });
-    state.dirty = true;
+    state.dirty = true; updateSaveButton();
     showToast('Accepted');
     await refreshStats();
 
@@ -1217,7 +1219,7 @@ async function flagLine() {
         bytes: state.lineData.bytes,
         status: 'flagged'
     });
-    state.dirty = true;
+    state.dirty = true; updateSaveButton();
     showToast('Flagged');
     await refreshStats();
     if (nextAddr) {
@@ -1232,7 +1234,7 @@ async function resetLine() {
         bytes: state.lineData.bytes,
         status: 'unreviewed'
     });
-    state.dirty = true;
+    state.dirty = true; updateSaveButton();
     const lineData = await api('GET', `/api/line/${state.currentAddr}`);
     state.lineData = lineData;
     renderHeader();
@@ -1241,9 +1243,21 @@ async function resetLine() {
     showToast('Reset');
 }
 
+function updateSaveButton() {
+    const btn = document.querySelector('.btn-save');
+    if (state.dirty) {
+        btn.classList.add('dirty');
+        btn.textContent = 'Save *';
+    } else {
+        btn.classList.remove('dirty');
+        btn.textContent = 'Save';
+    }
+}
+
 async function doSave() {
     await api('POST', '/api/save');
     state.dirty = false;
+    updateSaveButton();
     showToast('Saved');
 }
 
