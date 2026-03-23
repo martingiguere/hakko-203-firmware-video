@@ -31,7 +31,7 @@
       "edited_positions": []
     },
     "00010": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -54,7 +54,7 @@
       "edited_positions": []
     },
     "00020": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -77,7 +77,7 @@
       "edited_positions": []
     },
     "00030": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -100,7 +100,7 @@
       "edited_positions": []
     },
     "00040": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -123,7 +123,7 @@
       "edited_positions": []
     },
     "00050": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -146,7 +146,7 @@
       "edited_positions": []
     },
     "00060": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -169,7 +169,7 @@
       "edited_positions": []
     },
     "00070": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -192,7 +192,7 @@
       "edited_positions": []
     },
     "00080": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -215,7 +215,7 @@
       "edited_positions": []
     },
     "00090": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -238,7 +238,7 @@
       "edited_positions": []
     },
     "000A0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -261,7 +261,7 @@
       "edited_positions": []
     },
     "000B0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -284,7 +284,7 @@
       "edited_positions": []
     },
     "000C0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -307,7 +307,7 @@
       "edited_positions": []
     },
     "000D0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -330,7 +330,7 @@
       "edited_positions": []
     },
     "000E0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -353,7 +353,7 @@
       "edited_positions": []
     },
     "000F0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -376,7 +376,7 @@
       "edited_positions": []
     },
     "00100": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -399,7 +399,7 @@
       "edited_positions": []
     },
     "00110": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -422,7 +422,7 @@
       "edited_positions": []
     },
     "00120": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -445,7 +445,7 @@
       "edited_positions": []
     },
     "00130": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -468,7 +468,7 @@
       "edited_positions": []
     },
     "00140": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -491,7 +491,7 @@
       "edited_positions": []
     },
     "00150": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -514,7 +514,7 @@
       "edited_positions": []
     },
     "00160": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -537,7 +537,7 @@
       "edited_positions": []
     },
     "00170": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -560,7 +560,7 @@
       "edited_positions": []
     },
     "00180": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -583,7 +583,7 @@
       "edited_positions": []
     },
     "00190": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -606,7 +606,7 @@
       "edited_positions": []
     },
     "001A0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -629,7 +629,7 @@
       "edited_positions": []
     },
     "001B0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -790,7 +790,7 @@
       "edited_positions": []
     },
     "00220": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -813,7 +813,7 @@
       "edited_positions": []
     },
     "00230": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -836,7 +836,7 @@
       "edited_positions": []
     },
     "00240": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -859,7 +859,7 @@
       "edited_positions": []
     },
     "00250": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -882,7 +882,7 @@
       "edited_positions": []
     },
     "00260": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -905,7 +905,7 @@
       "edited_positions": []
     },
     "00270": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -928,7 +928,7 @@
       "edited_positions": []
     },
     "00280": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -951,7 +951,7 @@
       "edited_positions": []
     },
     "00290": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -974,7 +974,7 @@
       "edited_positions": []
     },
     "002A0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -997,7 +997,7 @@
       "edited_positions": []
     },
     "002B0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -1017,13 +1017,10 @@
         "FF"
       ],
       "source": "user",
-      "edited_positions": [
-        0,
-        4
-      ]
+      "edited_positions": []
     },
     "002C0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -1046,7 +1043,7 @@
       "edited_positions": []
     },
     "002D0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -1066,9 +1063,7 @@
         "FF"
       ],
       "source": "user",
-      "edited_positions": [
-        6
-      ]
+      "edited_positions": []
     },
     "002E0": {
       "status": "unreviewed",
@@ -1485,7 +1480,7 @@
       "edited_positions": []
     },
     "00400": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -1508,7 +1503,7 @@
       "edited_positions": []
     },
     "00410": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -13215,7 +13210,7 @@
       "edited_positions": []
     },
     "023E0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -13284,7 +13279,7 @@
       "edited_positions": []
     },
     "02410": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "43",
         "50",
@@ -13353,7 +13348,7 @@
       "edited_positions": []
     },
     "02440": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "41",
         "50",
@@ -14779,7 +14774,7 @@
       "edited_positions": []
     },
     "02820": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -25658,7 +25653,7 @@
       "edited_positions": []
     },
     "045B0": {
-      "status": "edited",
+      "status": "unreviewed",
       "bytes": [
         "--",
         "--",
@@ -25678,24 +25673,7 @@
         "--"
       ],
       "source": "user",
-      "edited_positions": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        10,
-        11,
-        12,
-        13,
-        14,
-        15
-      ]
+      "edited_positions": []
     },
     "045C0": {
       "status": "unreviewed",
@@ -49830,7 +49808,7 @@
       "edited_positions": []
     },
     "08750": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "B7",
         "D1",
@@ -49850,9 +49828,7 @@
         "F2"
       ],
       "source": "user",
-      "edited_positions": [
-        12
-      ]
+      "edited_positions": []
     },
     "08760": {
       "status": "unreviewed",
@@ -52293,7 +52269,7 @@
       "edited_positions": []
     },
     "08E00": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "D8",
         "F2",
@@ -58687,7 +58663,7 @@
       "edited_positions": []
     },
     "09F60": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "AA",
         "75",
@@ -58710,7 +58686,7 @@
       "edited_positions": []
     },
     "09F70": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "01",
         "6E",
@@ -64598,7 +64574,7 @@
       "edited_positions": []
     },
     "0AF70": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "D8",
         "12",
@@ -78076,7 +78052,7 @@
       "edited_positions": []
     },
     "0D410": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "4F",
         "78",
@@ -83665,7 +83641,7 @@
       "edited_positions": []
     },
     "0E340": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "A3",
         "0A",
@@ -88817,7 +88793,7 @@
       "edited_positions": []
     },
     "0F140": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "6E",
         "08",
@@ -89760,7 +89736,7 @@
       "edited_positions": []
     },
     "0F3D0": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "C9",
         "FF",
@@ -90197,7 +90173,7 @@
       "edited_positions": []
     },
     "0F500": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "02",
         "D2",
@@ -91945,7 +91921,7 @@
       "edited_positions": []
     },
     "0F9C0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "F2",
         "73",
@@ -92014,7 +91990,7 @@
       "edited_positions": []
     },
     "0F9F0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "B4",
         "FE",
@@ -92474,7 +92450,7 @@
       "edited_positions": []
     },
     "0FB30": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "74",
         "10",
@@ -94038,7 +94014,7 @@
       "edited_positions": []
     },
     "0FF70": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "4E",
         "FC",
@@ -94107,7 +94083,7 @@
       "edited_positions": []
     },
     "0FFA0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "4E",
         "FC",
@@ -94130,7 +94106,7 @@
       "edited_positions": []
     },
     "0FFB0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "4E",
         "FC",
@@ -94153,7 +94129,7 @@
       "edited_positions": []
     },
     "0FFC0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "4E",
         "FC",
@@ -94176,7 +94152,7 @@
       "edited_positions": []
     },
     "0FFD0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "4E",
         "FC",
@@ -94199,7 +94175,7 @@
       "edited_positions": []
     },
     "0FFE0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "4E",
         "FC",
@@ -95740,7 +95716,7 @@
       "edited_positions": []
     },
     "10410": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "05",
         "05",
@@ -96522,7 +96498,7 @@
       "edited_positions": []
     },
     "10630": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "0A",
         "0A",
@@ -96568,7 +96544,7 @@
       "edited_positions": []
     },
     "10650": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "08",
         "05",
@@ -96844,7 +96820,7 @@
       "edited_positions": []
     },
     "10710": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "03",
         "03",
@@ -96936,7 +96912,7 @@
       "edited_positions": []
     },
     "10750": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "09",
         "08",
@@ -96959,7 +96935,7 @@
       "edited_positions": []
     },
     "10760": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "07",
         "07",
@@ -96982,7 +96958,7 @@
       "edited_positions": []
     },
     "10770": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "07",
         "07",
@@ -97005,7 +96981,7 @@
       "edited_positions": []
     },
     "10780": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "07",
         "07",
@@ -97028,7 +97004,7 @@
       "edited_positions": []
     },
     "10790": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "05",
         "00",
@@ -97048,12 +97024,10 @@
         "00"
       ],
       "source": "user",
-      "edited_positions": [
-        0
-      ]
+      "edited_positions": []
     },
     "107A0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "03",
         "00",
@@ -97076,7 +97050,7 @@
       "edited_positions": []
     },
     "107B0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "0A",
         "00",
@@ -97096,9 +97070,7 @@
         "00"
       ],
       "source": "user",
-      "edited_positions": [
-        8
-      ]
+      "edited_positions": []
     },
     "107C0": {
       "status": "unreviewed",
@@ -97147,7 +97119,7 @@
       "edited_positions": []
     },
     "107E0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "64",
         "00",
@@ -97170,7 +97142,7 @@
       "edited_positions": []
     },
     "107F0": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -97331,7 +97303,7 @@
       "edited_positions": []
     },
     "10860": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -97351,14 +97323,7 @@
         "FF"
       ],
       "source": "user",
-      "edited_positions": [
-        2,
-        6,
-        9,
-        10,
-        13,
-        14
-      ]
+      "edited_positions": []
     },
     "10870": {
       "status": "unreviewed",
@@ -97591,7 +97556,7 @@
       "edited_positions": []
     },
     "10910": {
-      "status": "flagged",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -97706,7 +97671,7 @@
       "edited_positions": []
     },
     "10960": {
-      "status": "accepted",
+      "status": "unreviewed",
       "bytes": [
         "FF",
         "FF",
@@ -97726,24 +97691,7 @@
         "FF"
       ],
       "source": "user",
-      "edited_positions": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        10,
-        11,
-        12,
-        13,
-        14,
-        15
-      ]
+      "edited_positions": []
     },
     "10970": {
       "status": "unreviewed",
