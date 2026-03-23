@@ -24,6 +24,16 @@
   "cell_y_offset": 0,
   "cell_x_offset": 0,
   "calibration_frame": "frame_05000.png",
+  "scrollbar": {
+    "x_min": 1375,
+    "x_max": 1395,
+    "track_y_min": 187,
+    "track_y_max": 563,
+    "slope": 217.9,
+    "intercept": -40780,
+    "min_thumb_height": 8,
+    "notes": "Linear fit from 41 manual trajectory waypoints. Mean error $01F4, max $04C0."
+  },
   "notes": "Calibrated from Xeltek SuperPro 6100N Edit Buffer dialog",
   "layout": {
     "address_cols": [

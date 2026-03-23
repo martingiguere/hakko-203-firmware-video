@@ -35,6 +35,7 @@ from template_matcher import (
     extract_cell, is_blank_cell, extract_features,
     load_reference, find_rows_with_known_data,
 )
+from scrollbar_detector import detect_scrollbar_address
 
 # Address range for the R5F21258SNFP buffer
 ADDR_MIN = 0x00000
@@ -429,7 +430,7 @@ def try_fix_49_swap(addr, expected_addr):
     return result if result == expected_addr else None
 
 
-def validate_address_sequence(addresses_with_rows):
+def validate_address_sequence(addresses_with_rows, scrollbar_hint=None):
     """Validate and correct addresses in a frame.
 
     Addresses should be sequential with 0x10 spacing. Uses an anchor-based
@@ -438,6 +439,7 @@ def validate_address_sequence(addresses_with_rows):
 
     Args:
         addresses_with_rows: list of (addr_int, row_y, confidence)
+        scrollbar_hint: estimated top address from scrollbar detector, or None
 
     Returns:
         Corrected list of (addr_int, row_y, confidence).
@@ -489,6 +491,15 @@ def validate_address_sequence(addresses_with_rows):
         if ff_count > len(sequence) * 0.5:
             score *= 0.3
 
+        # Boost/penalize anchors based on scrollbar position estimate
+        if scrollbar_hint is not None:
+            anchor_top = min(a for a, _, _ in sequence)
+            distance = abs(anchor_top - scrollbar_hint)
+            if distance <= 0x200:
+                score *= 1.5    # strong match with scrollbar
+            elif distance >= 0x1000:
+                score *= 0.3    # likely wrong region
+
         if score > best_score:
             best_score = score
             best_sequence = sequence
@@ -533,8 +544,13 @@ def detect_and_split_groups(addr_results):
     return groups
 
 
-def process_frame(classifier, img):
+def process_frame(classifier, img, scrollbar_hint=None):
     """Process a single frame: read all addresses and hex data.
+
+    Args:
+        classifier: FastKNNClassifier
+        img: Grayscale frame image
+        scrollbar_hint: estimated top address from scrollbar detector, or None
 
     Returns list of (addr_int, row_y, hex_bytes, byte_confidences, addr_conf).
     """
@@ -562,11 +578,9 @@ def process_frame(classifier, img):
         except ValueError:
             pass
 
-    # Step 2: Detect split-scroll frames and validate each group independently
-    groups = detect_and_split_groups(addr_results)
-    validated_addrs = []
-    for group in groups:
-        validated_addrs.extend(validate_address_sequence(group))
+    # Step 2: Validate address sequence (with scrollbar hint if available)
+    validated_addrs = validate_address_sequence(addr_results,
+                                                scrollbar_hint=scrollbar_hint)
 
     # Step 3: Read hex bytes for each validated row
     # For FF-forced regions: read bytes but only keep if non-FF
@@ -758,8 +772,12 @@ def run_extraction(classifier, frame_dir='frames',
         prev_img = img
         processed += 1
 
+        # Detect scrollbar position for address validation hint
+        scrollbar_addr, scrollbar_conf = detect_scrollbar_address(img)
+        scrollbar_hint = scrollbar_addr if scrollbar_conf >= 0.5 else None
+
         # Process this frame
-        results = process_frame(classifier, img)
+        results = process_frame(classifier, img, scrollbar_hint=scrollbar_hint)
 
         assignments = []
         for addr_int, row_y, hex_bytes, byte_confs, addr_conf in results:
