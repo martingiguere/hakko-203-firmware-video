@@ -91,7 +91,7 @@ def load_extraction(filepath):
             if len(hex_bytes) == 16:
                 valid = all(re.match(r'^[0-9A-Fa-f]{2}$', b) for b in hex_bytes)
                 if valid:
-                    data[addr] = ([b.upper() for b in hex_bytes], obs)
+                    data[addr] = ([b.upper() for b in hex_bytes], obs, False)
 
     return data
 
@@ -125,8 +125,9 @@ def load_from_crop_index(crop_index_path='crops/crop_index.json'):
         if not readings:
             continue
 
-        # Weighted majority vote per byte position
-        voted_bytes = []
+        # Two-pass weighted majority vote per byte position
+        # Pass 1: initial consensus from all frames
+        pass1_bytes = []
         for byte_idx in range(16):
             vote_counts = defaultdict(float)
             for frame_key, reading in readings.items():
@@ -139,15 +140,49 @@ def load_from_crop_index(crop_index_path='crops/crop_index.json'):
                 if frame_key in confidences and len(confidences[frame_key]) > byte_idx:
                     conf = confidences[frame_key][byte_idx]
                 vote_counts[byte_val] += conf
-
             if vote_counts:
-                winner = max(vote_counts, key=vote_counts.get)
-                voted_bytes.append(winner)
+                pass1_bytes.append(max(vote_counts, key=vote_counts.get))
             else:
-                voted_bytes.append('FF')
+                pass1_bytes.append('FF')
+
+        # Pass 2: exclude outlier frames (8+ bytes differ) if majority is strong
+        good_frames = []
+        for frame_key, reading in readings.items():
+            if len(reading) != 16:
+                continue
+            diffs = sum(1 for i in range(16)
+                        if reading[i].upper() != '--' and reading[i].upper() != pass1_bytes[i])
+            if diffs < 8:
+                good_frames.append(frame_key)
+
+        # Only re-vote if outliers exist AND good frames are >75% of total
+        if len(good_frames) < len(readings) and len(good_frames) > len(readings) * 0.75:
+            voted_bytes = []
+            for byte_idx in range(16):
+                vote_counts = defaultdict(float)
+                for frame_key in good_frames:
+                    reading = readings[frame_key]
+                    byte_val = reading[byte_idx].upper()
+                    if byte_val == '--':
+                        continue
+                    conf = 1.0
+                    if frame_key in confidences and len(confidences[frame_key]) > byte_idx:
+                        conf = confidences[frame_key][byte_idx]
+                    vote_counts[byte_val] += conf
+                if vote_counts:
+                    voted_bytes.append(max(vote_counts, key=vote_counts.get))
+                else:
+                    voted_bytes.append('FF')
+        else:
+            voted_bytes = pass1_bytes
+
+        # Detect single-row-position addresses (likely scroll artifacts)
+        row_ys = entry.get('row_ys', {})
+        unique_ys = set(row_ys.values()) if row_ys else set()
+        is_single_row = len(readings) >= 2 and len(unique_ys) == 1
 
         if len(voted_bytes) == 16:
-            data[addr] = (voted_bytes, len(readings))
+            data[addr] = (voted_bytes, len(readings), is_single_row)
 
     return data
 
@@ -634,8 +669,13 @@ def main():
     # Filter extraction
     valid_extraction = {}
     review_extraction = {}
+    single_row_addrs = set()
     filtered = 0
-    for addr, (hex_bytes, obs) in raw_data.items():
+    for addr, entry in raw_data.items():
+        hex_bytes, obs = entry[0], entry[1]
+        is_single_row = entry[2] if len(entry) > 2 else False
+        if is_single_row:
+            single_row_addrs.add(addr)
         status = is_valid_line(addr, hex_bytes, obs)
         if status is True:
             corrected = apply_corrections(addr, hex_bytes)
@@ -648,6 +688,26 @@ def main():
     print(f"\nFiltered {filtered} invalid lines")
     print(f"Valid extraction lines: {len(valid_extraction)}")
     print(f"Flagged for review (repetitive data): {len(review_extraction)}")
+    if single_row_addrs:
+        print(f"Single-row-position addresses (needs manual review): {len(single_row_addrs)}")
+
+    # Flag single-row-position addresses in review_state for manual review
+    if single_row_addrs:
+        review_state_path = 'review_state.json'
+        if os.path.exists(review_state_path):
+            with open(review_state_path) as f:
+                rs = json.load(f)
+            flagged_count = 0
+            for addr in single_row_addrs:
+                addr_str = f"{addr:05X}"
+                line = rs.get("lines", {}).get(addr_str)
+                if line and line.get("status") not in ("accepted", "edited"):
+                    line["status"] = "flagged"
+                    flagged_count += 1
+            if flagged_count:
+                with open(review_state_path, 'w') as f:
+                    json.dump(rs, f)
+                print(f"Flagged {flagged_count} single-row-position addresses for manual review")
 
     # Merge with reference
     print("\nMerging data sources...")
