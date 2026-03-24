@@ -1076,9 +1076,11 @@ async function doSingleMove(frameKey, rawAddr) {
         state.dirty = true; updateSaveButton();
         const scrollY = window.scrollY;
         await loadLine(state.currentAddr);
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => { window.scrollTo(0, scrollY); });
-        });
+        // Restore scroll after DOM rebuild + image loads
+        const restoreScroll = () => window.scrollTo(0, scrollY);
+        requestAnimationFrame(() => { requestAnimationFrame(restoreScroll); });
+        setTimeout(restoreScroll, 100);
+        setTimeout(restoreScroll, 300);
         refreshStats();
     } catch(e) {
         showToast('Move failed', 3000);
@@ -1143,9 +1145,10 @@ async function doMoveAllRows(frameKey, rawAddr) {
         state.dirty = true; updateSaveButton();
         const scrollY = window.scrollY;
         await loadLine(state.currentAddr);
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => { window.scrollTo(0, scrollY); });
-        });
+        const restoreScroll = () => window.scrollTo(0, scrollY);
+        requestAnimationFrame(() => { requestAnimationFrame(restoreScroll); });
+        setTimeout(restoreScroll, 100);
+        setTimeout(restoreScroll, 300);
         refreshStats();
     } catch(e) {
         showToast('Move all failed', 3000);
