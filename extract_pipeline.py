@@ -1047,6 +1047,7 @@ def main():
     post_steps = [
         ('Precompute (crop index)',          os.path.join('firmware_review_tool', 'precompute.py')),
         ('Address trajectory correction',    'fix_address_trajectory.py'),
+        ('FF-forced frame relocation',       'fix_ff_forced_relocation.py'),
         ('Outlier vote correction',          'fix_outlier_votes.py'),
         ('Post-processing (merge/binary)',   'postprocess_firmware.py'),
         ('FF-fill & FF-forced override',     'ff_fill.py --heuristic'),
