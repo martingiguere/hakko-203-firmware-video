@@ -508,6 +508,20 @@ The R5F21258SNFP emulator project includes instruction encoding documentation (`
 - Suggest corrections based on instruction encoding constraints
 - Use recursive descent from the reset vector to trace valid code paths
 
+**TODO: Lightweight pattern-based validation** (simpler alternative to full disassembly):
+
+1. **Vector table pattern check**: The interrupt vector region `$0FF70-$0FFCF` should be repeating `4E FC 00 00` (24 repetitions). Any deviation flags the address for review. The programmed vectors at `$0FFDC-$0FFF3` have `4E FC 00 xx` where xx is the ISP ID byte — validate the `4E FC 00` prefix.
+
+2. **Known jump target validation**: `$F5` bytes are `JMP.B` (relative 8-bit displacement). Check that the target address (`current_addr + 2 + signed_displacement`) lands within the ROM code region (`$04990-$107E0`). Targets outside ROM indicate either a wrong `$F5` byte or a wrong displacement byte.
+
+3. **Undefined opcode detection**: Byte `$01` is the only undefined first byte in R8C/Tiny. While `$01` appearing as a data operand is normal, a high density of `$01` in a region suggests misassigned frames or systematic OCR errors. Currently 1,324 occurrences in ROM.
+
+4. **Data table boundary validation**: Known data tables (`$10000-$107E0`) contain calibration ramps with monotonically non-decreasing values. Validate that these sequences are monotonic — any reversal indicates a wrong byte.
+
+5. **Instruction length table walk**: Build a first-byte → instruction-length lookup from the encoding doc (section 6). Walk from the reset vector (`$0FBAE`), computing instruction boundaries. Flag any `$01` (undefined) encountered as a first byte. Stop at the first invalid opcode (variable-length encoding desyncs after one wrong byte).
+
+Reference: `R5F21258SNFP_emulator/INSTRUCTION_ENCODING.md` section 6 (First-Byte Decode Map)
+
 ### 6.7 Output Files
 
 | File | Purpose |
