@@ -559,9 +559,9 @@ def process_frame(classifier, img, scrollbar_hint=None):
     num_rows = CAL['visible_rows']
     addr_x = ADDR_X_START
 
-    # Step 1: Read all addresses (including 2 extra rows above)
+    # Step 1: Read all addresses (including 3 extra rows above for full 16-row capture)
     addr_results = []
-    for row_idx in range(-2, num_rows):
+    for row_idx in range(-3, num_rows):
         row_y = y_first + row_idx * row_h
         if row_y < CELL_H or row_y > img.shape[0] - CELL_H:
             continue
@@ -770,6 +770,13 @@ def run_extraction(classifier, frame_dir='frames',
             frame_idx += 1
             continue
         prev_img = img
+
+        # Skip frames with no hex viewer (UI transition/dialog)
+        frame_num = int(frame_name.replace('frame_', '').replace('.png', ''))
+        if 5045 <= frame_num <= 5229:
+            frame_idx += 1
+            continue
+
         processed += 1
 
         # Detect scrollbar position for address validation hint

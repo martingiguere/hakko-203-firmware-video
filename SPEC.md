@@ -167,7 +167,7 @@ Manually confirmed video scroll structure, now stored in `manual_trajectory.py` 
 | F1 | `$00000` | Start of video, scrolling increasing |
 | F1–F1728 | `$00000`→`$0FF50-$10040` | Steady forward scroll |
 | F1728–F5044 | `$0FF50-$10040` | Static (no scrolling) |
-| F5045 | — | No hex data view (UI transition/dialog) |
+| F5045–F5229 | — | No hex data view (UI transition/dialog, hex viewer not visible). These frames must be excluded from OCR pipeline. |
 | F5230–F5287 | `$00000` | Static (view restarted) |
 
 **Pass 2: Oscillating start, then forward**

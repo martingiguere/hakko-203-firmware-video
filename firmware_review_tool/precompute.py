@@ -54,7 +54,7 @@ CROP_X_END = 1120    # 10px margin after last byte digit (ends at ~1108)
 BASE_ADDR = 0x00000
 END_ADDR = 0x13FF0
 MAX_ADDR_DIFF = 0x10000  # Max allowable difference between raw OCR read and validated address
-EXTRA_ROWS_ABOVE = 2
+EXTRA_ROWS_ABOVE = 3
 
 REF_IMAGE_PATH = os.path.join(PROJECT_ROOT, 'reference', 'reference_screenshot.png')
 REF_CROPS_DIR = os.path.join(CROPS_DIR, 'ref')
