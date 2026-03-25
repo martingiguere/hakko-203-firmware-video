@@ -25,6 +25,7 @@ import json
 import os
 import sys
 from collections import Counter
+from itertools import combinations, product
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(PROJECT_ROOT)
@@ -67,18 +68,30 @@ MATCH_THRESHOLD = 12      # >=12/16 bytes must match destination to move
 MAX_OUTLIER_RATIO = 0.30  # skip address if >30% of frames are outliers
 
 
-def generate_confusion_alternatives(addr):
-    """Generate addresses reachable by single-digit OCR confusion substitution.
+def generate_confusion_alternatives(addr, num_digits):
+    """Generate addresses reachable by exactly num_digits OCR confusion substitutions.
 
     Substitutes digits at positions 0-3 (position 4 is always '0' since
     addresses are 0x10-aligned). Returns a set excluding the original.
     """
+    positions = range(4)
     alternatives = set()
-    for pos in range(4):  # positions 0-3 of the 5-char address
-        digit = addr[pos].upper()
-        for alt in CONFUSION_MAP.get(digit, []):
-            alt_addr = addr[:pos] + alt + addr[pos + 1:]
-            alternatives.add(alt_addr)
+    for pos_combo in combinations(positions, num_digits):
+        alt_lists = []
+        for p in pos_combo:
+            digit = addr[p].upper()
+            alts = CONFUSION_MAP.get(digit, [])
+            if not alts:
+                break
+            alt_lists.append((p, alts))
+        else:
+            if len(alt_lists) == num_digits:
+                for combo in product(*(a for _, a in alt_lists)):
+                    new_addr = list(addr)
+                    for (p, _), alt_digit in zip(alt_lists, combo):
+                        new_addr[p] = alt_digit
+                    alternatives.add(''.join(new_addr))
+    alternatives.discard(addr)
     return alternatives
 
 
@@ -133,18 +146,18 @@ def detect_confusion_moves(crop_index, mmap):
     total_outliers = 0
     skipped_ff = 0
     skipped_ratio = 0
-    checked = 0
-    resolved = 0
+    resolved_by_level = {1: 0, 2: 0, 3: 0}
+
+    # Collect all outliers first
+    all_outliers = []  # (addr, fk, reading, consensus)
 
     for addr, consensus in addr_consensus.items():
         entry = crop_index[addr]
         readings = entry.get('readings', {})
 
-        # Skip all-FF consensus (no meaningful comparison)
         if is_all_ff(consensus):
             continue
 
-        # Find outlier frames
         outliers = []
         for fk, reading in readings.items():
             disagreements = 16 - count_matches(reading, consensus)
@@ -157,32 +170,28 @@ def detect_confusion_moves(crop_index, mmap):
         if not outliers:
             continue
 
-        # Skip if too many outliers (consensus unreliable)
         if len(outliers) / len(readings) > MAX_OUTLIER_RATIO:
             skipped_ratio += len(outliers)
             continue
 
         total_outliers += len(outliers)
-
-        # Generate confusion alternatives that exist in consensus
-        alternatives = generate_confusion_alternatives(addr)
-        alt_with_consensus = [(a, addr_consensus[a]) for a in alternatives
-                              if a in addr_consensus]
-
-        if not alt_with_consensus:
-            checked += len(outliers)
-            continue
-
-        # Try each outlier against each alternative
         for fk, reading in outliers:
-            checked += 1
+            all_outliers.append((addr, fk, reading, consensus))
+
+    # Cascade: try single-digit, then double, then triple
+    remaining = all_outliers
+    for level in (1, 2, 3):
+        still_remaining = []
+        for addr, fk, reading, consensus in remaining:
             current_score = count_matches(reading, consensus)
+            alternatives = generate_confusion_alternatives(addr, level)
+            alt_with_consensus = [(a, addr_consensus[a]) for a in alternatives
+                                  if a in addr_consensus]
 
             best_alt = None
             best_score = current_score
 
             for alt_addr, alt_consensus in alt_with_consensus:
-                # Skip FF-forced destinations
                 alt_int = int(alt_addr, 16)
                 if alt_int > 0x13FFF:
                     continue
@@ -196,15 +205,21 @@ def detect_confusion_moves(crop_index, mmap):
 
             if best_alt:
                 moves.append((addr, fk, best_alt))
-                resolved += 1
+                resolved_by_level[level] += 1
+            else:
+                still_remaining.append((addr, fk, reading, consensus))
 
-    unresolved = checked - resolved
+        remaining = still_remaining
+
+    total_resolved = sum(resolved_by_level.values())
     print(f"  Total outlier frames: {total_outliers}")
     print(f"  Skipped (all-FF readings): {skipped_ff}")
     print(f"  Skipped (outlier ratio >{MAX_OUTLIER_RATIO:.0%}): {skipped_ratio}")
-    print(f"  Checked against confusion alternatives: {checked}")
-    print(f"  Resolved by byte agreement: {resolved}")
-    print(f"  Unresolved: {unresolved}")
+    print(f"  Resolved (single-digit): {resolved_by_level[1]}")
+    print(f"  Resolved (double-digit): {resolved_by_level[2]}")
+    print(f"  Resolved (triple-digit): {resolved_by_level[3]}")
+    print(f"  Total resolved: {total_resolved}")
+    print(f"  Unresolved: {len(remaining)}")
 
     return moves
 
