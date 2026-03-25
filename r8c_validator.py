@@ -112,6 +112,15 @@ def extract_vectors(fw):
     return unique
 
 
+def _und_is_nop(fw):
+    """Check if the UND interrupt handler is just REIT (making UND act as 1-byte NOP)."""
+    und_vec_addr = 0x0FFDC
+    handler = fw[und_vec_addr] | (fw[und_vec_addr + 1] << 8) | ((fw[und_vec_addr + 2] & 0x0F) << 16)
+    if _in_rom(handler) and fw[handler] == 0xFB:  # REIT
+        return True
+    return False
+
+
 def walk_code(fw, entry_points):
     """BFS instruction walk from entry points.
 
@@ -122,6 +131,7 @@ def walk_code(fw, entry_points):
     visited = set()
     issues = []
     queue = deque()
+    und_nop = _und_is_nop(fw)
 
     for name, addr in entry_points:
         queue.append((name, addr))
@@ -170,8 +180,11 @@ def walk_code(fw, entry_points):
             if b1 == 0x00:  # BRK (software interrupt)
                 break
 
-            # UND: flag and stop
+            # UND: if handler is REIT, UND acts as 1-byte NOP (overlapping code)
             if b1 == 0xFF:
+                if und_nop:
+                    addr += 1
+                    continue
                 issues.append((addr, f"UND instruction at ${addr:05X}"))
                 break
 

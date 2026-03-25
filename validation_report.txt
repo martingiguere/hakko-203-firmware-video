@@ -11,21 +11,11 @@ Non-default vectors: 3
   $0FF3C -> $08B4C
   $0FF50 -> $08AEA
 
-Instructions decoded: 958
-Code bytes covered:   2583 / 65536
-Code coverage:        3.9%
+Instructions decoded: 1548
+Code bytes covered:   3527 / 65536
+Code coverage:        5.4%
 
-Issues: 13
-  $04812: UND instruction at $04812
-  $04A58: UND instruction at $04A58
-  $0542B: UND instruction at $0542B
-  $05436: UND instruction at $05436
-  $05460: Invalid opcode 0x01 at $05460
-  $0651B: UND instruction at $0651B
-  $07E5C: UND instruction at $07E5C
-  $07E67: UND instruction at $07E67
-  $08B14: Invalid opcode 0x01 at $08B14
-  $09117: UND instruction at $09117
-  $0F8C2: Invalid opcode 0x01 at $0F8C2
+Issues: 3
+  $B0404: Jump target $B0404 outside ROM (from JSR.A@$08B41)
   $FD105: Jump target $FD105 outside ROM (from JMP.A@$0F5D0)
   $FF440: Jump target $FF440 outside ROM (from JMP.A@$05428)

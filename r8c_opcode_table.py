@@ -58,9 +58,12 @@ def get_instruction_length(data, offset):
     if b1 == 0x00:
         return 1
 
-    # --- 0x01: undefined (only truly invalid first byte) ---
+    # --- 0x01: MOV.B:S R0L, dsp8[SB] (2 bytes) ---
+    # Documented as "undefined" but follows the MOV.B:S R0L/R0H,dest pattern:
+    # 0x00=BRK, 0x01=dsp8[SB], 0x02=dsp8[FB], 0x03=abs16 (SRC=R0L)
+    # Confirmed valid by firmware usage (1324 occurrences in ROM).
     if b1 == 0x01:
-        return 0
+        return 2
 
     # --- 0x02-0x3F: :S format (AND/OR/ADD/SUB/MOV/CMP src,dest) ---
     # Low 2 bits encode operand: 00=reg(1), 01=dsp8(2), 10=dsp8(2), 11=abs16(3)
