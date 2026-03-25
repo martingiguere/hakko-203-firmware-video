@@ -40,7 +40,8 @@ FRAME_ASSIGNMENTS_PATH = 'frame_assignments.json'
 FRAMES_DIR = 'frames'
 OUTPUT_PATH = 'review_training_samples.npz'
 
-MAX_FRAMES_PER_ADDR = 5  # Limit to avoid over-representing one region
+MIN_AVG_CONFIDENCE = 0.8  # Only use frames with high confidence
+MAX_BYTE_DIFFS = 2        # Only use frames that closely match accepted bytes
 
 
 def main():
@@ -101,17 +102,35 @@ def main():
         if not frame_nums:
             continue
 
-        # Limit frames per address
-        if len(frame_nums) > MAX_FRAMES_PER_ADDR:
-            # Evenly spaced subsample
-            indices = np.linspace(0, len(frame_nums) - 1,
-                                  MAX_FRAMES_PER_ADDR, dtype=int)
-            frame_nums = [frame_nums[i] for i in indices]
+        # Filter to high-confidence frames that match accepted bytes
+        readings = entry.get('readings', {})
+        confidences = entry.get('confidences', {})
+        good_frames = []
+        for fnum in frame_nums:
+            fstr = str(fnum)
+            reading = readings.get(fstr)
+            if not reading or len(reading) != 16:
+                continue
+            # Check byte agreement with accepted values
+            diffs = sum(1 for i in range(16)
+                        if reading[i] != '--' and reading[i].upper() != confirmed_bytes[i].upper())
+            if diffs > MAX_BYTE_DIFFS:
+                continue
+            # Check average confidence
+            conf_list = confidences.get(fstr, [])
+            if conf_list:
+                avg_conf = sum(conf_list) / len(conf_list)
+                if avg_conf < MIN_AVG_CONFIDENCE:
+                    continue
+            good_frames.append(fnum)
+
+        if not good_frames:
+            continue
 
         addr_int = int(addr, 16)
         addrs_used += 1
 
-        for frame_num in frame_nums:
+        for frame_num in good_frames:
             frame_name = f"frame_{frame_num:05d}.png"
             frame_path = os.path.join(FRAMES_DIR, frame_name)
 
