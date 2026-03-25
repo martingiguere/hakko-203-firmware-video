@@ -1058,6 +1058,7 @@ def main():
         ('Outlier vote correction',          'fix_outlier_votes.py'),
         ('Post-processing (merge/binary)',   'postprocess_firmware.py'),
         ('FF-fill & FF-forced override',     'ff_fill.py --heuristic'),
+        ('R8C instruction validation',       'r8c_validator.py'),
         ('Gap context precompute',           os.path.join('firmware_review_tool', 'precompute_gaps.py')),
     ]
 
