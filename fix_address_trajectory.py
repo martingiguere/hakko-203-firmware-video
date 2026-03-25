@@ -438,7 +438,7 @@ def execute_moves(crop_index, moves):
                 arr_key = 'video_frames'
             else:
                 is_video = False
-                frame_int = frame
+                frame_int = int(frame)
                 frame_str = str(frame)
                 arr_key = 'frames'
 
