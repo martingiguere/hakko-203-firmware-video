@@ -294,6 +294,7 @@ def main():
     mmap = load_memory_map()
     iteration = 0
     total_moves = 0
+    prev_move_count = None
 
     while True:
         iteration += 1
@@ -333,6 +334,12 @@ def main():
 
         if not args.loop:
             break
+
+        # Detect ping-pong: if same move count repeats, frames are cycling
+        if len(moves) == prev_move_count:
+            print(f"\n  Stopping: {len(moves)} moves repeating (ping-pong detected)")
+            break
+        prev_move_count = len(moves)
 
     if args.loop and iteration > 1:
         print(f"\nConverged after {iteration} iterations. Total moves: {total_moves}")
