@@ -364,19 +364,7 @@ def execute_moves(crop_index, moves):
             # Remove frame from source
             src_entry[arr_key].remove(frame_int)
 
-            # Move crop PNG
-            src_dir = os.path.join(CROPS_DIR, src_key.lower())
-            dst_dir = os.path.join(CROPS_DIR, dst_key.lower())
-            png_name = crop_filename(frame_int, is_video=is_video)
-            src_path = os.path.join(src_dir, png_name)
-            dst_path = os.path.join(dst_dir, png_name)
-
-            if os.path.exists(src_path):
-                os.makedirs(dst_dir, exist_ok=True)
-                shutil.move(src_path, dst_path)
-                crops_moved += 1
-            else:
-                crops_missing += 1
+            # No crop PNG move needed — frame-based storage is address-independent
 
             frames_moved += 1
 
@@ -388,9 +376,6 @@ def execute_moves(crop_index, moves):
         if not src_entry.get('frames') and not src_entry.get('video_frames'):
             del crop_index[src_key]
             entries_emptied += 1
-            src_dir = os.path.join(CROPS_DIR, src_key.lower())
-            if os.path.isdir(src_dir) and not os.listdir(src_dir):
-                os.rmdir(src_dir)
 
     print(f"  Frames moved: {frames_moved}")
     print(f"  Crops moved: {crops_moved} (missing: {crops_missing})")

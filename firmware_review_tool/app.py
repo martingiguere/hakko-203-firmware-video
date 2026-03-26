@@ -23,7 +23,7 @@ sys.path.insert(0, PROJECT_ROOT)
 
 from frame_utils import (
     is_video_frame_key, video_frame_key, extracted_frame_key,
-    crop_filename, parse_frame_key, total_frame_count,
+    crop_filename, crop_path_for_frame, parse_frame_key, total_frame_count,
 )
 from memory_map_utils import load_memory_map, get_ff_forced_ranges
 
@@ -198,21 +198,11 @@ def apply_single_move(frame, from_addr, to_addr):
         dst.setdefault(src_arr, []).append(frame_int)
         dst[src_arr].sort()
 
-    # Move crop PNG
-    png_name = crop_filename(frame_int, is_video=is_video)
-    src_png = os.path.join(CROPS_DIR, from_addr.lower(), png_name)
-    dst_dir = os.path.join(CROPS_DIR, to_addr.lower())
-    dst_png = os.path.join(dst_dir, png_name)
-    if os.path.exists(src_png):
-        os.makedirs(dst_dir, exist_ok=True)
-        shutil.move(src_png, dst_png)
+    # No crop PNG move needed — frame-based storage is address-independent
 
-    # Clean up empty source entry/directory
+    # Clean up empty source entry
     if not src.get("frames") and not src.get("video_frames") and not src.get("readings"):
         del crop_index[from_addr]
-        src_dir = os.path.join(CROPS_DIR, from_addr.lower())
-        if os.path.isdir(src_dir) and not os.listdir(src_dir):
-            os.rmdir(src_dir)
 
     return True
 
@@ -593,24 +583,38 @@ def get_frames(addr):
 
 @app.route('/api/crop/<addr>/<frame>')
 def get_crop(addr, frame):
-    addr_lower = normalize_addr(addr).lower()
+    addr_upper = normalize_addr(addr)
     if frame.startswith('v'):
-        # Video frame
         try:
-            vf = int(frame[1:])
+            frame_num = int(frame[1:])
         except ValueError:
             return jsonify({"error": "Invalid frame identifier"}), 400
-        png_name = crop_filename(vf, is_video=True)
+        is_video = True
+        frame_str = frame
     else:
         try:
-            ef = int(frame)
+            frame_num = int(frame)
         except ValueError:
             return jsonify({"error": "Invalid frame identifier"}), 400
-        png_name = crop_filename(ef, is_video=False)
+        is_video = False
+        frame_str = str(frame_num)
+
+    # Look up row_y from crop_index to find the frame-based crop
+    entry = crop_index.get(addr_upper, {})
+    row_y = entry.get('row_ys', {}).get(frame_str)
+    if row_y is not None:
+        crop_path = crop_path_for_frame(frame_num, row_y, is_video, CROPS_DIR)
+        if os.path.exists(crop_path):
+            return send_file(crop_path, mimetype='image/png')
+
+    # Fallback: try legacy address-based path
+    addr_lower = addr_upper.lower()
+    png_name = crop_filename(frame_num, is_video=is_video)
     crop_path = os.path.join(CROPS_DIR, addr_lower, png_name)
-    if not os.path.exists(crop_path):
-        return jsonify({"error": "Crop not found"}), 404
-    return send_file(crop_path, mimetype='image/png')
+    if os.path.exists(crop_path):
+        return send_file(crop_path, mimetype='image/png')
+
+    return jsonify({"error": "Crop not found"}), 404
 
 
 @app.route('/api/ref_crop/<addr>')

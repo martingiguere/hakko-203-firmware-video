@@ -403,9 +403,7 @@ def save_crops_and_update_index(observations, crop_index, classifier):
         if not best_by_frame:
             continue
 
-        # Create crop directory
-        crop_dir = os.path.join(CROPS_DIR, addr_lower)
-        os.makedirs(crop_dir, exist_ok=True)
+        # Crop directory created per-frame below (frame-based storage)
 
         # Initialize crop_index entry if needed
         is_new = addr_hex not in crop_index
@@ -443,9 +441,11 @@ def save_crops_and_update_index(observations, crop_index, classifier):
             y_bot = min(gray.shape[0], row_y + 11)
             crop = gray[y_top:y_bot, 284:1120]
 
-            crop_name = crop_filename(vf, is_video=True)
-            crop_path = os.path.join(crop_dir, crop_name)
-            cv2.imwrite(crop_path, crop)
+            from frame_utils import crop_path_for_frame
+            crop_path = crop_path_for_frame(vf, row_y, is_video=True, crops_dir=CROPS_DIR)
+            if not os.path.exists(crop_path):
+                os.makedirs(os.path.dirname(crop_path), exist_ok=True)
+                cv2.imwrite(crop_path, crop)
 
             # Update crop_index entry — video frames go in video_frames array
             if vf not in entry['video_frames']:

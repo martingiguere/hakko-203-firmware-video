@@ -35,10 +35,20 @@ def extracted_frame_key(ef):
 
 
 def crop_filename(frame_num, is_video=False):
-    """Return the crop PNG filename for a frame."""
+    """Return the legacy crop PNG filename for a frame (address-based storage)."""
     if is_video:
         return f"frame_v{frame_num:05d}.png"
     return f"frame_{frame_num:05d}.png"
+
+
+def crop_path_for_frame(frame_num, row_y, is_video=False, crops_dir='crops'):
+    """Return the filesystem path for a frame-row crop (frame-based storage).
+
+    Crops are stored by frame identity: crops/frames/<frame_id>/<row_y>.png
+    The same crop is served regardless of which address the frame is assigned to.
+    """
+    frame_id = f"v{frame_num}" if is_video else str(frame_num)
+    return os.path.join(crops_dir, 'frames', frame_id, f'{int(row_y)}.png')
 
 
 def frame_key(frame_num, is_video=False):

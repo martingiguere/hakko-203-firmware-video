@@ -182,11 +182,12 @@ def precompute():
                 classifier, img, row_y
             )
 
-            # Save crop PNG
-            crop_dir = os.path.join(CROPS_DIR, addr_lower)
-            os.makedirs(crop_dir, exist_ok=True)
-            crop_path = os.path.join(crop_dir, f'frame_{frame_num:05d}.png')
-            cv2.imwrite(crop_path, crop)
+            # Save crop PNG (frame-based storage: crops/frames/<frame_id>/<row_y>.png)
+            from frame_utils import crop_path_for_frame
+            crop_path = crop_path_for_frame(frame_num, row_y, is_video=False, crops_dir=CROPS_DIR)
+            if not os.path.exists(crop_path):
+                os.makedirs(os.path.dirname(crop_path), exist_ok=True)
+                cv2.imwrite(crop_path, crop)
 
             # Update index
             if addr_upper not in crop_index:
@@ -302,21 +303,11 @@ def _move_frame(crop_index, frame_str, frame_int, is_video, arr_key, from_addr, 
         dst[arr_key].append(frame_int)
         dst[arr_key].sort()
 
-    # Move crop PNG
-    png_name = crop_filename(frame_int, is_video=is_video)
-    src_png = os.path.join(CROPS_DIR, from_addr.lower(), png_name)
-    dst_dir = os.path.join(CROPS_DIR, to_addr.lower())
-    dst_png = os.path.join(dst_dir, png_name)
-    if os.path.exists(src_png):
-        os.makedirs(dst_dir, exist_ok=True)
-        shutil.move(src_png, dst_png)
+    # No crop PNG move needed — frame-based storage is address-independent
 
     # Clean up empty source
     if not src.get("frames") and not src.get("video_frames") and not src.get("readings"):
         del crop_index[from_addr]
-        src_dir_path = os.path.join(CROPS_DIR, from_addr.lower())
-        if os.path.isdir(src_dir_path) and not os.listdir(src_dir_path):
-            os.rmdir(src_dir_path)
 
     return True
 
