@@ -77,11 +77,10 @@ def detect_outlier_moves(crop_index):
     accepted_addrs, _ = load_accepted_addresses()
 
     # Pre-build consensus for all addresses with enough frames
+    # Include accepted addresses so they can be move destinations
     addr_consensus = {}
     for addr, entry in crop_index.items():
         if addr == 'ref_addresses' or not isinstance(entry, dict):
-            continue
-        if addr in accepted_addrs:
             continue
         readings = entry.get('readings', {})
         if len(readings) < MIN_FRAMES:
@@ -96,6 +95,8 @@ def detect_outlier_moves(crop_index):
     total_outliers = 0
 
     for addr, consensus in addr_consensus.items():
+        if addr in accepted_addrs:
+            continue  # don't detect outliers at accepted, but they're in dict for matching
         entry = crop_index[addr]
         readings = entry.get('readings', {})
         addr_int = int(addr, 16)

@@ -52,15 +52,14 @@ def build_all_consensus(crop_index, mmap, accepted_addrs=None):
 
     Returns dict of addr -> (consensus_list, frame_count, is_ff_forced).
     Includes ff-forced addresses (they can be sources of stolen data).
-    Skips accepted addresses, all-FF consensus, and non-ROM addresses.
+    Includes accepted addresses (they can be move destinations).
+    Skips all-FF consensus and non-ROM addresses.
     """
     if accepted_addrs is None:
         accepted_addrs = set()
     result = {}
     for addr, entry in crop_index.items():
         if addr == 'ref_addresses' or not isinstance(entry, dict):
-            continue
-        if addr in accepted_addrs:
             continue
         addr_int = int(addr, 16)
         if addr_int < ROM_START or addr_int > ROM_END:
@@ -93,15 +92,17 @@ def build_all_consensus(crop_index, mmap, accepted_addrs=None):
     return result
 
 
-def find_duplicate_pairs(addr_consensus):
+def find_duplicate_pairs(addr_consensus, accepted_addrs=None):
     """Find address pairs whose consensus matches at >= MATCH_THRESHOLD bytes.
 
     Returns list of (stolen_addr, source_addr, match_score) where stolen
     is the address with fewer frames (its data came from source).
-    FF-forced addresses are always considered stolen (their data gets
-    overwritten with FF anyway — moving frames OUT is purely beneficial).
+    FF-forced addresses are always considered stolen. Accepted addresses
+    are never stolen (they can only be destinations).
     Skips pairs closer than MIN_DISTANCE, and pairs where both are ff-forced.
     """
+    if accepted_addrs is None:
+        accepted_addrs = set()
     pairs = []
     addrs = sorted(addr_consensus.keys())
 
@@ -123,13 +124,23 @@ def find_duplicate_pairs(addr_consensus):
             if matches < MATCH_THRESHOLD:
                 continue
 
+            # Accepted addresses are never stolen — only destinations
+            a1_accepted = a1 in accepted_addrs
+            a2_accepted = a2 in accepted_addrs
+            if a1_accepted and a2_accepted:
+                continue  # both accepted, nothing to do
+
             # FF-forced is always the stolen one
             if ff1 and not ff2:
                 pairs.append((a1, a2, matches))
             elif ff2 and not ff1:
                 pairs.append((a2, a1, matches))
+            elif a2_accepted:
+                pairs.append((a1, a2, matches))  # a1 is stolen, a2 (accepted) is destination
+            elif a1_accepted:
+                pairs.append((a2, a1, matches))  # a2 is stolen, a1 (accepted) is destination
             else:
-                # Neither ff-forced: fewer frames = stolen
+                # Neither ff-forced nor accepted: fewer frames = stolen
                 if n1 == n2:
                     continue
                 if n1 < n2:
@@ -150,7 +161,7 @@ def detect_duplicate_moves(crop_index, mmap):
     addr_consensus = build_all_consensus(crop_index, mmap, accepted_addrs)
     print(f"  ROM addresses with consensus: {len(addr_consensus)}")
 
-    pairs = find_duplicate_pairs(addr_consensus)
+    pairs = find_duplicate_pairs(addr_consensus, accepted_addrs)
     print(f"  Duplicate pairs found: {len(pairs)}")
 
     # Deduplicate: a stolen address might match multiple sources.
