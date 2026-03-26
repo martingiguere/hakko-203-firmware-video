@@ -281,42 +281,56 @@ def main():
         description='Fix misassigned frames by byte-agreement with confusion-mapped addresses')
     parser.add_argument('--dry-run', action='store_true',
                         help='Detect moves but do not modify files')
+    parser.add_argument('--loop', action='store_true',
+                        help='Run iteratively until no more moves found')
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("Byte Agreement Address Correction")
-    print("=" * 60)
-
-    crop_index = load_crop_index()
-    total_addrs = sum(1 for k in crop_index if k != 'ref_addresses')
-    print(f"\n  Total addresses in crop_index: {total_addrs}")
-
     mmap = load_memory_map()
+    iteration = 0
+    total_moves = 0
 
-    print(f"\nStep 1: Detect outlier frames and confusion matches")
-    moves = detect_confusion_moves(crop_index, mmap)
+    while True:
+        iteration += 1
+        print(f"\n{'=' * 60}")
+        print(f"Byte Agreement Address Correction{f' (iteration {iteration})' if args.loop else ''}")
+        print(f"{'=' * 60}")
 
-    if not moves:
-        print("\nNo byte-agreement moves detected.")
-        return
+        crop_index = load_crop_index()
+        total_addrs = sum(1 for k in crop_index if k != 'ref_addresses')
+        print(f"\n  Total addresses in crop_index: {total_addrs}")
 
-    summarize_moves(moves)
+        print(f"\nStep 1: Detect outlier frames and confusion matches")
+        moves = detect_confusion_moves(crop_index, mmap)
 
-    if args.dry_run:
-        print(f"\n  [DRY RUN] {len(moves)} moves detected, no files modified.")
-        return
+        if not moves:
+            print("\nNo byte-agreement moves detected.")
+            break
 
-    print(f"\nStep 2: Execute moves")
-    affected_src, affected_dst = execute_moves(crop_index, moves)
+        summarize_moves(moves)
 
-    print(f"\nStep 3: Save and update downstream")
-    save_crop_index(crop_index)
-    log_frame_moves(moves, strategy="byte_agreement")
-    update_frame_assignments(moves)
-    update_extracted_firmware(crop_index, affected_src, affected_dst)
+        if args.dry_run:
+            print(f"\n  [DRY RUN] {len(moves)} moves detected, no files modified.")
+            break
 
-    print(f"\n  Source addresses affected: {len(affected_src)}")
-    print(f"  Destination addresses affected: {len(affected_dst)}")
+        print(f"\nStep 2: Execute moves")
+        affected_src, affected_dst = execute_moves(crop_index, moves)
+
+        print(f"\nStep 3: Save and update downstream")
+        save_crop_index(crop_index)
+        log_frame_moves(moves, strategy="byte_agreement")
+        update_frame_assignments(moves)
+        update_extracted_firmware(crop_index, affected_src, affected_dst)
+
+        print(f"\n  Source addresses affected: {len(affected_src)}")
+        print(f"  Destination addresses affected: {len(affected_dst)}")
+        total_moves += len(moves)
+
+        if not args.loop:
+            break
+
+    if args.loop and iteration > 1:
+        print(f"\nConverged after {iteration} iterations. Total moves: {total_moves}")
+
     print("Done.")
 
 

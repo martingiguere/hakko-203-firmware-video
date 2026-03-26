@@ -926,6 +926,36 @@ def run_extraction(classifier, frame_dir='frames',
     return final_dump
 
 
+MANUAL_STRATEGIES = {None, 'none', ''}
+
+
+def _reset_automated_moves():
+    """Strip automated moves from frame_moves.json, keeping manual ones.
+
+    On a full retrain, automated fix scripts will re-derive their own moves
+    from fresh OCR data. Manual moves (from the review tool) must be preserved.
+    """
+    path = 'frame_moves.json'
+    if not os.path.exists(path):
+        print("  No frame_moves.json to reset.")
+        return
+
+    with open(path) as f:
+        data = json.load(f)
+
+    original = len(data.get('moves', []))
+    manual = [m for m in data.get('moves', [])
+              if m.get('strategy') in MANUAL_STRATEGIES]
+    removed = original - len(manual)
+
+    data['moves'] = manual
+    with open(path, 'w') as f:
+        json.dump(data, f)
+
+    print(f"  Reset frame_moves.json: kept {len(manual)} manual moves, "
+          f"removed {removed} automated moves.")
+
+
 def main():
     print("=== Firmware Extraction Pipeline (FM-203) ===\n")
 
@@ -937,6 +967,12 @@ def main():
     classifier_path = 'fast_knn_classifier.npz'
     rebuild = '--rebuild' in sys.argv
     post_only = '--post-only' in sys.argv
+    reset_moves = '--reset' in sys.argv
+
+    # On full retrain, strip automated moves from frame_moves.json
+    # but preserve manual moves (strategy=None) so user work isn't lost.
+    if reset_moves:
+        _reset_automated_moves()
 
     classifier = None
 
@@ -1056,8 +1092,8 @@ def main():
         ('Address trajectory correction',    'fix_address_trajectory.py'),
         ('FF-forced frame relocation',       'fix_ff_forced_relocation.py'),
         ('Outlier vote correction',          'fix_outlier_votes.py'),
-        ('Byte agreement correction',        'fix_byte_agreement.py'),
-        ('Duplicate consensus correction',   'fix_duplicate_consensus.py'),
+        ('Byte agreement correction',        'fix_byte_agreement.py --loop'),
+        ('Duplicate consensus correction',   'fix_duplicate_consensus.py --loop'),
         ('Post-processing (merge/binary)',   'postprocess_firmware.py'),
         ('FF-fill & FF-forced override',     'ff_fill.py --heuristic'),
         ('R8C instruction validation',       'r8c_validator.py'),
