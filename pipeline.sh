@@ -2,11 +2,12 @@
 # Pipeline controller for Hakko FM-203 firmware extraction.
 #
 # Usage:
-#   ./pipeline.sh start                 # full pipeline (OCR + post-steps)
-#   ./pipeline.sh start --post-only     # post-steps only (skip OCR)
-#   ./pipeline.sh start --rebuild       # retrain classifier + full pipeline
-#   ./pipeline.sh stop                  # stop running pipeline + all children
-#   ./pipeline.sh status                # show running state and progress
+#   ./pipeline.sh start                       # full pipeline (OCR + post-steps)
+#   ./pipeline.sh start --post-only           # post-steps only (skip OCR)
+#   ./pipeline.sh start --rebuild             # retrain classifier + full pipeline
+#   ./pipeline.sh start --rebuild --reset     # full retrain (reset automated moves, keep manual)
+#   ./pipeline.sh stop                        # stop running pipeline + all children
+#   ./pipeline.sh status                      # show running state and progress
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -49,7 +50,7 @@ stop_pipeline() {
     if [ ! -f "$PID_FILE" ]; then
         echo "No pipeline running (no PID file)"
         # Check for orphaned processes anyway
-        orphans=$(pgrep -f "extract_pipeline.py|precompute.py|fix_address_trajectory|fix_outlier_votes|postprocess_firmware|ff_fill.py|precompute_gaps" 2>/dev/null || true)
+        orphans=$(pgrep -f "extract_pipeline.py|precompute.py|fix_address_trajectory|fix_outlier_votes|fix_byte_agreement|fix_duplicate_consensus|postprocess_firmware|ff_fill.py|r8c_validator|precompute_gaps" 2>/dev/null || true)
         if [ -n "$orphans" ]; then
             echo "Found orphaned pipeline processes: $orphans"
             echo "Killing them..."
@@ -76,7 +77,7 @@ stop_pipeline() {
     fi
 
     # Also kill any orphaned pipeline scripts
-    pgrep -f "extract_pipeline.py|precompute.py|fix_address_trajectory|fix_outlier_votes|postprocess_firmware|ff_fill.py|precompute_gaps" 2>/dev/null | xargs -r kill 2>/dev/null || true
+    pgrep -f "extract_pipeline.py|precompute.py|fix_address_trajectory|fix_outlier_votes|fix_byte_agreement|fix_duplicate_consensus|postprocess_firmware|ff_fill.py|r8c_validator|precompute_gaps" 2>/dev/null | xargs -r kill 2>/dev/null || true
 
     rm -f "$PID_FILE"
     echo "Pipeline stopped"
@@ -140,7 +141,7 @@ case "${1:-}" in
         show_status
         ;;
     *)
-        echo "Usage: $0 {start|stop|status} [--post-only|--rebuild]"
+        echo "Usage: $0 {start|stop|status} [flags]"
         echo ""
         echo "Commands:"
         echo "  start              Start the pipeline (runs in background)"
@@ -150,6 +151,8 @@ case "${1:-}" in
         echo "Flags (for start):"
         echo "  --post-only        Skip OCR extraction, run post-steps only"
         echo "  --rebuild          Retrain kNN classifier from scratch"
+        echo "  --reset            Reset automated frame moves, keep manual moves"
+        echo "                     (use with --rebuild for clean retrain)"
         exit 1
         ;;
 esac
