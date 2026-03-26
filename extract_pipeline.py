@@ -1057,6 +1057,7 @@ def main():
         ('FF-forced frame relocation',       'fix_ff_forced_relocation.py'),
         ('Outlier vote correction',          'fix_outlier_votes.py'),
         ('Byte agreement correction',        'fix_byte_agreement.py'),
+        ('Duplicate consensus correction',   'fix_duplicate_consensus.py'),
         ('Post-processing (merge/binary)',   'postprocess_firmware.py'),
         ('FF-fill & FF-forced override',     'ff_fill.py --heuristic'),
         ('R8C instruction validation',       'r8c_validator.py'),
