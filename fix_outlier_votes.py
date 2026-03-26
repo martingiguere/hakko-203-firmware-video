@@ -71,11 +71,17 @@ def detect_outlier_moves(crop_index):
     """Detect outlier frames and find better neighbor assignments.
 
     Returns list of (source_addr, frame_key, dest_addr) tuples.
+    Skips accepted addresses (user-verified data).
     """
+    from memory_map_utils import load_accepted_addresses
+    accepted_addrs, _ = load_accepted_addresses()
+
     # Pre-build consensus for all addresses with enough frames
     addr_consensus = {}
     for addr, entry in crop_index.items():
         if addr == 'ref_addresses' or not isinstance(entry, dict):
+            continue
+        if addr in accepted_addrs:
             continue
         readings = entry.get('readings', {})
         if len(readings) < MIN_FRAMES:

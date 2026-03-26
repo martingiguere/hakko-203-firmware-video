@@ -149,6 +149,35 @@ def get_buffer_range(mmap=None):
     return (_parse_addr(mmap['buffer_start']), _parse_addr(mmap['buffer_end']))
 
 
+def load_accepted_addresses(review_state_path='review_state.json'):
+    """Load accepted/edited address keys and their byte data from review_state.json.
+
+    Accepted addresses are treated as manually verified ground truth.
+    Pipeline scripts must not overwrite or move frames at these addresses.
+
+    Returns:
+        accepted_addrs: set of 5-char uppercase hex address strings
+        accepted_bytes: dict of addr_key -> list of 16 hex byte strings
+    """
+    accepted_addrs = set()
+    accepted_bytes = {}
+
+    if not os.path.exists(review_state_path):
+        return accepted_addrs, accepted_bytes
+
+    with open(review_state_path) as f:
+        state = json.load(f)
+
+    for addr_key, line in state.get('lines', {}).items():
+        if line.get('status') in ('accepted', 'edited'):
+            accepted_addrs.add(addr_key.upper())
+            byte_data = line.get('bytes', [])
+            if byte_data and '--' not in byte_data:
+                accepted_bytes[addr_key.upper()] = byte_data
+
+    return accepted_addrs, accepted_bytes
+
+
 if __name__ == '__main__':
     mmap = load_memory_map()
     print(f"Device: {mmap['device']}")

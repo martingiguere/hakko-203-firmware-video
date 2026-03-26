@@ -396,13 +396,18 @@ def execute_moves(crop_index, moves):
     """
     Move frames from source to destination address entries.
     Moves readings, confidences, crop PNGs.
+    Skips moves involving accepted addresses (user-verified data).
     """
+    from memory_map_utils import load_accepted_addresses
+    accepted_addrs, _ = load_accepted_addresses()
+
     affected_src = set()
     affected_dst = set()
     frames_moved = 0
     crops_moved = 0
     crops_missing = 0
     entries_emptied = 0
+    skipped_accepted = 0
 
     # Group moves by (source, dest) for efficiency
     grouped = {}
@@ -410,6 +415,9 @@ def execute_moves(crop_index, moves):
         grouped.setdefault((src, dest), []).append(frame)
 
     for (src_key, dst_key), frame_list in sorted(grouped.items()):
+        if src_key in accepted_addrs or dst_key in accepted_addrs:
+            skipped_accepted += len(frame_list)
+            continue
         affected_src.add(src_key)
         affected_dst.add(dst_key)
 
@@ -494,6 +502,8 @@ def execute_moves(crop_index, moves):
 
     print(f"  Frames moved: {frames_moved}")
     print(f"  Crops moved: {crops_moved} (missing: {crops_missing})")
+    if skipped_accepted:
+        print(f"  Skipped (accepted addresses): {skipped_accepted}")
     print(f"  Source addresses affected: {len(affected_src)}")
     print(f"  Source entries emptied (removed): {entries_emptied}")
     print(f"  Destination addresses created/updated: {len(affected_dst)}")
@@ -660,6 +670,8 @@ def reset_review_state(affected_src, affected_dst):
 
     for addr_key in sorted(all_affected):
         if addr_key in state['lines']:
+            if state['lines'][addr_key].get('status') in ('accepted', 'edited'):
+                continue  # preserve manual review work
             state['lines'][addr_key]['status'] = 'unreviewed'
             state['lines'][addr_key]['edited_positions'] = []
             reset_count += 1

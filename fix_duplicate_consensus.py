@@ -35,7 +35,7 @@ from fix_address_trajectory import (
     log_frame_moves, update_extracted_firmware,
 )
 from frame_utils import parse_frame_key
-from memory_map_utils import load_memory_map, is_ff_forced
+from memory_map_utils import load_memory_map, is_ff_forced, load_accepted_addresses
 
 FRAME_ASSIGNMENTS_PATH = os.path.join(PROJECT_ROOT, 'frame_assignments.json')
 
@@ -47,16 +47,20 @@ ROM_START = 0x04000
 ROM_END = 0x107F0
 
 
-def build_all_consensus(crop_index, mmap):
+def build_all_consensus(crop_index, mmap, accepted_addrs=None):
     """Build weighted consensus for all ROM addresses with enough frames.
 
     Returns dict of addr -> (consensus_list, frame_count, is_ff_forced).
     Includes ff-forced addresses (they can be sources of stolen data).
-    Skips all-FF consensus and non-ROM addresses.
+    Skips accepted addresses, all-FF consensus, and non-ROM addresses.
     """
+    if accepted_addrs is None:
+        accepted_addrs = set()
     result = {}
     for addr, entry in crop_index.items():
         if addr == 'ref_addresses' or not isinstance(entry, dict):
+            continue
+        if addr in accepted_addrs:
             continue
         addr_int = int(addr, 16)
         if addr_int < ROM_START or addr_int > ROM_END:
@@ -140,8 +144,10 @@ def detect_duplicate_moves(crop_index, mmap):
     """Detect stolen addresses and build move list.
 
     Returns list of (src_addr, frame_key, dst_addr) tuples.
+    Skips accepted addresses (user-verified data).
     """
-    addr_consensus = build_all_consensus(crop_index, mmap)
+    accepted_addrs, _ = load_accepted_addresses()
+    addr_consensus = build_all_consensus(crop_index, mmap, accepted_addrs)
     print(f"  ROM addresses with consensus: {len(addr_consensus)}")
 
     pairs = find_duplicate_pairs(addr_consensus)

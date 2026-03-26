@@ -36,7 +36,7 @@ from fix_address_trajectory import (
     weighted_majority_vote,
 )
 from frame_utils import parse_frame_key
-from memory_map_utils import load_memory_map, is_ff_forced
+from memory_map_utils import load_memory_map, is_ff_forced, load_accepted_addresses
 
 FRAME_ASSIGNMENTS_PATH = os.path.join(PROJECT_ROOT, 'frame_assignments.json')
 
@@ -128,11 +128,16 @@ def detect_confusion_moves(crop_index, mmap):
     """Detect outlier frames whose bytes match a confusion-mapped address.
 
     Returns list of (source_addr, frame_key, dest_addr) tuples.
+    Skips accepted addresses (user-verified data).
     """
+    accepted_addrs, _ = load_accepted_addresses()
+
     # Pre-build consensus for all addresses with enough frames
     addr_consensus = {}
     for addr, entry in crop_index.items():
         if addr == 'ref_addresses' or not isinstance(entry, dict):
+            continue
+        if addr in accepted_addrs:
             continue
         readings = entry.get('readings', {})
         if len(readings) < MIN_FRAMES:

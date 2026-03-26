@@ -265,14 +265,16 @@ def apply_corrections(addr, hex_bytes, context=None):
     return corrected
 
 
-def merge_and_vote(extraction, reference, review=None, crop_fallback=None):
+def merge_and_vote(extraction, reference, review=None, crop_fallback=None,
+                   accepted_bytes=None):
     """Merge extraction with reference data.
 
     Priority:
     1. Reference data (always wins)
-    2. Extraction data weighted by observation count
-    3. Review-flagged data (repetitive patterns, needs human review)
-    4. Crop-index fallback (addresses seen by precompute but missed by extraction)
+    2. Accepted user data (manually verified, like reference)
+    3. Extraction data weighted by observation count
+    4. Review-flagged data (repetitive patterns, needs human review)
+    5. Crop-index fallback (addresses seen by precompute but missed by extraction)
 
     Returns dict of addr -> {bytes, source, confidence}.
     """
@@ -280,6 +282,8 @@ def merge_and_vote(extraction, reference, review=None, crop_fallback=None):
         review = {}
     if crop_fallback is None:
         crop_fallback = {}
+    if accepted_bytes is None:
+        accepted_bytes = {}
     final = {}
 
     all_addrs = set()
@@ -299,6 +303,16 @@ def merge_and_vote(extraction, reference, review=None, crop_fallback=None):
             final[addr] = {
                 'bytes': list(reference[addr]),
                 'source': 'reference',
+                'confidence': 1.0,
+            }
+            continue
+
+        # Accepted user data wins (manually verified ground truth)
+        addr_key = f"{addr:05X}"
+        if addr_key in accepted_bytes:
+            final[addr] = {
+                'bytes': list(accepted_bytes[addr_key]),
+                'source': 'accepted',
                 'confidence': 1.0,
             }
             continue
@@ -711,7 +725,12 @@ def main():
 
     # Merge with reference
     print("\nMerging data sources...")
-    final = merge_and_vote(valid_extraction, reference, review_extraction)
+    from memory_map_utils import load_accepted_addresses
+    _, accepted_bytes = load_accepted_addresses()
+    if accepted_bytes:
+        print(f"Accepted user data: {len(accepted_bytes)} addresses (priority over OCR)")
+    final = merge_and_vote(valid_extraction, reference, review_extraction,
+                           accepted_bytes=accepted_bytes)
     print(f"Merged data: {len(final)} addresses")
     # NOTE: FF-fill and FF-forced override now handled by ff_fill.py
     # (runs as a separate pipeline step after this script)

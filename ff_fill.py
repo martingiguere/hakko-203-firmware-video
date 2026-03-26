@@ -149,14 +149,22 @@ def write_binary(final_data, full_path, rom_path):
 
 # ── FF-Forced Override ───────────────────────────────────────────────────────
 
-def ff_force(final_data, ff_ranges):
+def ff_force(final_data, ff_ranges, accepted_addrs=None):
     """Force all addresses in ff-forced ranges to all-FF.
 
     Creates entries for missing addresses, overwrites non-FF entries.
+    Skips addresses marked as accepted in review_state (user-verified data).
     """
+    if accepted_addrs is None:
+        accepted_addrs = set()
     forced = 0
+    skipped_accepted = 0
     for region_start, region_end in ff_ranges:
         for addr in range(region_start & ~0xF, (region_end & ~0xF) + 1, 0x10):
+            addr_key = f"{addr:05X}"
+            if addr_key in accepted_addrs:
+                skipped_accepted += 1
+                continue
             if addr in final_data:
                 if not all(b == 'FF' for b in final_data[addr]['bytes']):
                     final_data[addr]['bytes'] = ['FF'] * 16
@@ -177,6 +185,8 @@ def ff_force(final_data, ff_ranges):
         print(f"FF-forced: {forced} lines overridden ({regions_str})")
     else:
         print("FF-forced: no changes needed")
+    if skipped_accepted:
+        print(f"FF-forced: skipped {skipped_accepted} accepted addresses")
     return forced
 
 
@@ -305,9 +315,11 @@ def main():
     apply_sources(final, sources)
     print(f"  {len(final)} lines loaded")
 
-    # Step 1: FF-forced override
+    # Step 1: FF-forced override (skip accepted addresses)
+    from memory_map_utils import load_accepted_addresses
+    accepted_addrs, _ = load_accepted_addresses()
     print(f"\nApplying FF-forced override...")
-    ff_force(final, ff_ranges)
+    ff_force(final, ff_ranges, accepted_addrs)
 
     # Step 2: Heuristic FF-fill (optional)
     if args.heuristic:
