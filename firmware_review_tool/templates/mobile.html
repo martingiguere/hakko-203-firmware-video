@@ -856,7 +856,7 @@ hexKeyBackspace = function() {
 
 const _origHexKeyDone = hexKeyDone;
 hexKeyDone = function() {
-    if (addrKeypadInput && addrKeypadFrameKey) {
+    if (addrKeypadInput && addrKeypadFrameKey && addrKeypadFrameKey !== '__batch__') {
         const addr = addrKeypadInput.value;
         const frameKey = addrKeypadFrameKey;
         closeAddrKeypad();
@@ -869,6 +869,9 @@ hexKeyDone = function() {
 const _origHexKeyCancel = hexKeyCancel;
 hexKeyCancel = function() {
     if (addrKeypadInput) {
+        if (addrKeypadFrameKey === '__batch__') {
+            addrKeypadInput.parentNode && addrKeypadInput.parentNode.removeChild(addrKeypadInput);
+        }
         closeAddrKeypad();
         return;
     }
