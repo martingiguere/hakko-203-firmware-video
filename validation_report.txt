@@ -11,8 +11,8 @@ Non-default vectors: 3
   $0FF3C -> $08B4C
   $0FF50 -> $08AEA
 
-Instructions decoded: 1548
-Code bytes covered:   3527 / 65536
+Instructions decoded: 1544
+Code bytes covered:   3519 / 65536
 Code coverage:        5.4%
 
 Issues: 3
