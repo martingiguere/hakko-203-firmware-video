@@ -223,6 +223,38 @@
         }
         .crop-move-btn:active { background: #bbdefb; }
 
+        /* --- Multi-select --- */
+        .crop-wrapper { position: relative; }
+        .crop-wrapper.selected {
+            border: 2px solid #1e88e5;
+            background: #e3f2fd;
+        }
+        .crop-wrapper.selected::after {
+            content: '\2713';
+            position: absolute; top: 2px; right: 6px;
+            font-size: 20px; color: #1e88e5; font-weight: bold;
+            pointer-events: none;
+        }
+        #selection-bar {
+            display: none;
+            position: fixed; bottom: 65px; left: 0; right: 0;
+            height: 50px; z-index: 120;
+            background: #1565c0; color: white;
+            align-items: center; justify-content: space-between;
+            padding: 0 16px; font-size: 15px;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.3);
+        }
+        #selection-bar.visible { display: flex; }
+        #selection-bar button {
+            height: 36px; padding: 0 16px; font-size: 14px; font-weight: bold;
+            border: none; border-radius: 6px; color: #fff; cursor: pointer;
+            margin-left: 8px;
+        }
+        #sel-move { background: #43a047; }
+        #sel-move:active { background: #388e3c; }
+        #sel-clear { background: rgba(255,255,255,0.2); }
+        #sel-clear:active { background: rgba(255,255,255,0.3); }
+
         /* --- Staleness banner --- */
         #stale-banner {
             display: none;
@@ -492,6 +524,7 @@ const state = {
     addressList: [],
     minimapData: [],
     dirty: false,
+    selectedFrames: new Set(),
 };
 
 const TIER_PRIORITY = {
@@ -575,6 +608,10 @@ async function buildAddressList() {
 async function loadLine(addr) {
     addr = normalizeAddr(addr);
     state.currentAddr = addr;
+
+    // Clear multi-select when navigating
+    state.selectedFrames.clear();
+    updateSelectionBar();
 
     // Reset keypad state when navigating to a new address
     closeHexKeypad();
@@ -791,7 +828,10 @@ hexKey = function(ch) {
     if (addrKeypadInput) {
         if (addrKeypadInput.value.length >= 5) addrKeypadInput.value = '';
         addrKeypadInput.value += ch;
-        document.getElementById('hex-keypad-info').textContent = 'Move to address: ' + addrKeypadInput.value;
+        const prefix = addrKeypadFrameKey === '__batch__'
+            ? `Move ${state.selectedFrames.size} to: `
+            : 'Move to address: ';
+        document.getElementById('hex-keypad-info').textContent = prefix + addrKeypadInput.value;
         return;
     }
     _origHexKey(ch);
@@ -1003,7 +1043,31 @@ function addCropImage(container, frameNum, isVideo, fd) {
         }
     };
 
+    // Tap to toggle selection (multi-select)
+    wrap.dataset.frameKey = frameKey;
+    wrap.addEventListener('click', (e) => {
+        if (e.target.closest('button, .move-row, input')) return;
+        if (state.selectedFrames.has(frameKey)) {
+            state.selectedFrames.delete(frameKey);
+            wrap.classList.remove('selected');
+        } else {
+            state.selectedFrames.add(frameKey);
+            wrap.classList.add('selected');
+        }
+        updateSelectionBar();
+    });
+
     container.appendChild(wrap);
+}
+
+// ── Multi-select ──────────────────────────────────────────────────────────
+function updateSelectionBar() {
+    const bar = document.getElementById('selection-bar');
+    if (!bar) return;
+    const count = state.selectedFrames.size;
+    document.getElementById('sel-count').textContent =
+        count === 1 ? '1 selected' : `${count} selected`;
+    bar.classList.toggle('visible', count > 0);
 }
 
 // ── Frame move ─────────────────────────────────────────────────────────────
@@ -1307,9 +1371,80 @@ async function refreshFromMerged() {
     refreshStats();
 }
 
+// ── Multi-select action bar handlers ──────────────────────────────────────
+document.getElementById('sel-move').addEventListener('click', () => {
+    if (state.selectedFrames.size === 0) return;
+    // Create a hidden input for the address keypad
+    const fakeInput = document.createElement('input');
+    fakeInput.value = '';
+    fakeInput.style.position = 'fixed';
+    fakeInput.style.top = '-100px';
+    document.body.appendChild(fakeInput);
+
+    // Store original callbacks and override for batch mode
+    const origDone = hexKeyDone;
+    addrKeypadInput = fakeInput;
+    addrKeypadFrameKey = '__batch__';
+
+    document.getElementById('hex-keypad-info').textContent =
+        `Move ${state.selectedFrames.size} frames to: -----`;
+    document.getElementById('hex-keypad').style.display = 'block';
+    const keypadHeight = document.getElementById('hex-keypad').offsetHeight + 60;
+    document.body.style.paddingBottom = keypadHeight + 'px';
+});
+
+// Override hexKeyDone to handle batch moves
+const _batchOrigDone = hexKeyDone;
+hexKeyDone = function() {
+    if (addrKeypadInput && addrKeypadFrameKey === '__batch__') {
+        const addr = addrKeypadInput.value;
+        closeAddrKeypad();
+        addrKeypadInput.parentNode && addrKeypadInput.parentNode.removeChild(addrKeypadInput);
+        doBatchMove(addr);
+        return;
+    }
+    _batchOrigDone();
+};
+
+async function doBatchMove(rawAddr) {
+    if (!rawAddr || rawAddr.length < 3) {
+        showToast('Invalid address');
+        return;
+    }
+    const toAddr = rawAddr.toUpperCase().padStart(5, '0');
+    const moves = Array.from(state.selectedFrames).map(fk => ({
+        frame: fk,
+        from_addr: state.currentAddr,
+        to_addr: toAddr
+    }));
+    try {
+        const result = await api('POST', '/api/move_frames', { moves });
+        showToast(`Moved ${result.moves_applied || moves.length} frames to $${toAddr}`);
+    } catch(e) {
+        showToast('Error: ' + (e.message || e));
+    }
+    state.selectedFrames.clear();
+    updateSelectionBar();
+    await loadLine(state.currentAddr);
+}
+
+document.getElementById('sel-clear').addEventListener('click', () => {
+    state.selectedFrames.clear();
+    document.querySelectorAll('.crop-wrapper.selected')
+        .forEach(el => el.classList.remove('selected'));
+    updateSelectionBar();
+});
+
 // ── Start ──────────────────────────────────────────────────────────────────
 init();
 checkStaleness();
 </script>
+<div id="selection-bar">
+    <span id="sel-count">0 selected</span>
+    <div>
+        <button id="sel-move">Move</button>
+        <button id="sel-clear">Clear</button>
+    </div>
+</div>
 </body>
 </html>
