@@ -1408,8 +1408,9 @@ const _batchOrigDone = hexKeyDone;
 hexKeyDone = function() {
     if (addrKeypadInput && addrKeypadFrameKey === '__batch__') {
         const addr = addrKeypadInput.value;
+        const fakeEl = addrKeypadInput;
         closeAddrKeypad();
-        addrKeypadInput.parentNode && addrKeypadInput.parentNode.removeChild(addrKeypadInput);
+        fakeEl.parentNode && fakeEl.parentNode.removeChild(fakeEl);
         doBatchMove(addr);
         return;
     }
