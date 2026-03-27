@@ -35,6 +35,7 @@ REF_CROPS_DIR = os.path.join(CROPS_DIR, 'ref')
 MERGED_PATH = os.path.join(PROJECT_ROOT, 'firmware_merged.txt')
 FRAMES_DIR = os.path.join(PROJECT_ROOT, 'frames')
 REVIEW_STATE_PATH = os.path.join(PROJECT_ROOT, 'review_state.json')
+FRAME_ASSIGNMENTS_PATH = os.path.join(PROJECT_ROOT, 'frame_assignments.json')
 EXPORT_HEX_PATH = os.path.join(PROJECT_ROOT, 'firmware_reviewed.txt')
 EXPORT_ROM_PATH = os.path.join(PROJECT_ROOT, 'hakko_fm203_reviewed.bin')
 EXPORT_FULL_PATH = os.path.join(PROJECT_ROOT, 'hakko_fm203_full_reviewed.bin')
@@ -118,6 +119,34 @@ def load_frame_moves():
 def save_frame_moves():
     with open(FRAME_MOVES_PATH, 'w', encoding='utf-8') as f:
         json.dump({"moves": frame_moves}, f, indent=2)
+
+
+def update_frame_assignment(frame, from_addr, to_addr):
+    """Update frame_assignments.json to reflect a manual frame move.
+
+    Prevents precompute.py from re-adding the frame at the old address.
+    """
+    if not os.path.exists(FRAME_ASSIGNMENTS_PATH):
+        return
+    frame_str = str(frame) if not str(frame).startswith('v') else str(frame)
+    is_video = str(frame).startswith('v')
+    if is_video:
+        return  # frame_assignments only tracks extracted frames
+    try:
+        frame_int = int(frame)
+    except (ValueError, TypeError):
+        return
+    frame_name = f"frame_{frame_int:05d}.png"
+    with open(FRAME_ASSIGNMENTS_PATH) as f:
+        assignments = json.load(f)
+    if frame_name not in assignments:
+        return
+    to_int = int(to_addr, 16)
+    for entry in assignments[frame_name]:
+        if f"{entry['addr']:05X}" == from_addr.upper():
+            entry['addr'] = to_int
+    with open(FRAME_ASSIGNMENTS_PATH, 'w') as f:
+        json.dump(assignments, f)
 
 
 def save_crop_index():
@@ -906,6 +935,7 @@ def move_frame():
     row_y = src.get("row_ys", {}).get(frame_str)
 
     apply_single_move(frame, from_addr, to_addr)
+    update_frame_assignment(frame, from_addr, to_addr)
 
     move_record = {
         "frame": frame,
@@ -963,6 +993,7 @@ def move_frames_batch():
         row_y = src.get("row_ys", {}).get(frame_str) if src else None
 
         apply_single_move(frame, from_addr, to_addr)
+        update_frame_assignment(frame, from_addr, to_addr)
         move_record = {
             "frame": frame,
             "from_addr": from_addr,
@@ -1064,6 +1095,7 @@ def move_frame_all_rows():
         row_y = entry.get("row_ys", {}).get(frame_str)
 
         apply_single_move(frame, addr, new_addr)
+        update_frame_assignment(frame, addr, new_addr)
         move_record = {
             "frame": frame,
             "from_addr": addr,
