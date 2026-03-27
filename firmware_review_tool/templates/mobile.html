@@ -503,6 +503,13 @@
 </div>
 
 <!-- Bottom nav bar -->
+<div id="selection-bar">
+    <span id="sel-count">0 selected</span>
+    <div>
+        <button id="sel-move">Move</button>
+        <button id="sel-clear">Clear</button>
+    </div>
+</div>
 <div id="nav-bar">
     <button class="nav-btn" onclick="navigateSeq(-1)">&laquo;</button>
     <button class="nav-btn" onclick="navigate(-1)">&lsaquo; Prev</button>
@@ -1439,12 +1446,5 @@ document.getElementById('sel-clear').addEventListener('click', () => {
 init();
 checkStaleness();
 </script>
-<div id="selection-bar">
-    <span id="sel-count">0 selected</span>
-    <div>
-        <button id="sel-move">Move</button>
-        <button id="sel-clear">Clear</button>
-    </div>
-</div>
 </body>
 </html>
