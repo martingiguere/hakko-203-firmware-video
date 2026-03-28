@@ -162,8 +162,10 @@
         }
         .btn-accept { background: #43a047; }
         .btn-accept:active { background: #388e3c; }
-        .btn-flag { background: #e53935; }
+        .btn-flag { background: #e53935; flex: 0.5; }
         .btn-flag:active { background: #c62828; }
+        .btn-undo { background: #7B1FA2; flex: 0.5; }
+        .btn-undo:active { background: #6A1B9A; }
         .btn-reset { background: #888; flex: 0.5; }
         .btn-reset:active { background: #666; }
         .btn-save { background: #1e88e5; flex: 0.5; }
@@ -478,6 +480,7 @@
     <div id="actions">
         <button class="action-btn btn-accept" onclick="acceptLine()">Accept</button>
         <button class="action-btn btn-flag" onclick="flagLine()">Flag</button>
+    <button class="action-btn btn-undo" onclick="undoLastMove()">Undo</button>
         <button class="action-btn btn-reset" onclick="resetLine()">Reset</button>
         <button class="action-btn btn-save" onclick="doSave()">Save</button>
     </div>
@@ -1363,6 +1366,22 @@ async function flagLine() {
         loadLine(nextAddr);
     } else {
         navigate(1);
+    }
+}
+
+async function undoLastMove() {
+    try {
+        const result = await api('POST', '/api/undo_move');
+        if (result.error) {
+            showToast(result.error, 3000);
+            return;
+        }
+        showToast(`Undone: F${result.frame} ${result.from_addr}\u2192${result.to_addr}`);
+        state.dirty = true; updateSaveButton();
+        await loadLine(state.currentAddr);
+        refreshStats();
+    } catch(e) {
+        showToast('Nothing to undo', 2000);
     }
 }
 

@@ -970,6 +970,38 @@ def move_frame():
     return jsonify({"ok": True, "frame": frame, "from_addr": from_addr, "to_addr": to_addr})
 
 
+@app.route('/api/undo_move', methods=['POST'])
+def undo_move():
+    """Undo the last frame move by reversing it."""
+    global dirty, minimap_cache
+    if not frame_moves:
+        return jsonify({"error": "Nothing to undo"}), 404
+
+    last = frame_moves.pop()
+    frame = last["frame"]
+    from_addr = last["from_addr"]
+    to_addr = last["to_addr"]
+
+    # Reverse the move: move frame from to_addr back to from_addr
+    apply_single_move(frame, to_addr, from_addr)
+    update_frame_assignment(frame, to_addr, from_addr)
+    save_frame_moves()
+    save_crop_index()
+
+    recompute_consensus_for_addr(from_addr)
+    recompute_consensus_for_addr(to_addr)
+
+    dirty = True
+    minimap_cache = None
+
+    return jsonify({
+        "ok": True,
+        "frame": frame,
+        "from_addr": to_addr,
+        "to_addr": from_addr,
+    })
+
+
 @app.route('/api/move_frames', methods=['POST'])
 def move_frames_batch():
     global dirty, minimap_cache
