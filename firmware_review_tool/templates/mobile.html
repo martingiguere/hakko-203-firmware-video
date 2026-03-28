@@ -160,9 +160,9 @@
             cursor: pointer;
             font-family: inherit;
         }
-        .btn-accept { background: #43a047; }
+        .btn-accept { background: #43a047; flex: 0.5; }
         .btn-accept:active { background: #388e3c; }
-        .btn-flag { background: #e53935; flex: 0.5; }
+        .btn-flag { background: #e53935; }
         .btn-flag:active { background: #c62828; }
         .btn-undo { background: #7B1FA2; flex: 0.5; }
         .btn-undo:active { background: #6A1B9A; }
@@ -478,11 +478,11 @@
 
     <!-- Action buttons -->
     <div id="actions">
-        <button class="action-btn btn-accept" onclick="acceptLine()">Accept</button>
         <button class="action-btn btn-flag" onclick="flagLine()">Flag</button>
-    <button class="action-btn btn-undo" onclick="undoLastMove()">Undo</button>
-        <button class="action-btn btn-reset" onclick="resetLine()">Reset</button>
         <button class="action-btn btn-save" onclick="doSave()">Save</button>
+        <button class="action-btn btn-undo" onclick="undoLastMove()">Undo</button>
+        <button class="action-btn btn-reset" onclick="resetLine()">Reset</button>
+        <button class="action-btn btn-accept" onclick="acceptLine()">&#x2713; All</button>
     </div>
 
     <!-- Crop images -->
