@@ -1294,12 +1294,23 @@ async function doMoveAllRows(frameKey, rawAddr) {
 
 // ── Navigation ─────────────────────────────────────────────────────────────
 function navigate(delta) {
+    // Skip accepted/edited, go to next unreviewed/flagged/low_confidence address.
+    // List is sorted by tier (flagged first, accepted last), so this effectively
+    // cycles through flagged → low_confidence → high_confidence, skipping done ones.
     const list = state.addressList;
     if (list.length === 0) return;
     const idx = list.indexOf(state.currentAddr);
-    let next = idx + delta;
-    if (next < 0) next = list.length - 1;
-    if (next >= list.length) next = 0;
+    for (let i = 1; i < list.length; i++) {
+        let next = ((idx + delta * i) % list.length + list.length) % list.length;
+        const addr = list[next];
+        const entry = state.minimapData.find(e => e.address === addr);
+        if (!entry || (entry.tier !== 'accepted' && entry.tier !== 'edited')) {
+            loadLine(addr);
+            return;
+        }
+    }
+    // All done — just go next
+    let next = ((idx + delta) % list.length + list.length) % list.length;
     loadLine(list[next]);
 }
 
