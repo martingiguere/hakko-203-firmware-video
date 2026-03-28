@@ -6408,8 +6408,8 @@
     "confidence": 0.6
   },
   "06420": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction",
+    "confidence": 0.6
   },
   "06430": {
     "source": "accepted",
@@ -12612,8 +12612,8 @@
     "confidence": 1.0
   },
   "0C510": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction",
+    "confidence": 0.6
   },
   "0C520": {
     "source": "extraction",
@@ -12652,8 +12652,8 @@
     "confidence": 1.0
   },
   "0C5B0": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction",
+    "confidence": 0.6
   },
   "0C5C0": {
     "source": "extraction",
@@ -12784,8 +12784,8 @@
     "confidence": 1.0
   },
   "0C7C0": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction",
+    "confidence": 0.6
   },
   "0C7D0": {
     "source": "accepted",
@@ -12880,6 +12880,10 @@
     "confidence": 0.6
   },
   "0C940": {
+    "source": "extraction",
+    "confidence": 0.6
+  },
+  "0C950": {
     "source": "extraction",
     "confidence": 0.6
   },
@@ -14164,16 +14168,16 @@
     "confidence": 1.0
   },
   "0DD60": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction",
+    "confidence": 0.6
   },
   "0DD70": {
     "source": "accepted",
     "confidence": 1.0
   },
   "0DD80": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction",
+    "confidence": 0.6
   },
   "0DD90": {
     "source": "accepted",
@@ -14192,8 +14196,8 @@
     "confidence": 1.0
   },
   "0DDD0": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction",
+    "confidence": 0.6
   },
   "0DDE0": {
     "source": "accepted",
@@ -16408,8 +16412,8 @@
     "confidence": 1.0
   },
   "10070": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction-review",
+    "confidence": 0.3
   },
   "10080": {
     "source": "accepted",
@@ -16564,8 +16568,8 @@
     "confidence": 0.6
   },
   "102E0": {
-    "source": "extraction",
-    "confidence": 0.2
+    "source": "extraction-review",
+    "confidence": 0.3
   },
   "102F0": {
     "source": "accepted",
@@ -16612,26 +16616,22 @@
     "confidence": 0.6
   },
   "103A0": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction-review",
+    "confidence": 0.3
   },
   "103B0": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction",
+    "confidence": 0.6
   },
   "103C0": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction",
+    "confidence": 0.6
   },
   "103D0": {
     "source": "accepted",
     "confidence": 1.0
   },
   "103E0": {
-    "source": "accepted",
-    "confidence": 1.0
-  },
-  "103F0": {
     "source": "accepted",
     "confidence": 1.0
   },
@@ -16664,8 +16664,8 @@
     "confidence": 0.6
   },
   "10470": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction-review",
+    "confidence": 0.3
   },
   "10480": {
     "source": "accepted",
@@ -16680,16 +16680,16 @@
     "confidence": 0.3
   },
   "104B0": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction-review",
+    "confidence": 0.3
   },
   "104C0": {
     "source": "accepted",
     "confidence": 1.0
   },
   "104D0": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "extraction-review",
+    "confidence": 0.3
   },
   "104E0": {
     "source": "extraction",
@@ -16708,6 +16708,18 @@
     "confidence": 0.6
   },
   "10520": {
+    "source": "extraction",
+    "confidence": 0.6
+  },
+  "10530": {
+    "source": "extraction-review",
+    "confidence": 0.3
+  },
+  "10540": {
+    "source": "extraction",
+    "confidence": 0.6
+  },
+  "10550": {
     "source": "extraction",
     "confidence": 0.6
   },
@@ -16751,6 +16763,10 @@
     "source": "extraction",
     "confidence": 0.6
   },
+  "10600": {
+    "source": "extraction-review",
+    "confidence": 0.3
+  },
   "10610": {
     "source": "accepted",
     "confidence": 1.0
@@ -16763,7 +16779,15 @@
     "source": "extraction-review",
     "confidence": 0.3
   },
+  "10640": {
+    "source": "extraction-review",
+    "confidence": 0.3
+  },
   "10650": {
+    "source": "extraction-review",
+    "confidence": 0.3
+  },
+  "10660": {
     "source": "extraction-review",
     "confidence": 0.3
   },
@@ -16786,6 +16810,10 @@
   "106B0": {
     "source": "extraction",
     "confidence": 0.6
+  },
+  "106C0": {
+    "source": "extraction-review",
+    "confidence": 0.3
   },
   "106D0": {
     "source": "extraction-review",
@@ -16814,6 +16842,10 @@
   "10730": {
     "source": "extraction",
     "confidence": 0.6
+  },
+  "10740": {
+    "source": "extraction-review",
+    "confidence": 0.3
   },
   "10750": {
     "source": "extraction",
