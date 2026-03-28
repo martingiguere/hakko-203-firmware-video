@@ -93,6 +93,10 @@ def find_misassigned_addresses(crop_index, mmap, accepted_addrs,
         confidences = entry.get('confidences', {})
         consensus = build_consensus(readings, confidences)
 
+        # Skip all-FF consensus (erased/empty regions)
+        if all(b == 'FF' for b in consensus):
+            continue
+
         # Find frames that disagree strongly
         wrong_frames = []
         for fk, rd in readings.items():
