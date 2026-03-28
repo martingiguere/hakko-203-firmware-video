@@ -1096,8 +1096,11 @@ function addCropImage(container, frameNum, isVideo, fd) {
         // Red label text if any bytes differ
         if (totalDiffs > 0) {
             const labelEl = wrap.querySelector('.crop-label');
-            labelEl.textContent += ` -- ${totalDiffs} byte${totalDiffs > 1 ? 's' : ''} differ`;
-            labelEl.style.color = '#c62828';
+            const diffSpan = document.createElement('span');
+            diffSpan.textContent = ` -- ${totalDiffs} byte${totalDiffs > 1 ? 's' : ''} differ`;
+            diffSpan.style.color = '#c62828';
+            diffSpan.style.fontWeight = 'bold';
+            labelEl.insertBefore(diffSpan, labelEl.firstChild);
         }
     };
 
