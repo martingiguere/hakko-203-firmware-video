@@ -961,6 +961,21 @@ function addCropImage(container, frameNum, isVideo, fd) {
     }
     label.textContent = labelText;
 
+    // Disagreement indicator (red text like desktop)
+    const reading = fd.readings && fd.readings[frameKey];
+    if (reading && state.lineData) {
+        let diffs = 0;
+        for (let i = 0; i < 16; i++) {
+            if (reading[i] !== '--' && state.lineData.bytes[i] !== '--'
+                && reading[i] !== state.lineData.bytes[i]) diffs++;
+        }
+        if (diffs > 0) {
+            labelText += ` -- ${diffs} byte${diffs > 1 ? 's' : ''} differ`;
+            label.textContent = labelText;
+            label.style.color = '#c62828';
+        }
+    }
+
     // Row context info button
     const infoBtn = document.createElement('button');
     infoBtn.className = 'crop-move-btn';
