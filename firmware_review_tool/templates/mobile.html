@@ -52,6 +52,7 @@
         .badge-accepted { background: #43a047; }
         .badge-edited { background: #1e88e5; }
         .badge-flagged { background: #e53935; }
+        .badge-verified { background: #7B1FA2; }
         .badge-missing { background: #555; }
         .region-badge {
             display: inline-block;
@@ -478,7 +479,7 @@
 
     <!-- Action buttons -->
     <div id="actions">
-        <button class="action-btn btn-flag" onclick="flagLine()">Flag</button>
+        <button class="action-btn btn-flag" onclick="verifyTop2()">&#x2713; 2</button>
         <button class="action-btn btn-save" onclick="doSave()">Save</button>
         <button class="action-btn btn-undo" onclick="undoLastMove()">Undo</button>
         <button class="action-btn btn-reset" onclick="resetLine()">Reset</button>
@@ -555,7 +556,7 @@ const state = {
 
 const TIER_PRIORITY = {
     flagged: 0, missing: 1, low_confidence: 2,
-    high_confidence: 3, edited: 4, accepted: 5
+    high_confidence: 3, verified: 4, edited: 5, accepted: 6
 };
 
 // ── API helper ─────────────────────────────────────────────────────────────
@@ -1304,7 +1305,7 @@ function navigate(delta) {
         let next = ((idx + delta * i) % list.length + list.length) % list.length;
         const addr = list[next];
         const entry = state.minimapData.find(e => e.address === addr);
-        if (!entry || (entry.tier !== 'accepted' && entry.tier !== 'edited')) {
+        if (!entry || (entry.tier !== 'accepted' && entry.tier !== 'edited' && entry.tier !== 'verified')) {
             loadLine(addr);
             return;
         }
@@ -1357,7 +1358,7 @@ function findNextPriorityAddr() {
         if (addr === state.currentAddr) continue;
         // Check if this address is still in a priority tier (not accepted)
         const entry = state.minimapData.find(e => e.address === addr);
-        if (entry && entry.tier !== 'accepted' && entry.tier !== 'edited') {
+        if (entry && entry.tier !== 'accepted' && entry.tier !== 'edited' && entry.tier !== 'verified') {
             return addr;
         }
     }
@@ -1373,6 +1374,29 @@ async function flagLine() {
     state.dirty = true; updateSaveButton();
     showToast('Flagged');
     await refreshStats();
+    if (nextAddr) {
+        loadLine(nextAddr);
+    } else {
+        navigate(1);
+    }
+}
+
+async function verifyTop2() {
+    const nextAddr = findNextPriorityAddr();
+    const frames = (state.frameData.frames || []).map(String);
+    const videoFrames = (state.frameData.video_frames || []).map(f => 'v' + f);
+    const allFrames = [...frames, ...videoFrames];
+    const top2 = allFrames.slice(0, 2);
+
+    await api('POST', '/api/verify_top', {
+        address: state.currentAddr,
+        bytes: state.lineData.bytes,
+        top_frames: top2,
+    });
+    state.dirty = true; updateSaveButton();
+    showToast('Verified (top 2)');
+    await refreshStats();
+
     if (nextAddr) {
         loadLine(nextAddr);
     } else {

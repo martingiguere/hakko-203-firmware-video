@@ -169,7 +169,7 @@ def load_accepted_addresses(review_state_path='review_state.json'):
         state = json.load(f)
 
     for addr_key, line in state.get('lines', {}).items():
-        if line.get('status') in ('accepted', 'edited'):
+        if line.get('status') in ('accepted', 'edited', 'verified'):
             accepted_addrs.add(addr_key.upper())
             byte_data = line.get('bytes', [])
             if byte_data and '--' not in byte_data:

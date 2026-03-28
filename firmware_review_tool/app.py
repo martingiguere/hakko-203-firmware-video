@@ -522,6 +522,8 @@ def build_minimap():
         # Determine tier for minimap coloring
         if status == "accepted":
             tier = "accepted"
+        elif status == "verified":
+            tier = "verified"
         elif status == "edited":
             tier = "edited"
         elif status == "flagged":
@@ -1000,6 +1002,29 @@ def undo_move():
         "from_addr": to_addr,
         "to_addr": from_addr,
     })
+
+
+@app.route('/api/verify_top', methods=['POST'])
+def verify_top():
+    """Mark address as verified with only top 2 frames for training."""
+    global dirty, minimap_cache
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "No JSON body"}), 400
+
+    addr = normalize_addr(str(data.get("address", "")))
+    line = review_state["lines"].get(addr)
+    if not line:
+        return jsonify({"error": "Address not found"}), 404
+
+    if "bytes" in data:
+        line["bytes"] = [b.upper() for b in data["bytes"]]
+    line["status"] = "verified"
+    line["verified_frames"] = data.get("top_frames", [])
+
+    dirty = True
+    minimap_cache = None
+    return jsonify({"ok": True, "address": addr})
 
 
 @app.route('/api/move_frames', methods=['POST'])

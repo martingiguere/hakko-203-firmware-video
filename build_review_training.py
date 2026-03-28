@@ -102,6 +102,15 @@ def main():
         if not frame_nums:
             continue
 
+        # For verified addresses, only use the specific verified frames
+        if line.get('status') == 'verified':
+            verified_fks = set(str(f) for f in line.get('verified_frames', []))
+            if not verified_fks:
+                continue
+            frame_nums = [f for f in frame_nums if str(f) in verified_fks]
+        if not frame_nums:
+            continue
+
         # Filter to high-confidence frames that match accepted bytes
         readings = entry.get('readings', {})
         confidences = entry.get('confidences', {})
