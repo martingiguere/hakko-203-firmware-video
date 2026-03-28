@@ -479,11 +479,11 @@
 
     <!-- Action buttons -->
     <div id="actions">
-        <button class="action-btn btn-flag" onclick="verifyTop2()">&#x2713; 2</button>
+        <button class="action-btn btn-accept" onclick="acceptLine()">&#x2713; All</button>
         <button class="action-btn btn-save" onclick="doSave()">Save</button>
         <button class="action-btn btn-undo" onclick="undoLastMove()">Undo</button>
         <button class="action-btn btn-reset" onclick="resetLine()">Reset</button>
-        <button class="action-btn btn-accept" onclick="acceptLine()">&#x2713; All</button>
+        <button class="action-btn btn-flag" onclick="verifyTop2()">&#x2713; 2</button>
     </div>
 
     <!-- Crop images -->
@@ -1455,7 +1455,7 @@ async function doSave() {
 // ── Stats ──────────────────────────────────────────────────────────────────
 async function refreshStats() {
     const s = await api('GET', '/api/stats');
-    const reviewed = (s.accepted || 0) + (s.edited || 0) + (s.flagged || 0);
+    const reviewed = (s.accepted || 0) + (s.edited || 0) + (s.flagged || 0) + (s.verified || 0);
     const total = s.total_lines || 5120;
     document.getElementById('stats-row').textContent =
         `${reviewed}/${total} reviewed | ${s.missing || 0} missing | ${s.has_data || 0} data`;

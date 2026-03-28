@@ -462,6 +462,7 @@ def compute_stats():
         "accepted": 0,
         "edited": 0,
         "flagged": 0,
+        "verified": 0,
         "has_data": 0,
     }
 
@@ -474,6 +475,8 @@ def compute_stats():
         source = line.get("source", "")
         if status == "accepted":
             stats["accepted"] += 1
+        elif status == "verified":
+            stats["verified"] += 1
         elif status == "edited":
             stats["edited"] += 1
         elif status == "flagged":
