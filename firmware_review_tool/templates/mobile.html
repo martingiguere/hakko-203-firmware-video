@@ -350,6 +350,13 @@
             margin-bottom: 2px;
             border-radius: 3px;
             background: #f0f0f0;
+            position: relative;
+        }
+        .crop-split canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
         }
         .crop-split img {
             display: block;
@@ -961,21 +968,6 @@ function addCropImage(container, frameNum, isVideo, fd) {
     }
     label.textContent = labelText;
 
-    // Disagreement indicator (red text like desktop)
-    const reading = fd.readings && fd.readings[frameKey];
-    if (reading && state.lineData) {
-        let diffs = 0;
-        for (let i = 0; i < 16; i++) {
-            if (reading[i] !== '--' && state.lineData.bytes[i] !== '--'
-                && reading[i] !== state.lineData.bytes[i]) diffs++;
-        }
-        if (diffs > 0) {
-            labelText += ` -- ${diffs} byte${diffs > 1 ? 's' : ''} differ`;
-            label.textContent = labelText;
-            label.style.color = '#c62828';
-        }
-    }
-
     // Row context info button
     const infoBtn = document.createElement('button');
     infoBtn.className = 'crop-move-btn';
@@ -1049,8 +1041,16 @@ function addCropImage(container, frameNum, isVideo, fd) {
         const labelEl = wrap.querySelector('.crop-label');
         labelEl.appendChild(addrDiv);
 
-        // Two byte rows
-        for (const rx of [row1_x, row2_x]) {
+        // Two byte rows with disagreement overlays
+        const reading = fd.readings && fd.readings[frameKey];
+        const currentBytes = state.lineData ? state.lineData.bytes : null;
+        let totalDiffs = 0;
+
+        const rowRanges = [
+            { rx: row1_x, byteStart: 0, byteEnd: 8 },
+            { rx: row2_x, byteStart: 8, byteEnd: 16 },
+        ];
+        for (const { rx, byteStart, byteEnd } of rowRanges) {
             const div = document.createElement('div');
             div.className = 'crop-split';
             div.style.width = containerW + 'px';
@@ -1062,9 +1062,42 @@ function addCropImage(container, frameNum, isVideo, fd) {
             rowImg.style.height = displayH + 'px';
             rowImg.style.marginLeft = -Math.round(rx * scale) + 'px';
             rowImg.style.imageRendering = 'pixelated';
-
             div.appendChild(rowImg);
+
+            // Canvas overlay for disagreement highlights
+            if (reading && currentBytes) {
+                const canvas = document.createElement('canvas');
+                canvas.width = containerW;
+                canvas.height = displayH;
+                canvas.style.width = containerW + 'px';
+                canvas.style.height = displayH + 'px';
+                const ctx2d = canvas.getContext('2d');
+
+                // Byte positions in source image: 168 + i*41.75, each 28px wide
+                // Offset by rx for this split, then scale
+                for (let i = byteStart; i < byteEnd; i++) {
+                    const fv = reading[i];
+                    const cv = currentBytes[i];
+                    if (fv === '--' || cv === '--') continue;
+                    if (fv === cv) continue;
+                    totalDiffs++;
+                    const srcX = 168 + i * 41.75;
+                    const x = Math.round((srcX - rx) * scale);
+                    const w = Math.round(28 * scale);
+                    ctx2d.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                    ctx2d.fillRect(x, 0, w, displayH);
+                }
+                div.appendChild(canvas);
+            }
+
             wrap.appendChild(div);
+        }
+
+        // Red label text if any bytes differ
+        if (totalDiffs > 0) {
+            const labelEl = wrap.querySelector('.crop-label');
+            labelEl.textContent += ` -- ${totalDiffs} byte${totalDiffs > 1 ? 's' : ''} differ`;
+            labelEl.style.color = '#c62828';
         }
     };
 
