@@ -967,6 +967,7 @@ def main():
     classifier_path = 'fast_knn_classifier.npz'
     rebuild = '--rebuild' in sys.argv
     post_only = '--post-only' in sys.argv
+    merge_only = '--merge-only' in sys.argv
     reset_moves = '--reset' in sys.argv
 
     # On full retrain, strip automated moves from frame_moves.json
@@ -976,7 +977,7 @@ def main():
 
     classifier = None
 
-    if post_only:
+    if post_only or merge_only:
         pass  # skip classifier loading — not needed for post-pipeline steps
     elif os.path.exists(classifier_path) and not rebuild:
         print(f"\nLoading existing kNN classifier from {classifier_path}...")
@@ -1071,7 +1072,7 @@ def main():
 
         classifier.save(classifier_path)
 
-    if not post_only:
+    if not post_only and not merge_only:
         # Run full extraction
         print("\n" + "=" * 60)
         print("Starting full extraction...")
@@ -1087,18 +1088,24 @@ def main():
     import subprocess
     cwd = os.getcwd()
 
-    post_steps = [
-        ('Precompute (crop index)',          os.path.join('firmware_review_tool', 'precompute.py')),
-        ('Address trajectory correction',    'fix_address_trajectory.py'),
-        ('FF-forced frame relocation',       'fix_ff_forced_relocation.py'),
-        ('Outlier vote correction',          'fix_outlier_votes.py'),
-        ('Byte agreement correction',        'fix_byte_agreement.py --loop'),
-        ('Duplicate consensus correction',   'fix_duplicate_consensus.py --loop'),
-        ('Post-processing (merge/binary)',   'postprocess_firmware.py'),
-        ('FF-fill & FF-forced override',     'ff_fill.py --heuristic'),
-        ('R8C instruction validation',       'r8c_validator.py'),
-        ('Gap context precompute',           os.path.join('firmware_review_tool', 'precompute_gaps.py')),
-    ]
+    if merge_only:
+        post_steps = [
+            ('Post-processing (merge/binary)',   'postprocess_firmware.py'),
+            ('FF-fill & FF-forced override',     'ff_fill.py --heuristic'),
+        ]
+    else:
+        post_steps = [
+            ('Precompute (crop index)',          os.path.join('firmware_review_tool', 'precompute.py')),
+            ('Address trajectory correction',    'fix_address_trajectory.py'),
+            ('FF-forced frame relocation',       'fix_ff_forced_relocation.py'),
+            ('Outlier vote correction',          'fix_outlier_votes.py'),
+            ('Byte agreement correction',        'fix_byte_agreement.py --loop'),
+            ('Duplicate consensus correction',   'fix_duplicate_consensus.py --loop'),
+            ('Post-processing (merge/binary)',   'postprocess_firmware.py'),
+            ('FF-fill & FF-forced override',     'ff_fill.py --heuristic'),
+            ('R8C instruction validation',       'r8c_validator.py'),
+            ('Gap context precompute',           os.path.join('firmware_review_tool', 'precompute_gaps.py')),
+        ]
 
     for step_name, script in post_steps:
         print("\n" + "=" * 60)

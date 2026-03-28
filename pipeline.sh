@@ -150,6 +150,7 @@ case "${1:-}" in
         echo ""
         echo "Flags (for start):"
         echo "  --post-only        Skip OCR extraction, run post-steps only"
+        echo "  --merge-only       Quick rebuild: postprocess + ff_fill only (~30s)"
         echo "  --rebuild          Retrain kNN classifier from scratch"
         echo "  --reset            Reset automated frame moves, keep manual moves"
         echo "                     (use with --rebuild for clean retrain)"
