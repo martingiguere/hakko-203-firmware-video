@@ -1046,6 +1046,11 @@ def main():
             print("  No additional samples from Pass 2")
 
         # === Pass 3: Augment with review-tool-confirmed samples ===
+        # Build training samples from accepted/edited addresses in review_state
+        import subprocess as _sp
+        print("\n=== Pass 3: Building review-confirmed training samples ===")
+        _sp.run([sys.executable, '-u', 'build_review_training.py'], cwd=os.getcwd())
+
         review_samples_path = 'review_training_samples.npz'
         if os.path.exists(review_samples_path):
             print(f"\n=== Pass 3: Loading review-confirmed training samples ===")
