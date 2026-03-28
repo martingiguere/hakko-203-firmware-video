@@ -223,6 +223,9 @@ def apply_single_move(frame, from_addr, to_addr):
 
     if frame_int in src.get(src_arr, []):
         src[src_arr].remove(frame_int)
+    # Also remove string variant in case of type mismatch
+    if frame_str in src.get(src_arr, []):
+        src[src_arr].remove(frame_str)
     if frame_int not in dst.get(src_arr, []):
         dst.setdefault(src_arr, []).append(frame_int)
         dst[src_arr].sort()
@@ -240,11 +243,20 @@ def recompute_consensus_for_addr(addr):
     """Recompute weighted majority vote for an address and update review_state.
 
     If no frames remain at this address, clears the data to missing.
+    Also cleans up ghost frames (in frames list but no reading).
     """
     entry = crop_index.get(addr)
     line = review_state.get("lines", {}).get(addr)
     if not line:
         return
+
+    # Clean up ghost frames: entries in frames/video_frames with no reading
+    if entry:
+        reading_keys = set(entry.get("readings", {}).keys())
+        for arr_name in ("frames", "video_frames"):
+            arr = entry.get(arr_name)
+            if arr:
+                entry[arr_name] = [f for f in arr if str(f) in reading_keys]
 
     if not entry or not entry.get("readings"):
         # No frames left — clear to missing
