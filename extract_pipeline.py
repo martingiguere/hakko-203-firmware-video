@@ -1103,8 +1103,8 @@ def main():
     for step_name, script in post_steps:
         print("\n" + "=" * 60)
         print(f"Running: {step_name} ({script})")
-        print("=" * 60)
-        cmd = [sys.executable] + script.split()
+        print("=" * 60, flush=True)
+        cmd = [sys.executable, '-u'] + script.split()
         result = subprocess.run(cmd, cwd=cwd)
         if result.returncode != 0:
             print(f"WARNING: {script} exited with code {result.returncode}")

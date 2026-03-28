@@ -37,7 +37,7 @@ start_pipeline() {
 
     # Run in new session (setsid) so stop can kill entire process group
     source "$VENV"
-    setsid python3 extract_pipeline.py $flags > "$LOG_FILE" 2>&1 &
+    setsid python3 -u extract_pipeline.py $flags > "$LOG_FILE" 2>&1 &
     pid=$!
     echo "$pid" > "$PID_FILE"
 
