@@ -2048,8 +2048,8 @@
     "confidence": 1.0
   },
   "02000": {
-    "source": "accepted",
-    "confidence": 1.0
+    "source": "ff-fill",
+    "confidence": 0.95
   },
   "02010": {
     "source": "ff-forced",
@@ -2872,8 +2872,8 @@
     "confidence": 1.0
   },
   "02CE0": {
-    "source": "ff-forced",
-    "confidence": 1.0
+    "source": "extraction",
+    "confidence": 0.2
   },
   "02CF0": {
     "source": "ff-forced",
@@ -16192,8 +16192,8 @@
     "confidence": 0.6
   },
   "0FD00": {
-    "source": "extraction",
-    "confidence": 0.2
+    "source": "ff-fill",
+    "confidence": 0.95
   },
   "0FD10": {
     "source": "extraction",
@@ -16635,6 +16635,10 @@
     "source": "accepted",
     "confidence": 1.0
   },
+  "103F0": {
+    "source": "accepted",
+    "confidence": 1.0
+  },
   "10400": {
     "source": "accepted",
     "confidence": 1.0
@@ -16964,12 +16968,12 @@
     "confidence": 1.0
   },
   "10920": {
-    "source": "extraction",
-    "confidence": 0.4
+    "source": "ff-forced",
+    "confidence": 1.0
   },
   "10930": {
-    "source": "extraction",
-    "confidence": 0.4
+    "source": "ff-forced",
+    "confidence": 1.0
   },
   "10940": {
     "source": "ff-forced",
@@ -18228,8 +18232,8 @@
     "confidence": 1.0
   },
   "11CE0": {
-    "source": "extraction",
-    "confidence": 0.2
+    "source": "ff-forced",
+    "confidence": 1.0
   },
   "11CF0": {
     "source": "extraction",
@@ -20277,7 +20281,7 @@
   },
   "13CE0": {
     "source": "extraction",
-    "confidence": 0.4
+    "confidence": 0.2
   },
   "13CF0": {
     "source": "ff-forced",

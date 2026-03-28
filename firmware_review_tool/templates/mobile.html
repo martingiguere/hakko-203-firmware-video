@@ -68,6 +68,14 @@
             font-size: 13px;
             color: #666;
         }
+        #crc-display {
+            font-size: 9px;
+            color: #888;
+            font-family: "SF Mono", "Menlo", monospace;
+            white-space: nowrap;
+        }
+        #crc-display.crc-match { color: #2e7d32; }
+        #crc-display.crc-mismatch { color: #c62828; }
 
         /* --- Progress bar --- */
         #progress-bar {
@@ -442,6 +450,7 @@
     <span id="region-badge" class="region-badge"></span>
     <span id="header-spacer"></span>
     <span id="frame-count"></span>
+    <span id="crc-display"></span>
 </div>
 
 <!-- Progress bar -->
@@ -1400,6 +1409,14 @@ async function refreshStats() {
     // Progress bar
     const pct = total > 0 ? (reviewed / total * 100) : 0;
     document.getElementById('progress-fill').style.width = pct + '%';
+
+    // CRC display
+    const crcEl = document.getElementById('crc-display');
+    if (s.checksum) {
+        crcEl.className = s.checksum_match ? 'crc-match' : 'crc-mismatch';
+        crcEl.textContent = `${s.checksum_match ? '\u2713' : '\u2717'} 0x${s.checksum}`;
+        crcEl.title = `Target: 0x${s.checksum_target}`;
+    }
 
     // Rebuild address list for priority nav
     await buildAddressList();
