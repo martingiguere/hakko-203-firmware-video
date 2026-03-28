@@ -979,7 +979,7 @@ def move_frames_batch():
 
         frame_str = str(frame) if not str(frame).startswith('v') else str(frame)
         src = crop_index.get(from_addr)
-        if not src or frame_str not in src.get("readings", {}):
+        if not src:
             continue
 
         try:
