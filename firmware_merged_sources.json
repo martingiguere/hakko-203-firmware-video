@@ -2664,7 +2664,7 @@
     "confidence": 1.0
   },
   "029A0": {
-    "source": "accepted",
+    "source": "ff-forced",
     "confidence": 1.0
   },
   "029B0": {
@@ -4504,11 +4504,11 @@
     "confidence": 1.0
   },
   "04660": {
-    "source": "accepted",
+    "source": "ff-forced",
     "confidence": 1.0
   },
   "04670": {
-    "source": "accepted",
+    "source": "ff-forced",
     "confidence": 1.0
   },
   "04680": {
@@ -4560,8 +4560,8 @@
     "confidence": 0.2
   },
   "04740": {
-    "source": "ff-forced",
-    "confidence": 1.0
+    "source": "extraction",
+    "confidence": 0.2
   },
   "04750": {
     "source": "ff-forced",
@@ -4716,44 +4716,44 @@
     "confidence": 1.0
   },
   "049B0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "049C0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "049D0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "049E0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "049F0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04A00": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04A10": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04A20": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04A30": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04A40": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04A50": {
     "source": "accepted",
@@ -4764,212 +4764,212 @@
     "confidence": 1.0
   },
   "04A70": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04A80": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04A90": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04AA0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04AB0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04AC0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04AD0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04AE0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04AF0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04B00": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04B10": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04B20": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04B30": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04B40": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04B50": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04B60": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04B70": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04B80": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04B90": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04BA0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04BB0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04BC0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04BD0": {
     "source": "accepted",
     "confidence": 1.0
   },
   "04BE0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04BF0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04C00": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04C10": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04C20": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04C30": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04C40": {
     "source": "accepted",
     "confidence": 1.0
   },
   "04C50": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04C60": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04C70": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04C80": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04C90": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04CA0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04CB0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04CC0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04CD0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04CE0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04CF0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04D00": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04D10": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04D20": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04D30": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04D40": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04D50": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04D60": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04D70": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04D80": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04D90": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04DA0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04DB0": {
     "source": "accepted",
@@ -4984,400 +4984,400 @@
     "confidence": 1.0
   },
   "04DE0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04DF0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04E00": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04E10": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04E20": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04E30": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04E40": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04E50": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04E60": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04E70": {
     "source": "accepted",
     "confidence": 1.0
   },
   "04E80": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04E90": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04EA0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04EB0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04EC0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04ED0": {
     "source": "accepted",
     "confidence": 1.0
   },
   "04EE0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04EF0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04F00": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04F10": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04F20": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04F30": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04F40": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04F50": {
     "source": "accepted",
     "confidence": 1.0
   },
   "04F60": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04F70": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04F80": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04F90": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04FA0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04FB0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04FC0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04FD0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04FE0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "04FF0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05000": {
     "source": "accepted",
     "confidence": 1.0
   },
   "05010": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05020": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05030": {
     "source": "accepted",
     "confidence": 1.0
   },
   "05040": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05050": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05060": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05070": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05080": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05090": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "050A0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "050B0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "050C0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "050D0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "050E0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "050F0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05100": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05110": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05120": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05130": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05140": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05150": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05160": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05170": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05180": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05190": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "051A0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "051B0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "051C0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "051D0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "051E0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "051F0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05200": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05210": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05220": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05230": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05240": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05250": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05260": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05270": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05280": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05290": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "052A0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "052B0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "052C0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "052D0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "052E0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "052F0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05300": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05310": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05320": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05330": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05340": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05350": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05360": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05370": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05380": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05390": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "053A0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "053B0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "053C0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "053D0": {
     "source": "accepted",
     "confidence": 1.0
   },
   "053E0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "053F0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05400": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05410": {
     "source": "accepted",
@@ -5460,212 +5460,212 @@
     "confidence": 1.0
   },
   "05550": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05560": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05570": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05580": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05590": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "055A0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "055B0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "055C0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "055D0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "055E0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "055F0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05600": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05610": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05620": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05630": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05640": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05650": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05660": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05670": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05680": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05690": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "056A0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "056B0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "056C0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "056D0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "056E0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "056F0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05700": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05710": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05720": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05730": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05740": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05750": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05760": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05770": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05780": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05790": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "057A0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "057B0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "057C0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "057D0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "057E0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "057F0": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05800": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05810": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05820": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05830": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05840": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05850": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05860": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05870": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05880": {
-    "source": "extraction",
-    "confidence": 0.6
+    "source": "accepted",
+    "confidence": 1.0
   },
   "05890": {
     "source": "extraction",
